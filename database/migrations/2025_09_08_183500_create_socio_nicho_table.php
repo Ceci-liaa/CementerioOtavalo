@@ -10,27 +10,20 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('socios', function (Blueprint $t) {
+        Schema::create('socio_nicho', function (Blueprint $t) {
             $t->id();
-            $t->foreignId('comunidad_id')->nullable()->constrained('comunidades')->nullOnDelete();
-            $t->foreignId('genero_id')->nullable()->constrained('generos')->nullOnDelete();
-            $t->foreignId('estado_civil_id')->nullable()->constrained('estados_civiles')->nullOnDelete();
-            $t->string('cedula', 20)->unique();
-            $t->string('nombres', 255);
-            $t->string('apellidos', 255);
-            $t->string('telefono', 30)->nullable();
-            $t->string('direccion', 255)->nullable();
-            $t->string('email', 255)->nullable();
-            $t->date('fecha_nac')->nullable();
-            $t->boolean('es_representante')->default(false);
-            $t->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $t->foreignId('socio_id')->constrained('socios')->cascadeOnDelete();
+            $t->foreignId('nicho_id')->constrained('nichos')->restrictOnDelete();
+            $t->string('rol', 20)->default('TITULAR'); // 'TITULAR','CO-TITULAR','RESPONSABLE'
+            $t->date('desde')->nullable();
+            $t->date('hasta')->nullable();
             $t->timestampsTz();
-            $t->softDeletesTz();
-            $t->index(['comunidad_id', 'apellidos']);
+            $t->unique(['socio_id', 'nicho_id', 'rol']); // no duplicar mismo rol
+            $t->index(['nicho_id', 'rol']);
         });
     }
     public function down(): void
     {
-        Schema::dropIfExists('socios');
+        Schema::dropIfExists('socio_nicho');
     }
 };
