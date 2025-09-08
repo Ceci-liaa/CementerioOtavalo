@@ -10,19 +10,18 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Definir Roles iniciales
+        // Roles base
         $roles = ['Administrador', 'Auditor', 'Usuario'];
-
-        foreach ($roles as $roleName) {
-            Role::firstOrCreate(['name' => $roleName]);
+        foreach ($roles as $name) {
+            Role::firstOrCreate(['name' => $name], ['guard_name' => 'web']);
         }
 
-        // Definir Permisos iniciales
+        // Permisos base (cementerio)
         $permissions = [
             'crear carpeta',
             'editar carpeta',
             'eliminar carpeta',
-            'ver carepeta',
+            'ver carpeta',
             'subir archivo',
             'editar archivo',
             'eliminar archivo',
@@ -37,21 +36,27 @@ class RolesAndPermissionsSeeder extends Seeder
             'ver auditoria',
         ];
 
-        foreach ($permissions as $permiso) {
-            Permission::firstOrCreate(['name' => $permiso]);
+        foreach ($permissions as $p) {
+            Permission::firstOrCreate(['name' => $p], ['guard_name' => 'web']);
         }
 
-        // Asignar permisos al rol Administrador
+        // ✅ Admin: todos los permisos
         $adminRole = Role::findByName('Administrador');
-        $adminRole->syncPermissions($permissions);
+        $adminRole->syncPermissions(Permission::all());
 
-        // Asignar permisos al rol Usuario
-        // Se le asignan permisos específicos al rol Usuario
+        // Usuario: permisos específicos
         $userRole = Role::findByName('Usuario');
-        $userRole->syncPermissions(['subir archivo', 'editar archivo', 'eliminar archivo','ver archivo','ver archivo', 'ver formato']);
+        $userRole->syncPermissions([
+            'subir archivo', 'editar archivo', 'eliminar archivo', 'ver archivo', 'ver formato'
+        ]);
 
-        // Al rol Auditor se le asigna solo el permiso de ver auditoria
+        // Auditor: ver auditoría
         $auditorRole = Role::findByName('Auditor');
         $auditorRole->syncPermissions(['ver auditoria']);
+
+        // Limpiar caché del paquete
+        app('cache')
+            ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
+            ->forget(config('permission.cache.key'));
     }
 }

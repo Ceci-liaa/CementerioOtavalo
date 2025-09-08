@@ -57,25 +57,13 @@
     <title>
         Ingenieria Textil
     </title>
-    <!--     Fonts and icons    antiguo -->
-    <!-- <link
-        href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Noto+Sans:300,400,500,600,700,800|PT+Mono:300,400,500,600,700"
-        rel="stylesheet" /> -->
 
     <!-- Fonts and icons nuevo-->
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Noto+Sans:300,400,500,600,700,800|PT+Mono:300,400,500,600,700" rel="stylesheet" />
 
-    <!-- Nucleo Icons antiguo -->
-    <!-- <link href="../assets/css/nucleo-icons.css" rel="stylesheet" />
-    <link href="../assets/css/nucleo-svg.css" rel="stylesheet" /> -->
-
     <!-- Nucleo Icons nuevo-->
     <link href="{{ asset('assets/css/nucleo-icons.css') }}" rel="stylesheet" />
     <link href="{{ asset('assets/css/nucleo-svg.css') }}" rel="stylesheet" />
-
-    <!-- Font Awesome Icons antiguo-->
-    <!-- <script src="https://kit.fontawesome.com/349ee9c857.js" crossorigin="anonymous"></script>
-    <link href="../assets/css/nucleo-svg.css" rel="stylesheet" /> -->
 
     <!-- Font Awesome Icons nuevo-->
     <script src="https://kit.fontawesome.com/349ee9c857.js" crossorigin="anonymous"></script>
@@ -86,6 +74,9 @@
 
     <!-- CSS Files nuevo-->
     <link id="pagestyle" href="{{ asset('assets/css/corporate-ui-dashboard.css') }}?v=1.0.0" rel="stylesheet" />
+
+    <!-- CSS nuevo para las tablas de cada vista del CEMENTERIO-->
+    <link href="{{ asset('assets/css/custom.css') }}" rel="stylesheet" />
 
     <!-- Incluir SweetAlert2 en tu Proyecto -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -111,6 +102,10 @@
     @endif
 
     {{ $slot }}
+    <!-- nuevo -->
+    <!-- @yield('content') -->
+
+    <!-- solo esta linea -->
 
     <div class="fixed-plugin">
         <!-- <a class="fixed-plugin-button text-dark position-fixed px-3 py-2"> 

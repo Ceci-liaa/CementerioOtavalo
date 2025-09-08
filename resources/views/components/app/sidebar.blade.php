@@ -2,9 +2,10 @@
     <div class="sidenav-header">
         <i class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none"
             aria-hidden="true" id="iconSidenav"></i>
-        <a class="navbar-brand d-flex align-items-center m-0"
-            href=" https://demos.creative-tim.com/corporate-ui-dashboard/pages/dashboard.html " target="_blank">
-            <span class="font-weight-bold text-lg">Ingeniería Textil</span>
+        <a class="navbar-brand d-flex align-items-center m-0">
+            <span class="font-weight-bold text-lg">UNORICO </span>
+            <br />
+            <span class="font-weight-bold text-lg">SAMASHUNCHIK</span>
         </a>
     </div>
     <div class="collapse navbar-collapse px-4  w-auto " id="sidenav-collapse-main">
@@ -115,8 +116,8 @@
             @role('Administrador')
             <li class="nav-item mt-2">
                 <div class="d-flex align-items-center nav-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2"
-                        viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2" viewBox="0 0 24 24"
+                        fill="currentColor" class="w-6 h-6">
                         <path fill-rule="evenodd"
                             d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
                             clip-rule="evenodd" />
@@ -124,13 +125,29 @@
                     <span class="font-weight-normal text-md ms-2">Panel Administrador</span>
                 </div>
             </li>
-            
+
             <li class="nav-item border-start my-0 pt-2">
                 <a class="nav-link position-relative ms-0 ps-2 py-2 {{ is_current_route('users-management') ? 'active' : '' }}"
                     href="{{ route('users-management') }}">
                     <span class="nav-link-text ms-1">Gestión Usuarios</span>
                 </a>
             </li>
+
+            <!-- nuevo para la gestion de roles -->
+            <li class="nav-item border-start my-0 pt-2">
+                <a class="nav-link position-relative ms-0 ps-2 py-2 {{ is_current_route('roles.index') ? 'active' : '' }}"
+                    href="{{ route('roles.index') }}">
+                    <span class="nav-link-text ms-1">Gestión de Roles</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="{{ route('roles.permissions.manager') }}">
+                    <i class="fa-solid fa-table-list"></i> Administrador de permisos
+                </a>
+            </li>
+
+            <!-- Hasta aqui -->
 
             <li class="nav-item border-start my-0 pt-2">
                 <a class="nav-link position-relative ms-0 ps-2 py-2 {{ is_current_route('folders.index') ? 'active' : '' }}"
@@ -156,8 +173,8 @@
             @hasanyrole('Administrador|Usuario')
             <li class="nav-item mt-2">
                 <div class="d-flex align-items-center nav-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2"
-                        viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2" viewBox="0 0 24 24"
+                        fill="currentColor" class="w-6 h-6">
                         <path fill-rule="evenodd"
                             d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
                             clip-rule="evenodd" />
@@ -174,13 +191,13 @@
                 </a>
             </li>
             @endhasanyrole
-            
+
             @hasanyrole('Administrador|Usuario|Auditor')
-                        <!-- Nuevo para el perfil del Usuario-->
-                        <li class="nav-item mt-2">
+            <!-- Nuevo para el perfil del Usuario-->
+            <li class="nav-item mt-2">
                 <div class="d-flex align-items-center nav-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2"
-                        viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2" viewBox="0 0 24 24"
+                        fill="currentColor" class="w-6 h-6">
                         <path fill-rule="evenodd"
                             d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
                             clip-rule="evenodd" />
@@ -188,7 +205,7 @@
                     <span class="font-weight-normal text-md ms-2">Panel Usuario</span>
                 </div>
             </li>
-            
+
             <!-- Perfil del usuario  -->
             <li class="nav-item border-start my-0 pt-2">
                 <a class="nav-link position-relative ms-0 ps-2 py-2 {{ is_current_route('users.profile') ? 'active' : '' }}"
@@ -198,12 +215,12 @@
             </li>
             @endhasanyrole
 
-            @role('Auditor')            
+            @role('Auditor')
             <!-- Nuevo para la auditoria -->
             <li class="nav-item mt-2">
                 <div class="d-flex align-items-center nav-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2"
-                        viewBox="0 0 24 24" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="ms-2" viewBox="0 0 24 24"
+                        fill="currentColor">
                         <path fill-rule="evenodd"
                             d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
                             clip-rule="evenodd" />
@@ -219,7 +236,7 @@
                 </a>
             </li>
             @endrole
-<!-- 
+            <!-- 
             <li class="nav-item border-start my-0 pt-2">
                 <a class="nav-link position-relative ms-0 ps-2 py-2 {{ is_current_route('signin') ? 'active' : '' }}"
                     href="{{ route('signin') }}">
@@ -238,25 +255,30 @@
 </aside>
 
 <style>
-  html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
 
-  #sidenav-main {
-    height: 100vh;              /* Sidebar ocupa toda la ventana */
-    overflow: hidden;           /* Oculta scroll principal, lo controlamos dentro */
-    position: fixed;
-    top: 0;
-    left: 0;
-  }
+    #sidenav-main {
+        height: 100vh;
+        /* Sidebar ocupa toda la ventana */
+        overflow: hidden;
+        /* Oculta scroll principal, lo controlamos dentro */
+        position: fixed;
+        top: 0;
+        left: 0;
+    }
 
-  #sidenav-main .navbar-collapse {
-    height: calc(100vh - 80px); /* Ajusta si tu cabecera cambia */
-    overflow-y: auto;           /* Scroll vertical */
-    overflow-x: hidden;
-    position: relative;         /* Necesario si usas PerfectScrollbar */
-  }
+    #sidenav-main .navbar-collapse {
+        height: calc(100vh - 80px);
+        /* Ajusta si tu cabecera cambia */
+        overflow-y: auto;
+        /* Scroll vertical */
+        overflow-x: hidden;
+        position: relative;
+        /* Necesario si usas PerfectScrollbar */
+    }
 </style>
-

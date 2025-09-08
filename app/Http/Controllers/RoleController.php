@@ -3,52 +3,84 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
-    // Muestra roles
+    // Listado de roles (con paginación)
     public function index()
     {
-        $roles = Role::with('permissions')->get();
-        return view('roles.index', compact('roles'));
+        $roles = Role::with('permissions')->latest('id')->paginate(12);
+        return view('roles.role-index', compact('roles')); // roles/index.blade.php
     }
 
-    // Formulario para crear rol
     public function create()
     {
-        $permissions = Permission::all();
-        return view('roles.create', compact('permissions'));
+        return view('roles.role-create'); // roles/create.blade.php
     }
 
-    // Guarda el rol
     public function store(Request $request)
     {
-        $role = Role::create(['name' => $request->name]);
-        $role->syncPermissions($request->permissions);
-        return redirect()->route('roles.index');
+        $validated = $request->validate([
+            'name' => ['required','string','max:100','unique:roles,name'],
+        ]);
+
+        Role::create([
+            'name'       => $validated['name'],
+            'guard_name' => 'web',
+        ]);
+
+        return redirect()
+            ->route('roles.index')
+            ->with('ok', 'Rol creado correctamente.');
     }
 
-    // Editar rol
     public function edit(Role $role)
     {
-        $permissions = Permission::all();
-        return view('roles.edit', compact('role', 'permissions'));
+        return view('roles.role-edit', compact('role')); // roles/edit.blade.php
     }
 
-    // Actualizar rol
+    // Actualizar rol (solo nombre)
     public function update(Request $request, Role $role)
     {
-        $role->update(['name' => $request->name]);
-        $role->syncPermissions($request->permissions);
-        return redirect()->route('roles.index');
+        // ⛔ No renombrar Administrador
+        if ($role->name === 'Administrador' && $request->name !== 'Administrador') {
+            return back()->with('error', 'No se puede renombrar el rol Administrador.');
+        }
+
+        $validated = $request->validate([
+            'name' => [
+                'required','string','max:100',
+                Rule::unique('roles','name')->ignore($role->id),
+            ],
+        ]);
+
+        $role->update([
+            'name'       => $validated['name'],
+            'guard_name' => $role->guard_name ?? 'web',
+        ]);
+
+        return redirect()
+            ->route('roles.index')
+            ->with('ok', 'Rol actualizado correctamente.');
     }
 
-    // Eliminar rol
     public function destroy(Role $role)
     {
+        if ($role->name === 'Administrador') {
+            return back()->with('error', 'No se puede eliminar el rol Administrador.');
+        }
+
+        // (Opcional) evitar borrar si tiene usuarios asignados
+        // if ($role->users()->exists()) {
+        //     return back()->with('error', 'No se puede eliminar: el rol está asignado a usuarios.');
+        // }
+
         $role->delete();
-        return redirect()->route('roles.index');
+
+        return redirect()
+            ->route('roles.index')
+            ->with('ok', 'Rol eliminado correctamente.');
     }
 }
