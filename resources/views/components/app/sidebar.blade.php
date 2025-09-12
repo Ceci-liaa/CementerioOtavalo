@@ -169,6 +169,13 @@
                     <span>Comunidades</span>
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a href="{{ route('socios.index') }}" class="nav-link">
+                    <i class="fa-solid fa-user"></i>
+                    <span>Socios</span>
+                </a>
+            </li>
             @endhasanyrole
 
             @hasanyrole('Administrador|Usuario|Auditor')

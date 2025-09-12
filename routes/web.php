@@ -15,6 +15,7 @@ use App\Http\Controllers\PermissionManagerController;
 use App\Http\Controllers\CantonController;
 use App\Http\Controllers\ParroquiaController;
 use App\Http\Controllers\ComunidadController;
+use App\Http\Controllers\SocioController;
 
 
 /*
@@ -138,6 +139,28 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::get('parroquias/{parroquia}/comunidades', [ComunidadController::class, 'byParroquia'])
         ->name('parroquias.comunidades');
+
+    // Listar todos los socios
+Route::get('/socios', [SocioController::class, 'index'])->name('socios.index');
+
+// Formulario de creación
+Route::get('/socios/create', [SocioController::class, 'create'])->name('socios.create');
+
+// Guardar nuevo socio
+Route::post('/socios', [SocioController::class, 'store'])->name('socios.store');
+
+// Mostrar detalle de un socio
+Route::get('/socios/{socio}', [SocioController::class, 'show'])->name('socios.show');
+
+// Formulario de edición
+Route::get('/socios/{socio}/edit', [SocioController::class, 'edit'])->name('socios.edit');
+
+// Actualizar socio existente
+Route::put('/socios/{socio}', [SocioController::class, 'update'])->name('socios.update');
+Route::patch('/socios/{socio}', [SocioController::class, 'update']); // opcional, PATCH y PUT son equivalentes
+
+// Eliminar socio
+Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy');
 });
 // hasta aqui lo nuevo
 

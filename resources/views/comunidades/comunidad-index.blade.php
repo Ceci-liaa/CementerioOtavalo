@@ -42,14 +42,14 @@
                                         <td>{{ $com->parroquia->canton->nombre }}</td>
                                         <td>
                                             <a href="{{ route('comunidades.edit',$com) }}" class="btn btn-sm btn-warning" title="Editar">
-                                                <i class="fa-solid fa-pen-to-square"></i>
+                                                <i class="fa-solid fa-pen-to-square" style="font-size:.9rem;"></i>
                                             </a>
                                             <form action="{{ route('comunidades.destroy',$com) }}" method="POST"
                                                   class="d-inline js-delete-form">
                                                 @csrf @method('DELETE')
                                                 <button type="button" class="btn btn-sm btn-danger js-delete"
                                                         data-item="{{ $com->nombre }}" title="Eliminar">
-                                                    <i class="fa-solid fa-trash"></i>
+                                                    <i class="fa-solid fa-trash" style="font-size:.9rem;"></i>
                                                 </button>
                                             </form>
                                         </td>
