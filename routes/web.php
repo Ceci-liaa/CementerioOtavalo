@@ -18,6 +18,7 @@ use App\Http\Controllers\ComunidadController;
 use App\Http\Controllers\SocioController;
 use App\Http\Controllers\FallecidoController;
 use App\Http\Controllers\BloqueController;
+use App\Http\Controllers\NichoController;
 
 
 /*
@@ -172,6 +173,15 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/bloques/{bloque}', [BloqueController::class, 'update'])->name('bloques.update');
     Route::patch('/bloques/{bloque}', [BloqueController::class, 'update']); // opcional
     Route::delete('/bloques/{bloque}', [BloqueController::class, 'destroy'])->name('bloques.destroy');
+
+//NICHOS
+    Route::get('/nichos', [NichoController::class, 'index'])->name('nichos.index');
+    Route::get('/nichos/create', [NichoController::class, 'create'])->name('nichos.create');
+    Route::post('/nichos', [NichoController::class, 'store'])->name('nichos.store');
+    Route::get('/nichos/{nicho}', [NichoController::class, 'show'])->name('nichos.show');
+    Route::get('/nichos/{nicho}/edit', [NichoController::class, 'edit'])->name('nichos.edit');
+    Route::put('/nichos/{nicho}', [NichoController::class, 'update'])->name('nichos.update');
+    Route::delete('/nichos/{nicho}', [NichoController::class, 'destroy'])->name('nichos.destroy');
 });
 
 // hasta aqui lo nuevo
