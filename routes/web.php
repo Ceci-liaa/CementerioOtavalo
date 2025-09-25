@@ -17,6 +17,7 @@ use App\Http\Controllers\ParroquiaController;
 use App\Http\Controllers\ComunidadController;
 use App\Http\Controllers\SocioController;
 use App\Http\Controllers\FallecidoController;
+use App\Http\Controllers\BloqueController;
 
 
 /*
@@ -162,6 +163,15 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::patch('/fallecidos/{fallecido}', [FallecidoController::class, 'update']); // opcional
     Route::delete('/fallecidos/{fallecido}', [FallecidoController::class, 'destroy'])->name('fallecidos.destroy');
 
+//BLOQUES
+    Route::get('/bloques', [BloqueController::class, 'index'])->name('bloques.index');
+    Route::get('/bloques/create', [BloqueController::class, 'create'])->name('bloques.create');
+    Route::post('/bloques', [BloqueController::class, 'store'])->name('bloques.store');
+    Route::get('/bloques/{bloque}', [BloqueController::class, 'show'])->name('bloques.show');
+    Route::get('/bloques/{bloque}/edit', [BloqueController::class, 'edit'])->name('bloques.edit');
+    Route::put('/bloques/{bloque}', [BloqueController::class, 'update'])->name('bloques.update');
+    Route::patch('/bloques/{bloque}', [BloqueController::class, 'update']); // opcional
+    Route::delete('/bloques/{bloque}', [BloqueController::class, 'destroy'])->name('bloques.destroy');
 });
 
 // hasta aqui lo nuevo
