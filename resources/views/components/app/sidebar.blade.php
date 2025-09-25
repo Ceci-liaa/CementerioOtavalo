@@ -184,6 +184,13 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('bloques.index') }}" class="nav-link">
+                    <i class="fa-solid fa-border-all"></i>
+                    <span>Bloques</span>
+                </a>
+            </li>
+
             @endhasanyrole
 
             @hasanyrole('Administrador|Usuario|Auditor')
