@@ -16,6 +16,7 @@ use App\Http\Controllers\CantonController;
 use App\Http\Controllers\ParroquiaController;
 use App\Http\Controllers\ComunidadController;
 use App\Http\Controllers\SocioController;
+use App\Http\Controllers\FallecidoController;
 
 
 /*
@@ -140,29 +141,31 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('parroquias/{parroquia}/comunidades', [ComunidadController::class, 'byParroquia'])
         ->name('parroquias.comunidades');
 
-    // Listar todos los socios
-Route::get('/socios', [SocioController::class, 'index'])->name('socios.index');
+//SOCIOS
+    Route::get('/socios', [SocioController::class, 'index'])->name('socios.index');
+    Route::get('/socios/create', [SocioController::class, 'create'])->name('socios.create');
+    Route::post('/socios', [SocioController::class, 'store'])->name('socios.store');
+    Route::get('/socios/{socio}', [SocioController::class, 'show'])->name('socios.show');
+    Route::get('/socios/{socio}/edit', [SocioController::class, 'edit'])->name('socios.edit');
+    Route::put('/socios/{socio}', [SocioController::class, 'update'])->name('socios.update');
+    Route::patch('/socios/{socio}', [SocioController::class, 'update']); // opcional, PATCH y PUT son equivalentes
+    Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy');
 
-// Formulario de creación
-Route::get('/socios/create', [SocioController::class, 'create'])->name('socios.create');
 
-// Guardar nuevo socio
-Route::post('/socios', [SocioController::class, 'store'])->name('socios.store');
+//FALLECIDOS
+    Route::get('/fallecidos', [FallecidoController::class, 'index'])->name('fallecidos.index');
+    Route::get('/fallecidos/create', [FallecidoController::class, 'create'])->name('fallecidos.create');
+    Route::post('/fallecidos', [FallecidoController::class, 'store'])->name('fallecidos.store');
+    Route::get('/fallecidos/{fallecido}', [FallecidoController::class, 'show'])->name('fallecidos.show');
+    Route::get('/fallecidos/{fallecido}/edit', [FallecidoController::class, 'edit'])->name('fallecidos.edit');
+    Route::put('/fallecidos/{fallecido}', [FallecidoController::class, 'update'])->name('fallecidos.update');
+    Route::patch('/fallecidos/{fallecido}', [FallecidoController::class, 'update']); // opcional
+    Route::delete('/fallecidos/{fallecido}', [FallecidoController::class, 'destroy'])->name('fallecidos.destroy');
 
-// Mostrar detalle de un socio
-Route::get('/socios/{socio}', [SocioController::class, 'show'])->name('socios.show');
-
-// Formulario de edición
-Route::get('/socios/{socio}/edit', [SocioController::class, 'edit'])->name('socios.edit');
-
-// Actualizar socio existente
-Route::put('/socios/{socio}', [SocioController::class, 'update'])->name('socios.update');
-Route::patch('/socios/{socio}', [SocioController::class, 'update']); // opcional, PATCH y PUT son equivalentes
-
-// Eliminar socio
-Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy');
 });
+
 // hasta aqui lo nuevo
+
 
 Route::middleware(['auth', 'role.status:Administrador'])->group(function () {
     // Gestión de usuarios (Admin)
