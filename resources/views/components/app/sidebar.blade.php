@@ -176,6 +176,14 @@
                     <span>Socios</span>
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a href="{{ route('fallecidos.index') }}" class="nav-link">
+                    <i class="fa-solid fa-cross"></i>
+                    <span>Fallecidos</span>
+                </a>
+            </li>
+
             @endhasanyrole
 
             @hasanyrole('Administrador|Usuario|Auditor')
