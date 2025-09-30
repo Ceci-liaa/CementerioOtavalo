@@ -191,6 +191,14 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('nichos.index') }}" class="nav-link">
+                    <i class="fa-solid fa-dungeon"></i>
+                    <span>Nichos</span>
+                </a>
+            </li>
+
+
             @endhasanyrole
 
             @hasanyrole('Administrador|Usuario|Auditor')
