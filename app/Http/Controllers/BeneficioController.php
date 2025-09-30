@@ -24,12 +24,12 @@ class BeneficioController extends Controller
 
         $beneficios = $query->paginate(10)->withQueryString();
 
-        return view('beneficios.index', compact('beneficios','q'));
+        return view('beneficios.beneficio-index-blade', compact('beneficios','q'));
     }
 
     public function create()
     {
-        return view('beneficios.create');
+        return view('beneficios.beneficio-create-blade');
     }
 
     public function store(Request $request)
@@ -56,12 +56,12 @@ class BeneficioController extends Controller
 
     public function show(Beneficio $beneficio)
     {
-        return view('beneficios.show', compact('beneficio'));
+        return view('beneficios.beneficio-show-blade', compact('beneficio'));
     }
 
     public function edit(Beneficio $beneficio)
     {
-        return view('beneficios.edit', compact('beneficio'));
+        return view('beneficios.beneficio-edit-blade', compact('beneficio'));
     }
 
     public function update(Request $request, Beneficio $beneficio)

@@ -198,6 +198,13 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('beneficios.index') }}" class="nav-link">
+                    <i class="fa-solid fa-handshake"></i>
+                    <span>Beneficios</span>
+                </a>
+            </li>
+
 
             @endhasanyrole
 
