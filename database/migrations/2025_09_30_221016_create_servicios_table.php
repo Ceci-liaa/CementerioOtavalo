@@ -11,11 +11,8 @@ return new class extends Migration {
             $t->id();
             $t->string('nombre', 255);
             $t->text('descripcion')->nullable();
-            $t->decimal('valor', 10, 2)->nullable();   // precio sugerido
-            $t->string('categoria', 50)->nullable();    // REPARACION, CAPILLA, CARPAS, etc.
+            $t->decimal('valor', 10, 2)->nullable(); // precio sugerido
             $t->timestampsTz();
-
-            $t->index(['categoria']);
         });
     }
 

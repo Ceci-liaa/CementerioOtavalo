@@ -10,7 +10,6 @@ class ServicioController extends Controller
     public function index(Request $request)
     {
         $q = trim($request->get('q',''));
-        $categoria = $request->get('categoria','');
 
         $query = Servicio::orderBy('nombre');
 
@@ -18,17 +17,13 @@ class ServicioController extends Controller
             // Postgres: ILIKE | MySQL: LIKE
             $query->where(function($w) use ($q){
                 $w->where('nombre','ILIKE',"%{$q}%")
-                  ->orWhere('descripcion','ILIKE',"%{$q}%")
-                  ->orWhere('categoria','ILIKE',"%{$q}%");
+                  ->orWhere('descripcion','ILIKE',"%{$q}%");
             });
-        }
-        if ($categoria !== '') {
-            $query->where('categoria',$categoria);
         }
 
         $servicios = $query->paginate(10)->withQueryString();
 
-        return view('servicios.servicio-index-blade', compact('servicios','q','categoria'));
+        return view('servicios.servicio-index', compact('servicios','q'));
     }
 
     public function create()
@@ -39,37 +34,35 @@ class ServicioController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre'     => 'required|string|max:255',
-            'descripcion'=> 'nullable|string',
-            'valor'      => 'nullable|numeric',
-            'categoria'  => 'nullable|string|max:50',
+            'nombre'      => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'valor'       => 'nullable|numeric',
         ]);
 
-        Servicio::create($request->only(['nombre','descripcion','valor','categoria']));
+        Servicio::create($request->only(['nombre','descripcion','valor']));
 
         return redirect()->route('servicios.index')->with('success','Servicio creado correctamente.');
     }
 
     public function show(Servicio $servicio)
     {
-        return view('servicios.servicio-show-blade', compact('servicio'));
+        return view('servicios.servicio-show', compact('servicio'));
     }
 
     public function edit(Servicio $servicio)
     {
-        return view('servicios.servicio-edit-blade', compact('servicio'));
+        return view('servicios.servicio-edit', compact('servicio'));
     }
 
     public function update(Request $request, Servicio $servicio)
     {
         $request->validate([
-            'nombre'     => 'required|string|max:255',
-            'descripcion'=> 'nullable|string',
-            'valor'      => 'nullable|numeric',
-            'categoria'  => 'nullable|string|max:50',
+            'nombre'      => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'valor'       => 'nullable|numeric',
         ]);
 
-        $servicio->update($request->only(['nombre','descripcion','valor','categoria']));
+        $servicio->update($request->only(['nombre','descripcion','valor']));
 
         return redirect()->route('servicios.index')->with('success','Servicio actualizado.');
     }

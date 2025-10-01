@@ -205,6 +205,13 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('servicios.index') }}" class="nav-link">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span>Servicios</span>
+                </a>
+            </li>
+
 
             @endhasanyrole
 
