@@ -21,6 +21,7 @@ use App\Http\Controllers\BloqueController;
 use App\Http\Controllers\NichoController;
 use App\Http\Controllers\SocioNichoController;
 use App\Http\Controllers\BeneficioController;
+use App\Http\Controllers\ServicioController;
 
 
 /*
@@ -203,6 +204,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/beneficios/{beneficio}', [BeneficioController::class, 'update'])->name('beneficios.update');
     Route::delete('/beneficios/{beneficio}', [BeneficioController::class, 'destroy'])->name('beneficios.destroy');
 
+//SERVICIOS
+    Route::get('/servicios', [ServicioController::class, 'index'])->name('servicios.index');
+    Route::get('/servicios/create', [ServicioController::class, 'create'])->name('servicios.create');
+    Route::post('/servicios', [ServicioController::class, 'store'])->name('servicios.store');
+    Route::get('/servicios/{servicio}', [ServicioController::class, 'show'])->name('servicios.show');
+    Route::get('/servicios/{servicio}/edit', [ServicioController::class, 'edit'])->name('servicios.edit');
+    Route::put('/servicios/{servicio}', [ServicioController::class, 'update'])->name('servicios.update');
+    Route::delete('/servicios/{servicio}', [ServicioController::class, 'destroy'])->name('servicios.destroy');
 });
 
 

@@ -27,9 +27,23 @@ return new class extends Migration {
             // Info general de la factura
             $t->date('fecha')->default(DB::raw('CURRENT_DATE'));
             $t->decimal('total', 10, 2)->default(0);
-            $t->string('estado', 20)->default('PENDIENTE'); // PENDIENTE, PAGADA, ANULADA
+            // Estados: PENDIENTE, EMITIDA, PAGADA, ANULADA
+            $t->string('estado', 20)->default('PENDIENTE');
+
+            // ===== Auditoría / Trazabilidad =====
+            // Quién/cuándo la emitió (cierra y ya no se edita)
+            $t->timestampTz('emitida_at')->nullable();
+            $t->foreignId('emitida_por')->nullable()->constrained('users')->nullOnDelete();
+
+            // Quién/cuándo la anuló y por qué (no se borra)
+            $t->timestampTz('anulada_at')->nullable();
+            $t->foreignId('anulada_por')->nullable()->constrained('users')->nullOnDelete();
+            $t->string('motivo_anulacion', 500)->nullable();
 
             $t->timestampsTz();
+
+            // Índices útiles para listados/consultas
+            $t->index(['estado', 'fecha']);
         });
     }
 
