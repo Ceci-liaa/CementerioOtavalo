@@ -28,7 +28,7 @@ class ServicioController extends Controller
 
     public function create()
     {
-        return view('servicios.servicio-create-blade');
+        return view('servicios.servicio-create');
     }
 
     public function store(Request $request)

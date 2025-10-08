@@ -10,13 +10,13 @@
         <section>
             <div class="page-header min-vh-100 split-left-purple">
                 <div class="container">
-                    <div class="row">
+                    <div class="row g-0">
                         <div class="col-12 col-md-6 col-xl-6 d-flex flex-column">
                             <div class="card card-plain mt-8 mx-auto auth-box">
                                 <div class="card-header pb-0 text-left bg-transparent text-center">
                                     <h3 class="font-weight-black text-dark display-6">Bienvenido</h3>
-                                    <p class="mb-0 text-white" >Crea una nueva cuenta<br></p>
-                                    <p class="mb-0 text-white">O inicia sesión con tus credenciales</p>
+                                    <p class="mb-0">Crea una nueva cuenta<br></p>
+                                    <p class="mb-0">O inicia sesión con tus credenciales</p>
                                     <!--                                     <p class="mb-0">Email: <b>admin@corporateui.com</b></p>
                                     <p class="mb-0">Contraseña: <b>secret</b></p> -->
                                 </div>
@@ -82,7 +82,7 @@
                                     </form>
                                 </div>
                                 <div class="card-footer text-center pt-0 px-lg-2 px-1">
-                                    <p class="mb-4 text-xs mx-auto text-white">
+                                    <p class="mb-4 text-xs mx-auto">
                                         ¿No tienes una cuenta?
                                         <a href="{{ route('sign-up') }}"
                                             class="text-dark font-weight-bold">Registrarse</a>
@@ -150,40 +150,70 @@
             background-size: auto var(--logo-height) !important;
         }
 
-        /*Color del fondo izquierdo*/
+        
+        /* ── Vignette morado en el lado izquierdo (centro blanco) ── */
         :root {
-            /* Morado bajito (ajústalo si quieres) */
-            --left-bg: #bb41ac;
-            /* lavanda claro */
+            --left-bg: #C77BBD;
+            /* morado base (ajústalo) */
             --right-bg: #FFFFFF;
-            /* fondo lado del logo */
+            /* lado derecho */
+            --vignette-x: 85%;
+            /* radio X del difuminado interno (60–95%) */
+            --vignette-y: 80%;
+            /* radio Y del difuminado interno (60–95%) */
+            --inner-stop: 58%;
+            /* tamaño del “cuadro” blanco (menor = más grande) */
+            --outer-stop: 92%;
+            /* hasta dónde se difumina (mayor = borde más suave) */
         }
 
-        /* Pinta sólo la mitad izquierda del fondo de la sección */
         .split-left-purple {
             position: relative;
+            background: var(--right-bg);
+            /* base blanca */
         }
 
+        /* 1) Pintamos la mitad izquierda de morado */
         .split-left-purple::before {
             content: "";
             position: absolute;
             inset: 0;
-            /* 55% izquierda morada, 45% derecha blanca (ajusta el % si quieres) */
-            background: linear-gradient(90deg, var(--left-bg) 0 50%, var(--right-bg) 50% 100%);
             z-index: 0;
+            background: linear-gradient(90deg, var(--left-bg) 0 50%, transparent 50%);
         }
 
-        /* Asegura que el contenido quede por encima del fondo */
+        /* 2) Encima, un “vignette” que aclara el centro del lado izquierdo */
+        .split-left-purple::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            /* sobre el morado pero bajo el contenido */
+            pointer-events: none;
+
+            /* Un radial en la MITAD IZQUIERDA que va de blanco (centro) a transparente (bordes),
+     dejando ver el morado sólo en los bordes, como en tu imagen. */
+            background:
+                radial-gradient(var(--vignette-x) var(--vignette-y) at 25% 50%,
+                    rgba(255, 255, 255, 1) var(--inner-stop),
+                    rgba(255, 255, 255, 0) var(--outer-stop)) left / 50% 100% no-repeat;
+        }
+
+        /* El contenido va por encima */
         .split-left-purple>.container {
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
-        /* En móviles (no se muestra el logo), puedes dejar todo morado o blanco */
+        /* En móvil: todo morado (o déjalo blanco si quieres) */
         @media (max-width: 767.98px) {
-            .split-left-purple::before {
+            .split-left-purple {
                 background: var(--left-bg);
-                /* o usa var(--right-bg) si prefieres blanco en mobile */
+            }
+
+            .split-left-purple::before,
+            .split-left-purple::after {
+                background: none;
             }
         }
 
