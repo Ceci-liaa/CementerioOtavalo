@@ -28,7 +28,7 @@
                             </div>
                         </div>
                         <div class="col-md-4 d-flex flex-column mx-auto">
-                            <div class="card card-plain mt-8">
+                            <div class="card card-plain mt-8 auth-box">
                                 <div class="card-header pb-0 text-left bg-transparent">
                                     <h3 class="font-weight-black text-dark display-6">Registrarse</h3>
                                     <p class="mb-0">Mucho gusto! Por favor ingrese sus datos.</p>
@@ -65,8 +65,7 @@
                                             @error('password')
                                             <span class="text-danger text-sm">{{ $message }}</span>
                                             @enderror
-                                        </div>
- -->
+                                        </div>-->
                                         <label>Contraseña</label>
                                         <div class="mb-3 position-relative">
                                             <input type="password" id="password" name="password"
@@ -201,6 +200,34 @@
             background-position: center;
             background-size: cover;
             background-repeat: no-repeat;
+        }
+
+        /* Controla el ancho del formulario sin tocar el layout ni el degradado */
+        .split-right-vignette .auth-box {
+            max-width: 410px;
+            /* ajusta a gusto (p.ej. 380–520px) */
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Opcional: centrado vertical suave en md+ (tu col ya es d-flex) */
+        @media (min-width: 768px) {
+            .split-right-vignette .col-md-4.d-flex.flex-column.mx-auto {
+                align-items: center;
+                /* centra la card horizontalmente dentro de la col */
+            }
+
+            .split-right-vignette .auth-box {
+                margin-top: 0;
+            }
+        }
+
+        /* (Opcional) en móvil hacerlo un pelín más angosto si quieres */
+        @media (max-width: 767.98px) {
+            .split-right-vignette .auth-box {
+                max-width: 380px;
+            }
         }
     </style>
 
