@@ -8,32 +8,34 @@
     </div>
     <main class="main-content mt-0">
         <section>
-            <div class="page-header min-vh-100">
+            <div class="page-header min-vh-100 split-left-purple">
                 <div class="container">
                     <div class="row">
-                        <div class="col-xl-4 col-md-6 d-flex flex-column mx-auto">
-                            <div class="card card-plain mt-8">
+                        <div class="col-12 col-md-6 col-xl-6 d-flex flex-column">
+                            <div class="card card-plain mt-8 mx-auto auth-box">
                                 <div class="card-header pb-0 text-left bg-transparent text-center">
                                     <h3 class="font-weight-black text-dark display-6">Bienvenido</h3>
-                                    <p class="mb-0">Crea una nueva cuenta<br></p>
-                                    <p class="mb-0">O inicia sesión con tus credenciales</p>
+                                    <p class="mb-0 text-white" >Crea una nueva cuenta<br></p>
+                                    <p class="mb-0 text-white">O inicia sesión con tus credenciales</p>
                                     <!--                                     <p class="mb-0">Email: <b>admin@corporateui.com</b></p>
                                     <p class="mb-0">Contraseña: <b>secret</b></p> -->
                                 </div>
 
                                 <div class="card-body">
                                     @if (session('success'))
-                                    <div class="alert alert-success px-3 py-2 text-sm rounded mb-3" style="max-width: 400px;">
-                                        {{ session('success') }}
-                                    </div>
+                                        <div class="alert alert-success px-3 py-2 text-sm rounded mb-3"
+                                            style="max-width: 400px;">
+                                            {{ session('success') }}
+                                        </div>
                                     @endif
                                     <div class="text-center">
                                         @if ($errors->any())
-                                        <div class="alert alert-danger px-3 py-2 text-sm rounded" style="max-width: 400px;">
-                                            @foreach ($errors->all() as $error)
-                                            <div>{!! $error !!}</div> <!-- Mostrar errores con HTML -->
-                                            @endforeach
-                                        </div>
+                                            <div class="alert alert-danger px-3 py-2 text-sm rounded"
+                                                style="max-width: 400px;">
+                                                @foreach ($errors->all() as $error)
+                                                    <div>{!! $error !!}</div> <!-- Mostrar errores con HTML -->
+                                                @endforeach
+                                            </div>
                                         @endif
                                     </div>
                                     <form role="form" class="text-start" method="POST" action="{{ route('sign-in') }}">
@@ -41,22 +43,23 @@
                                         <label>Correo</label>
                                         <div class="mb-3 position-relative">
                                             <input type="email" id="email-login" name="email" class="form-control pe-5"
-                                                placeholder="Ingresar correo"
-                                                value="{{ old('email') }}"
+                                                placeholder="Ingresar correo" value="{{ old('email') }}"
                                                 aria-label="Email" aria-describedby="email-addon">
 
-                                            <div id="tooltip-email-login" class="tooltip-box card p-2 shadow-sm bg-white text-sm text-danger position-absolute">
+                                            <div id="tooltip-email-login"
+                                                class="tooltip-box card p-2 shadow-sm bg-white text-sm text-danger position-absolute">
                                                 Ingresa un correo electrónico válido (ej: nombre@dominio.com)
                                             </div>
                                         </div>
 
                                         <label>Contraseña</label>
                                         <div class="mb-3 position-relative">
-                                            <input type="password" id="password" name="password"
-                                                value=""
-                                                class="form-control pe-5" placeholder="Ingresar Contraseña" aria-label="Password">
+                                            <input type="password" id="password" name="password" value=""
+                                                class="form-control pe-5" placeholder="Ingresar Contraseña"
+                                                aria-label="Password">
 
-                                            <span class="position-absolute end-0 top-50 translate-middle-y me-3" style="cursor: pointer;" onclick="togglePasswordLogin()">
+                                            <span class="position-absolute end-0 top-50 translate-middle-y me-3"
+                                                style="cursor: pointer;" onclick="togglePasswordLogin()">
                                                 <i id="toggle-icon-login" class="fas fa-eye text-secondary"></i>
                                             </span>
                                         </div>
@@ -64,7 +67,8 @@
                                         <div class="d-flex align-items-center">
                                             <!-- Mostrar el enlace de desbloquear cuenta solo si la cuenta está bloqueada -->
                                             @if (session('account_locked'))
-                                            <a href="{{ route('password.request') }}" class="text-xs font-weight-bold ms-1">Desbloquear cuenta</a>
+                                                <a href="{{ route('password.request') }}"
+                                                    class="text-xs font-weight-bold ms-1">Desbloquear cuenta</a>
                                             @endif
 
                                             <!-- Enlace para recuperar la contraseña -->
@@ -72,31 +76,41 @@
                                                 class="text-xs font-weight-bold ms-auto">Olvidaste tu contraseña?</a>
                                         </div>
                                         <div class="text-center">
-                                            <button type="submit" class="btn btn-dark w-100 mt-4 mb-3">Iniciar Sesión</button>
+                                            <button type="submit" class="btn btn-dark w-100 mt-4 mb-3">Iniciar
+                                                Sesión</button>
                                         </div>
                                     </form>
                                 </div>
                                 <div class="card-footer text-center pt-0 px-lg-2 px-1">
-                                    <p class="mb-4 text-xs mx-auto">
+                                    <p class="mb-4 text-xs mx-auto text-white">
                                         ¿No tienes una cuenta?
-                                        <a href="{{ route('sign-up') }}" class="text-dark font-weight-bold">Registrarse</a>
+                                        <a href="{{ route('sign-up') }}"
+                                            class="text-dark font-weight-bold">Registrarse</a>
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+
+                        <!-- Columna derecha (logo centrado y escalable) -->
+                        <div class="col-12 col-md-6 col-xl-6 position-relative d-none d-md-block">
+                            <div class="position-absolute top-0 end-0 h-100 w-100">
+                                <div class="oblique-image bg-logo no-distort"></div>
+                            </div>
+                        </div>
+
+                        <!-- <div class="col-md-6">
                             <div class="position-absolute w-40 top-0 end-0 h-100 d-md-block d-none">
                                 <div class="oblique-image position-absolute fixed-top ms-auto h-100 z-index-0 bg-cover ms-n8"
                                     style="background: url('../assets/img/iniciarsesion.jpg') center center / cover no-repeat;">
                                     <div
                                         class="blur mt-12 p-4 text-center border border-white border-radius-md position-absolute fixed-bottom m-4">
                                         <h2 class="mt-3 text-dark font-weight-bold">Laboratorio de Calidad Textil</h2>
-                                        <!--                                         <h6 class="text-dark text-sm mt-5">Copyright © 2022 Corporate UI Design System
-                                            by Creative Tim.</h6> -->
+                                                                                <h6 class="text-dark text-sm mt-5">Copyright © 2022 Corporate UI Design System
+                                            by Creative Tim.</h6>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>
@@ -115,6 +129,79 @@
 
         .tooltip-box.show {
             display: block;
+        }
+
+        .oblique-image {
+            position: absolute;
+            inset: 0;
+        }
+
+        .bg-logo {
+            background-image: url('../assets/img/iniciarsesion.jpg');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Altura del logo dentro del contenedor (ajusta este %).
+   Cuanto MENOS % pongas aquí, MÁS del ancho cabrá sin recorte. */
+        .bg-logo.no-distort {
+            --logo-height: 88%;
+            /* prueba 90%, 88%, 85%... */
+            background-size: auto var(--logo-height) !important;
+        }
+
+        /*Color del fondo izquierdo*/
+        :root {
+            /* Morado bajito (ajústalo si quieres) */
+            --left-bg: #bb41ac;
+            /* lavanda claro */
+            --right-bg: #FFFFFF;
+            /* fondo lado del logo */
+        }
+
+        /* Pinta sólo la mitad izquierda del fondo de la sección */
+        .split-left-purple {
+            position: relative;
+        }
+
+        .split-left-purple::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            /* 55% izquierda morada, 45% derecha blanca (ajusta el % si quieres) */
+            background: linear-gradient(90deg, var(--left-bg) 0 50%, var(--right-bg) 50% 100%);
+            z-index: 0;
+        }
+
+        /* Asegura que el contenido quede por encima del fondo */
+        .split-left-purple>.container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* En móviles (no se muestra el logo), puedes dejar todo morado o blanco */
+        @media (max-width: 767.98px) {
+            .split-left-purple::before {
+                background: var(--left-bg);
+                /* o usa var(--right-bg) si prefieres blanco en mobile */
+            }
+        }
+
+        /* Controla el ancho del formulario sin tocar layout */
+        .auth-box {
+            max-width: 410px;
+            /* ajusta 460–560px a gusto */
+            width: 100%;
+        }
+
+        /* Opcional: centrado vertical suave en pantallas medianas+ sin mover nada más */
+        @media (min-width: 768px) {
+            .auth-box {
+                margin-top: 0;
+            }
+
+            /* si lo quieres más centrado vertical: descomenta la siguiente línea */
+            /* .auth-box{ margin-top: auto; margin-bottom: auto; } */
         }
     </style>
 
@@ -144,6 +231,5 @@
         emailInputLogin?.addEventListener('blur', () => tooltipLogin.classList.remove('show'));
         emailInputLogin?.addEventListener('input', validateEmailLogin);
     </script>
-
 
 </x-guest-layout>
