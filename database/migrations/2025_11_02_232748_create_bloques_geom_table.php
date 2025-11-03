@@ -9,20 +9,26 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Activar la extensión PostGIS si no existe
+        // Asegurar la extensión PostGIS
         DB::statement('CREATE EXTENSION IF NOT EXISTS postgis');
 
+        // Crear la tabla sin la columna geom (la añadimos con SQL para evitar problemas de sintaxis)
         Schema::create('bloques_geom', function (Blueprint $table) {
-            $table->id(); // id serial (PK)
-            $table->string('nombre', 100)->nullable(); // nombre del bloque (Bloque A, B, etc.)
-            // Columna geométrica tipo MULTIPOLYGON con SRID 4326
-            $table->geometry('geom', 4326);
+            $table->id();
+            $table->string('nombre', 100)->nullable();
             $table->timestamps();
         });
+
+        // Añadir columna geom correctamente (MULTIPOLYGON, SRID 4326) y crear índice GIST
+        // Ajusta MULTIPOLYGON a POLYGON si prefieres solo POLYGON
+        DB::statement("ALTER TABLE bloques_geom ADD COLUMN geom geometry(MULTIPOLYGON, 4326)");
+        DB::statement("CREATE INDEX IF NOT EXISTS bloques_geom_gix ON bloques_geom USING GIST (geom)");
     }
 
     public function down(): void
     {
+        // Eliminar índice si existe y luego la tabla
+        DB::statement('DROP INDEX IF EXISTS bloques_geom_gix');
         Schema::dropIfExists('bloques_geom');
     }
 };
