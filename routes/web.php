@@ -22,6 +22,7 @@ use App\Http\Controllers\NichoController;
 use App\Http\Controllers\SocioNichoController;
 use App\Http\Controllers\BeneficioController;
 use App\Http\Controllers\ServicioController;
+use App\Http\Controllers\BloqueGeomController;
 
 
 /*
@@ -36,22 +37,30 @@ use App\Http\Controllers\ServicioController;
 */
 
 Route::get('/', function () {
-    return redirect('/dashboard'); })->middleware('auth');
+    return redirect('/dashboard');
+})->middleware('auth');
 Route::get('/dashboard', function () {
-    return view('dashboard'); })->name('dashboard')->middleware('auth');
+    return view('dashboard');
+})->name('dashboard')->middleware('auth');
 Route::get('/tables', function () {
-    return view('tables'); })->name('tables')->middleware('auth');
+    return view('tables');
+})->name('tables')->middleware('auth');
 Route::get('/wallet', function () {
-    return view('wallet'); })->name('wallet')->middleware('auth');
+    return view('wallet');
+})->name('wallet')->middleware('auth');
 Route::get('/RTL', function () {
-    return view('RTL'); })->name('RTL')->middleware('auth');
+    return view('RTL');
+})->name('RTL')->middleware('auth');
 Route::get('/profile', function () {
-    return view('account-pages.profile'); })->name('profile')->middleware('auth');
+    return view('account-pages.profile');
+})->name('profile')->middleware('auth');
 
 Route::get('/signin', function () {
-    return view('account-pages.signin'); })->name('signin');
+    return view('account-pages.signin');
+})->name('signin');
 Route::get('/signup', function () {
-    return view('account-pages.signup'); })->name('signup')->middleware('guest');
+    return view('account-pages.signup');
+})->name('signup')->middleware('guest');
 Route::get('/sign-up', [RegisterController::class, 'create'])->middleware('guest')->name('sign-up');
 Route::post('/sign-up', [RegisterController::class, 'store'])->middleware('guest');
 Route::get('/sign-in', [LoginController::class, 'create'])->middleware('guest')->name('sign-in');
@@ -146,7 +155,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('parroquias/{parroquia}/comunidades', [ComunidadController::class, 'byParroquia'])
         ->name('parroquias.comunidades');
 
-//SOCIOS
+    //SOCIOS
     Route::get('/socios', [SocioController::class, 'index'])->name('socios.index');
     Route::get('/socios/create', [SocioController::class, 'create'])->name('socios.create');
     Route::post('/socios', [SocioController::class, 'store'])->name('socios.store');
@@ -157,7 +166,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy');
 
 
-//FALLECIDOS
+    //FALLECIDOS
     Route::get('/fallecidos', [FallecidoController::class, 'index'])->name('fallecidos.index');
     Route::get('/fallecidos/create', [FallecidoController::class, 'create'])->name('fallecidos.create');
     Route::post('/fallecidos', [FallecidoController::class, 'store'])->name('fallecidos.store');
@@ -167,7 +176,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::patch('/fallecidos/{fallecido}', [FallecidoController::class, 'update']); // opcional
     Route::delete('/fallecidos/{fallecido}', [FallecidoController::class, 'destroy'])->name('fallecidos.destroy');
 
-//BLOQUES
+    //BLOQUES
     Route::get('/bloques', [BloqueController::class, 'index'])->name('bloques.index');
     Route::get('/bloques/create', [BloqueController::class, 'create'])->name('bloques.create');
     Route::post('/bloques', [BloqueController::class, 'store'])->name('bloques.store');
@@ -177,7 +186,11 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::patch('/bloques/{bloque}', [BloqueController::class, 'update']); // opcional
     Route::delete('/bloques/{bloque}', [BloqueController::class, 'destroy'])->name('bloques.destroy');
 
-//NICHOS
+
+    //BLOQUE GEOM
+    Route::get('/bloques_geom/{id}/geojson', [BloqueGeomController::class, 'geojson'])->name('bloques_geom.geojson')->whereNumber('id');
+
+    //NICHOS
     Route::get('/nichos', [NichoController::class, 'index'])->name('nichos.index');
     Route::get('/nichos/create', [NichoController::class, 'create'])->name('nichos.create');
     Route::post('/nichos', [NichoController::class, 'store'])->name('nichos.store');
@@ -186,7 +199,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/nichos/{nicho}', [NichoController::class, 'update'])->name('nichos.update');
     Route::delete('/nichos/{nicho}', [NichoController::class, 'destroy'])->name('nichos.destroy');
 
-//SOCIO-NICHO
+    //SOCIO-NICHO
     Route::get('/socio-nicho', [SocioNichoController::class, 'index'])->name('socio_nicho.index');
     Route::get('/socio-nicho/create', [SocioNichoController::class, 'create'])->name('socio_nicho.create');
     Route::post('/socio-nicho', [SocioNichoController::class, 'store'])->name('socio_nicho.store');
@@ -194,7 +207,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/socio-nicho/{socioNicho}/edit', [SocioNichoController::class, 'edit'])->name('socio_nicho.edit');
     Route::put('/socio-nicho/{socioNicho}', [SocioNichoController::class, 'update'])->name('socio_nicho.update');
     Route::delete('/socio-nicho/{socioNicho}', [SocioNichoController::class, 'destroy'])->name('socio_nicho.destroy');
-//BENEFICIOS
+    //BENEFICIOS
 
     Route::get('/beneficios', [BeneficioController::class, 'index'])->name('beneficios.index');
     Route::get('/beneficios/create', [BeneficioController::class, 'create'])->name('beneficios.create');
@@ -204,7 +217,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/beneficios/{beneficio}', [BeneficioController::class, 'update'])->name('beneficios.update');
     Route::delete('/beneficios/{beneficio}', [BeneficioController::class, 'destroy'])->name('beneficios.destroy');
 
-//SERVICIOS
+    //SERVICIOS
     Route::get('/servicios', [ServicioController::class, 'index'])->name('servicios.index');
     Route::get('/servicios/create', [ServicioController::class, 'create'])->name('servicios.create');
     Route::post('/servicios', [ServicioController::class, 'store'])->name('servicios.store');

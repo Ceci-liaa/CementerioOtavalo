@@ -14,7 +14,7 @@ class Fallecido extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'fecha_nacimiento' => 'date',
+        'fecha_nac' => 'date',
         'fecha_fallecimiento' => 'date',
     ];
 

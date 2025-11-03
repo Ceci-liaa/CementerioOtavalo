@@ -8,6 +8,9 @@
         <a href="{{ route('fallecidos.index') }}" class="btn btn-secondary">Volver</a>
       </div>
 
+      @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
+      @if(session('error'))   <div class="alert alert-danger">{{ session('error') }}</div> @endif
+
       @if ($errors->any())
         <div class="alert alert-danger">
           <b>Revisa los campos:</b>
@@ -41,7 +44,7 @@
                 <select name="genero_id" class="form-select">
                   <option value="">—</option>
                   @foreach($generos as $g)
-                    <option value="{{ $g->id }}" @selected(old('genero_id', $fallecido->genero_id)==$g->id)>{{ $g->nombre }}</option>
+                    <option value="{{ $g->id }}" @selected(old('genero_id', $fallecido->genero_id) == $g->id)>{{ $g->nombre }}</option>
                   @endforeach
                 </select>
               </div>
@@ -50,7 +53,7 @@
                 <select name="estado_civil_id" class="form-select">
                   <option value="">—</option>
                   @foreach($estados as $e)
-                    <option value="{{ $e->id }}" @selected(old('estado_civil_id', $fallecido->estado_civil_id)==$e->id)>{{ $e->nombre }}</option>
+                    <option value="{{ $e->id }}" @selected(old('estado_civil_id', $fallecido->estado_civil_id) == $e->id)>{{ $e->nombre }}</option>
                   @endforeach
                 </select>
               </div>
@@ -60,14 +63,14 @@
                 <select name="comunidad_id" class="form-select">
                   <option value="">—</option>
                   @foreach($comunidades as $c)
-                    <option value="{{ $c->id }}" @selected(old('comunidad_id', $fallecido->comunidad_id)==$c->id)>{{ $c->nombre }}</option>
+                    <option value="{{ $c->id }}" @selected(old('comunidad_id', $fallecido->comunidad_id) == $c->id)>{{ $c->nombre }}</option>
                   @endforeach
                 </select>
               </div>
 
               <div class="col-md-3">
                 <label class="form-label">Fecha de nacimiento</label>
-                <input type="date" name="fecha_nacimiento" value="{{ old('fecha_nacimiento', optional($fallecido->fecha_nacimiento)->format('Y-m-d')) }}" class="form-control">
+                <input type="date" name="fecha_nac" value="{{ old('fecha_nac', optional($fallecido->fecha_nac)->format('Y-m-d')) }}" class="form-control">
               </div>
               <div class="col-md-3">
                 <label class="form-label">Fecha de fallecimiento</label>

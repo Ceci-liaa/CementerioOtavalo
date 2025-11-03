@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Comunidad;
 use App\Models\Genero;
 use App\Models\EstadoCivil;
+use Illuminate\Support\Facades\Log;
 
 class FallecidoController extends Controller
 {
@@ -42,33 +43,29 @@ class FallecidoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'comunidad_id'     => 'nullable|exists:comunidades,id',
-            'genero_id'        => 'nullable|exists:generos,id',
-            'estado_civil_id'  => 'nullable|exists:estados_civiles,id',
-            'cedula'           => 'required|string|max:20|unique:fallecidos,cedula',
-            'nombres'          => 'required|string|max:255',
-            'apellidos'        => 'required|string|max:255',
-            'fecha_nacimiento' => 'nullable|date',
+            'comunidad_id'        => 'nullable|exists:comunidades,id',
+            'genero_id'           => 'nullable|exists:generos,id',
+            'estado_civil_id'     => 'nullable|exists:estados_civiles,id',
+            'cedula'              => 'required|string|max:20|unique:fallecidos,cedula',
+            'nombres'             => 'required|string|max:255',
+            'apellidos'           => 'required|string|max:255',
+            'fecha_nac'           => 'nullable|date',
             'fecha_fallecimiento' => 'nullable|date',
-            'observaciones'    => 'nullable|string',
+            'observaciones'       => 'nullable|string',
         ]);
 
-        try {
-            Fallecido::create([
-                'comunidad_id'     => $request->comunidad_id,
-                'genero_id'        => $request->genero_id,
-                'estado_civil_id'  => $request->estado_civil_id,
-                'cedula'           => $request->cedula,
-                'nombres'          => $request->nombres,
-                'apellidos'        => $request->apellidos,
-                'fecha_nacimiento' => $request->fecha_nacimiento,
-                'fecha_fallecimiento' => $request->fecha_fallecimiento,
-                'observaciones'    => $request->observaciones,
-                'created_by'       => auth()->id(),
-            ]);
+        $data = $request->only([
+            'comunidad_id','genero_id','estado_civil_id','cedula','nombres','apellidos',
+            'fecha_nac','fecha_fallecimiento','observaciones'
+        ]);
 
+        $data['created_by'] = auth()->id();
+
+        try {
+            Fallecido::create($data);
             return redirect()->route('fallecidos.index')->with('success','Fallecido registrado correctamente.');
         } catch (\Exception $e) {
+            Log::error('Fallecido store error: '.$e->getMessage(), ['trace' => $e->getTraceAsString(), 'data' => $data]);
             return back()->withInput()->with('error','Error al registrar: '.$e->getMessage());
         }
     }
@@ -85,21 +82,27 @@ class FallecidoController extends Controller
     public function update(Request $request, Fallecido $fallecido)
     {
         $request->validate([
-            'comunidad_id'     => 'nullable|exists:comunidades,id',
-            'genero_id'        => 'nullable|exists:generos,id',
-            'estado_civil_id'  => 'nullable|exists:estados_civiles,id',
-            'cedula'           => 'required|string|max:20|unique:fallecidos,cedula,' . $fallecido->id,
-            'nombres'          => 'required|string|max:255',
-            'apellidos'        => 'required|string|max:255',
-            'fecha_nacimiento' => 'nullable|date',
+            'comunidad_id'        => 'nullable|exists:comunidades,id',
+            'genero_id'           => 'nullable|exists:generos,id',
+            'estado_civil_id'     => 'nullable|exists:estados_civiles,id',
+            'cedula'              => 'required|string|max:20|unique:fallecidos,cedula,' . $fallecido->id,
+            'nombres'             => 'required|string|max:255',
+            'apellidos'           => 'required|string|max:255',
+            'fecha_nac'           => 'nullable|date',
             'fecha_fallecimiento' => 'nullable|date',
-            'observaciones'    => 'nullable|string',
+            'observaciones'       => 'nullable|string',
+        ]);
+
+        $data = $request->only([
+            'comunidad_id','genero_id','estado_civil_id','cedula','nombres','apellidos',
+            'fecha_nac','fecha_fallecimiento','observaciones'
         ]);
 
         try {
-            $fallecido->update($request->all());
+            $fallecido->update($data);
             return redirect()->route('fallecidos.index')->with('success','Fallecido actualizado.');
         } catch (\Exception $e) {
+            Log::error('Fallecido update error: '.$e->getMessage(), ['trace' => $e->getTraceAsString(), 'data' => $data, 'id' => $fallecido->id]);
             return back()->withInput()->with('error','Error al actualizar: '.$e->getMessage());
         }
     }
@@ -116,6 +119,7 @@ class FallecidoController extends Controller
             $fallecido->delete();
             return redirect()->route('fallecidos.index')->with('success','Fallecido eliminado.');
         } catch (\Exception $e) {
+            Log::error('Fallecido delete error: '.$e->getMessage(), ['trace' => $e->getTraceAsString(), 'id' => $fallecido->id]);
             return redirect()->route('fallecidos.index')->with('error','Error al eliminar: '.$e->getMessage());
         }
     }

@@ -39,7 +39,7 @@
             {{-- Selección de polígono (incluye el actualmente asignado) --}}
             <div class="col-md-8">
               <label class="form-label">Polígono (QGIS) <small class="text-muted">(opcional)</small></label>
-              <select name="bloque_geom_id" class="form-control">
+              <select id="bloque_geom_id" name="bloque_geom_id" class="form-control">
                 <option value="">-- Seleccione (o conservar actual) --</option>
                 @isset($bloquesGeom)
                   @foreach($bloquesGeom as $bg)
@@ -56,11 +56,17 @@
               <textarea name="descripcion" rows="4" class="form-control">{{ old('descripcion', $bloque->descripcion) }}</textarea>
             </div>
 
+            {{-- Hidden geom y preview --}}
+            <input type="hidden" id="geom" name="geom" value="{{ old('geom', $bloque->geom ? json_encode($bloque->geom) : '') }}">
+
             <div class="col-12">
               <label class="form-label d-flex justify-content-between">
-                <span>Geom (JSON) <small class="text-muted">(opcional)</small></span>
+                <span>Previsualización del polígono <small class="text-muted">(si hay)</small></span>
               </label>
-              <textarea name="geom" rows="3" class="form-control">{{ old('geom', $bloque->geom ? json_encode($bloque->geom) : '') }}</textarea>
+              <div id="mini-map" style="height:300px;border:1px solid #e1e1e1;"></div>
+              <pre id="geo-preview" class="bg-light p-2 mt-2" style="max-height:200px; overflow:auto; white-space:pre-wrap;">
+                @if(old('geom')){{ old('geom') }}@elseif(isset($bloque) && $bloque->geom){{ json_encode($bloque->geom) }}@endif
+              </pre>
               <div class="form-text">Si pega GeoJSON se sobreescribirá la geometría; si selecciona Polígono (QGIS) la copiará desde `bloques_geom`.</div>
             </div>
 
@@ -75,4 +81,66 @@
     </div>
     <x-app.footer />
   </main>
+
+  {{-- Leaflet --}}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const select = document.getElementById('bloque_geom_id');
+    const preview = document.getElementById('geo-preview');
+    const geomHidden = document.getElementById('geom');
+
+    const map = L.map('mini-map', { center: [0,0], zoom: 2, attributionControl: false });
+    // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let geoLayer = null;
+
+    async function loadGeo(id) {
+      if (!id) {
+        if (geoLayer) { geoLayer.remove(); geoLayer = null; }
+        preview.textContent = '';
+        if (geomHidden) geomHidden.value = '';
+        return;
+      }
+
+      preview.textContent = 'Cargando geometría...';
+      try {
+        let template = "{{ route('bloques_geom.geojson', ['id' => '__ID__']) }}";
+        let url = template.replace('__ID__', encodeURIComponent(id));
+
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) {
+          preview.textContent = 'GeoJSON no disponible';
+          if (geomHidden) geomHidden.value = '';
+          return;
+        }
+        const geo = await res.json();
+        const pretty = JSON.stringify(geo, null, 2);
+        preview.textContent = pretty;
+        if (geomHidden) geomHidden.value = pretty;
+
+        if (geoLayer) geoLayer.remove();
+        geoLayer = L.geoJSON(geo).addTo(map);
+        map.fitBounds(geoLayer.getBounds(), { padding: [10,10] });
+      } catch (err) {
+        console.error(err);
+        preview.textContent = 'Error al cargar geometría';
+        if (geomHidden) geomHidden.value = '';
+      }
+    }
+
+    if (select) {
+      select.addEventListener('change', () => loadGeo(select.value));
+      // si hay valor actual, cargarlo:
+      const current = select.value || "{{ old('bloque_geom_id', $bloque->bloque_geom_id ?? '') }}";
+      if (current) loadGeo(current);
+    } else {
+      // si no hay select (edge case), pero existe la geom en el bloque, mostrarla:
+      const existing = "{{ $bloque->bloque_geom_id ?? '' }}";
+      if (existing) loadGeo(existing);
+    }
+  });
+  </script>
 </x-app-layout>

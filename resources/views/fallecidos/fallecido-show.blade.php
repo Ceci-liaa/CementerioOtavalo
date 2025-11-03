@@ -37,7 +37,7 @@
             </div>
             <div class="col-md-4">
               <label class="text-muted d-block">Fecha de nacimiento</label>
-              <div class="fw-semibold">{{ optional($fallecido->fecha_nacimiento)->format('d/m/Y') ?? '—' }}</div>
+              <div class="fw-semibold">{{ optional($fallecido->fecha_nac)->format('d/m/Y') ?? '—' }}</div>
             </div>
 
             <div class="col-md-4">
