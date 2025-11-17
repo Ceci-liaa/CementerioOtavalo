@@ -33,9 +33,6 @@ return new class extends Migration {
             $t->softDeletesTz();
         });
 
-        // Agregar la columna geom con PostGIS y crear índice GIST con nombre único
-        DB::statement("ALTER TABLE bloques ADD COLUMN IF NOT EXISTS geom geometry(MULTIPOLYGON, 4326)");
-        DB::statement("CREATE INDEX IF NOT EXISTS bloques_gix ON bloques USING GIST (geom)");
     }
 
     /**
@@ -43,28 +40,23 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        // Si la tabla existe, eliminar la FK primero (si existe) para evitar errores al dropear la tabla
+
         if (Schema::hasTable('bloques')) {
+
             Schema::table('bloques', function (Blueprint $table) {
-                // Intentamos dropear la FK; si no existe lanzará excepción en algunos entornos,
-                // pero en la mayoría de setups la FK sí existe y se eliminará correctamente.
-                // Si por seguridad quieres evitar excepciones, puedes envolver esto en try/catch.
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                // Simplemente intentar dropear la FK por columna (funciona en la mayoría de casos)
-                // Si la FK no existe el método puede lanzar excepción; si te da problemas,
-                // podemos reemplazar por una instrucción SQL DROP CONSTRAINT IF EXISTS con el nombre exacto.
+
                 try {
+
                     $table->dropForeign(['bloque_geom_id']);
+
                 } catch (\Throwable $e) {
-                    // Silenciar: si no existe la FK, continuamos con la limpieza
                 }
+
             });
 
-            // Eliminar índice espacial si existe
-            DB::statement('DROP INDEX IF EXISTS bloques_gix');
         }
 
-        // Finalmente eliminar la tabla
         Schema::dropIfExists('bloques');
+
     }
 };

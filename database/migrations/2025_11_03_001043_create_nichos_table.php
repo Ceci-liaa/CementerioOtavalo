@@ -25,9 +25,6 @@ return new class extends Migration {
             $t->index(['estado', 'disponible']);
         });
 
-        // Punto/centroide del nicho (PostGIS)
-        DB::statement("ALTER TABLE nichos ADD COLUMN geom geometry(POINT, 4326)");
-        DB::statement("CREATE INDEX nichos_geom_gix ON nichos USING GIST (geom)");
     }
     public function down(): void
     {

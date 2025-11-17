@@ -18,3 +18,4 @@ class BloqueGeomController extends Controller
         return response()->json(json_decode($row->geojson, true));
     }
 }
+        
