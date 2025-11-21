@@ -12,10 +12,13 @@ return new class extends Migration {
     {
         Schema::create('parroquias', function (Blueprint $t) {
             $t->id();
+            // Agregamos el código único
+            $t->string('codigo', 20)->unique();
             $t->foreignId('canton_id')->constrained('cantones')->cascadeOnUpdate()->restrictOnDelete();
             $t->string('nombre', 255);
             $t->timestampsTz();
-            $t->unique(['canton_id', 'nombre']); // no duplicar por cantón
+
+            $t->unique(['canton_id', 'nombre']);
             $t->index('canton_id');
         });
     }
