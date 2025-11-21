@@ -93,6 +93,7 @@
                 setTimeout(()=>{ el.style.transition="opacity .5s"; el.style.opacity=0; setTimeout(()=>el.remove(),500); }, 5000);
             });
         });
+        
         document.addEventListener('click', function (e) {
             const btn = e.target.closest('.js-delete'); if (!btn) return;
             const form = btn.closest('form'); const item = btn.getAttribute('data-item') || 'este registro';

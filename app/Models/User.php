@@ -14,9 +14,9 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 
 
-class User extends Authenticatable implements AuditableContract
+class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, AuditableTrait;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $guarded = [];
 
@@ -25,4 +25,15 @@ class User extends Authenticatable implements AuditableContract
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    // Mutador para generar codigo_usuario
+    public static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            // Genera el código de usuario basado en el ID, como 'US0001', 'US0002', etc.
+            $user->codigo_usuario = 'US' . str_pad(User::count() + 1, 4, '0', STR_PAD_LEFT);
+        });
+    }
 }

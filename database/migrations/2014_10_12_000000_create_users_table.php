@@ -25,8 +25,11 @@ return new class extends Migration {
             $table->integer('failed_attempts')->default(0); // Intentos fallidos
             $table->timestamp('locked_at')->nullable(); // Fecha de bloqueo
 
-            // 🔹 Clave foránea para rol_id, enlazada a roles.id
+            // 🔹 Clave foránea para role_id, enlazada a roles.id
             $table->foreign('role_id')->references('id')->on('roles')->onDelete('set null');
+            
+            // 🔹 Nuevo campo para código único
+            $table->string('codigo_usuario')->nullable()->unique(); // Código único
         });
     }
 
