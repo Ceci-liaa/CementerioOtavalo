@@ -5,50 +5,52 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Canton;
 
-
 class CantonController extends Controller
 {
-public function index(Request $request)
-{
-    $q = trim($request->get('q', ''));
-
-    $query = Canton::orderBy('nombre');
-
-    // Postgres: ILIKE | MySQL: LIKE
-    if ($q !== '') {
-        $query->where('nombre', 'ILIKE', "%{$q}%"); // cambia a 'LIKE' si usas MySQL
-    }
-
-    // 👇 retorna paginator (ya puedes usar ->links())
-    $cantones = $query->paginate(10)->withQueryString();
-
-    return view('cantones.canton-index', compact('cantones'));
-}
-
-    public function create()
+    public function index(Request $request)
     {
-        return view('cantones.canton-create');
+        $q = trim($request->get('q', ''));
+
+        // 1. Ordenar por el código generado (CA001, CA002...)
+        $query = Canton::orderBy('codigo', 'asc');
+
+        if ($q !== '') {
+            // 2. Búsqueda avanzada: busca por nombre O por código
+            $query->where(function($sub) use ($q) {
+                // Detectar si es Postgres o MySQL para el operador (ILIKE vs LIKE)
+                $operator = \DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+                
+                $sub->where('nombre', $operator, "%{$q}%")
+                    ->orWhere('codigo', $operator, "%{$q}%");
+            });
+        }
+
+        $cantones = $query->paginate(10)->withQueryString();
+
+        return view('cantones.canton-index', compact('cantones'));
     }
+
+    public function create() { return redirect()->route('cantones.index'); }
+    public function edit(Canton $canton) { return redirect()->route('cantones.index'); }
 
     public function store(Request $request)
     {
         $request->validate([
             'nombre' => 'required|string|max:255|unique:cantones,nombre',
+        ], [
+            'nombre.unique' => 'El nombre del cantón ya existe.',
+            'nombre.required' => 'El nombre es obligatorio.'
         ]);
 
         try {
             Canton::create([
                 'nombre' => $request->nombre,
+                // El código se genera automáticamente en el Modelo (boot)
             ]);
             return redirect()->route('cantones.index')->with('success', 'Cantón creado correctamente.');
         } catch (\Exception $e) {
-            return redirect()->back()->withInput()->with('error', 'Error al crear: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al crear: '.$e->getMessage());
         }
-    }
-
-    public function edit(Canton $canton)
-    {
-        return view('cantones.canton-edit', compact('canton'));
     }
 
     public function update(Request $request, Canton $canton)
@@ -63,14 +65,8 @@ public function index(Request $request)
             ]);
             return redirect()->route('cantones.index')->with('success', 'Cantón actualizado correctamente.');
         } catch (\Exception $e) {
-            return redirect()->back()->withInput()->with('error', 'Error al actualizar: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al actualizar: '.$e->getMessage());
         }
-    }
-
-    public function show(Canton $canton)
-    {
-        $canton->load('parroquias');
-        return view('cantones.canton-show', compact('canton'));
     }
 
     public function destroy(Canton $canton)
@@ -81,5 +77,12 @@ public function index(Request $request)
         } catch (\Exception $e) {
             return redirect()->route('cantones.index')->with('error', 'No se puede eliminar: tiene parroquias asociadas.');
         }
+    }
+    
+    // Show se mantiene igual por si quieres ver detalles
+    public function show(Canton $canton)
+    {
+        $canton->load('parroquias');
+        return view('cantones.canton-show', compact('canton')); // Asegúrate que esta vista exista si la usas
     }
 }

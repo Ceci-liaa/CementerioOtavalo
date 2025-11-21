@@ -1,12 +1,10 @@
 <x-app-layout>
-<style>
+    <style>
         /* 1. CORRECCIÓN DE COLOR EXACTO (VERDE PASTEL) + LETRA FINA */
         .alert-success {
             background-color: #e4f4db !important; /* El verde suave de tu imagen */
             color: #708736 !important;           /* Texto verde oscuro */
             border-color: #e4f4db !important;    /* Borde verde suave */
-            
-            /* CAMBIOS AQUÍ: */
             font-weight: 400 !important;         /* 400 es letra Normal (Sin negrilla) */
             font-size: 14px !important;          /* Letra un poco más pequeña */
         }
@@ -28,7 +26,13 @@
         <div class="container py-4">
             
             <div class="mb-4">
-                <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Administración de Usuarios</h3>
+                <div class="d-flex align-items-center gap-3">
+                    <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Administración de Usuarios</h3>
+                    {{-- Total de registros (Opcional, igual que en cantones) --}}
+                    <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        Total: {{ $users->total() }}
+                    </span>
+                </div>
                 <p class="mb-0 text-secondary text-sm">Aquí puedes gestionar los reportes de usuarios.</p>
             </div>
 
@@ -80,6 +84,8 @@
                                 <thead class="table-dark">
                                     <tr>
                                         <th style="width: 50px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" style="cursor: pointer;"></th>
+                                        {{-- COLUMNA # AGREGADA --}}
+                                        <th style="width: 50px;">#</th>
                                         <th>Código</th>
                                         <th>Nombre</th>
                                         <th>Email</th>
@@ -94,6 +100,12 @@
                                     @forelse ($users as $user)
                                         <tr>
                                             <td><input type="checkbox" name="users[]" value="{{ $user->id }}" style="cursor: pointer;"></td>
+                                            
+                                            {{-- CONTADOR DEL LOOP --}}
+                                            <td class="fw-bold text-secondary">
+                                                {{ $users->firstItem() + $loop->index }}
+                                            </td>
+
                                             <td class="fw-bold">{{ $user->codigo_usuario }}</td>
                                             <td class="text-start ps-3">{{ $user->name }}</td>
                                             <td>{{ $user->email }}</td>
@@ -131,11 +143,18 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron usuarios.</td></tr>
+                                        <tr><td colspan="10" class="text-center py-4 text-muted">No se encontraron usuarios.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
+                        
+                        {{-- PAGINACIÓN AGREGADA (Importante para que funcione el firstItem) --}}
+                        @if(method_exists($users, 'links'))
+                            <div class="mt-3 d-flex justify-content-end">
+                                {{ $users->links() }}
+                            </div>
+                        @endif
                     </div>
                 </div>
             </form>
@@ -225,6 +244,7 @@
                     if (e.key === 'Enter') {
                         e.preventDefault(); 
                         const searchTerm = this.value;
+                        // Asegúrate de que esta ruta exista
                         window.location.href = "{{ route('users-management') }}?search=" + encodeURIComponent(searchTerm);
                     }
                 });

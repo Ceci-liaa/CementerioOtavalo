@@ -52,7 +52,13 @@
             {{-- 2. ENCABEZADO --}}
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
                 <div class="mb-3 mb-md-0">
-                    <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Roles</h3>
+                    <div class="d-flex align-items-center gap-3">
+                        <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Roles</h3>
+                        {{-- CONTADOR TOTAL --}}
+                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                            Total: {{ $roles->total() }}
+                        </span>
+                    </div>
                     <p class="mb-0 text-secondary text-sm">Aquí puedes gestionar los roles y permisos del sistema.</p>
                 </div>
                 
@@ -85,6 +91,8 @@
                         <table class="table table-hover table-bordered align-middle text-center mb-0">
                             <thead class="table-dark">
                                 <tr>
+                                    {{-- COLUMNA # AGREGADA --}}
+                                    <th style="width: 50px;">#</th>
                                     <th style="width: 15%;">Código</th>
                                     <th style="width: 25%;">Nombre del Rol</th>
                                     <th>Permisos Asignados</th>
@@ -94,6 +102,11 @@
                             <tbody>
                                 @forelse ($roles as $role)
                                     <tr>
+                                        {{-- CONTADOR LOOP --}}
+                                        <td class="fw-bold text-secondary">
+                                            {{ $roles->firstItem() + $loop->index }}
+                                        </td>
+
                                         {{-- CÓDIGO R00X --}}
                                         <td>
                                             <span class="badge bg-light text-dark border" style="font-size: 0.85rem;">
@@ -152,7 +165,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted">
+                                        <td colspan="5" class="text-center py-4 text-muted">
                                             <div class="d-flex flex-column align-items-center">
                                                 <i class="fas fa-folder-open fa-2x mb-2 opacity-50"></i>
                                                 <p class="mb-0">No hay roles registrados.</p>

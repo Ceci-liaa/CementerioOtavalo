@@ -9,13 +9,10 @@
             margin: 0cm 0cm;
         }
 
-        /* 2. CUERPO (Aumenté el margen superior para bajar el contenido) */
+        /* 2. CUERPO */
         body {
             font-family: 'Arial', sans-serif;
-            
-            /* === CAMBIO AQUÍ: De 3.5cm a 5cm para que baje el texto === */
             margin-top: 5cm;    
-            
             margin-bottom: 4.5cm; 
             margin-left: 1.5cm;
             margin-right: 1.5cm;
@@ -156,6 +153,9 @@
         <table>
             <thead>
                 <tr>
+                    {{-- 1. COLUMNA NUMERACIÓN --}}
+                    <th style="width: 20px;">#</th>
+                    
                     <th>Código</th>
                     <th>Nombre</th>
                     <th>Email</th>
@@ -168,6 +168,11 @@
             <tbody>
                 @foreach ($users as $user)
                     <tr>
+                        {{-- 2. CONTADOR AUTOMÁTICO --}}
+                        <td style="font-weight: bold; background-color: #f9f9f9;">
+                            {{ $loop->iteration }}
+                        </td>
+
                         <td>{{ $user->codigo_usuario }}</td>
                         <td style="text-align: left;">{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
