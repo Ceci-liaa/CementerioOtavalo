@@ -108,7 +108,7 @@ class SocioController extends Controller
     }
 
     // ── REPORTES ───────────────────────────────────────────────────
-    public function reports(Request $request)
+ public function reports(Request $request)
     {
         $ids = $request->input('ids', []);
         $reportType = $request->input('report_type');
@@ -123,32 +123,45 @@ class SocioController extends Controller
             ->orderBy('nombres')
             ->get();
 
+        // 1. Encabezados Corregidos (Columna unida)
         $headings = [
-            'ID', 'Código', 'Cédula', 'Apellidos', 'Nombres', 
-            'Comunidad', 'Cantón', 'Teléfono', 'Representante', 'Fecha Registro'
+            'ID', 
+            'Código', 
+            'Cédula', 
+            'Apellidos y Nombres', // <--- Unificado
+            'Comunidad', 
+            'Cantón', 
+            'Teléfono', 
+            'Rep.', 
+            'Fecha'
         ];
 
+        // 2. Mapeo de datos (Concatenando nombres)
         $data = $socios->map(function ($s) {
             return [
-                'id'            => $s->id,
-                'codigo'        => $s->codigo,
-                'cedula'        => $s->cedula,
-                'apellidos'     => $s->apellidos,
-                'nombres'       => $s->nombres,
-                'comunidad'     => $s->comunidad?->nombre ?? 'N/A',
-                'canton'        => $s->comunidad?->parroquia?->canton?->nombre ?? 'N/A',
-                'telefono'      => $s->telefono,
-                'representante' => $s->es_representante ? 'SÍ' : 'NO',
-                'fecha'         => $s->created_at ? $s->created_at->format('Y-m-d') : '',
+                'id'                => $s->id,
+                'codigo'            => $s->codigo,
+                'cedula'            => $s->cedula,
+                'nombres_completos' => $s->apellidos . ' ' . $s->nombres, // <--- Concatenado
+                'comunidad'         => $s->comunidad?->nombre ?? 'N/A',
+                'canton'            => $s->comunidad?->parroquia?->canton?->nombre ?? 'N/A',
+                'telefono'          => $s->telefono,
+                'representante'     => $s->es_representante ? 'SÍ' : 'NO',
+                'fecha'             => $s->created_at ? $s->created_at->format('d/m/Y') : '',
             ];
         });
 
         if ($reportType === 'excel') {
             return Excel::download(new SociosExport($data, $headings), 'socios_reporte_' . date('YmdHis') . '.xlsx');
+            
         } elseif ($reportType === 'pdf') {
-            $pdf = Pdf::loadView('socios.reporte-pdf', compact('data', 'headings'));
+            // Asegúrate de que el nombre de la vista coincida con tu archivo (reports-pdf)
+            $pdf = Pdf::loadView('socios.reports-pdf', compact('data', 'headings'));
+            
             $pdf->setPaper('A4', 'landscape');
-            return $pdf->stream('socios_reporte_' . date('YmdHis') . '.pdf');
+            
+            // 3. Descarga directa (download en lugar de stream)
+            return $pdf->download('socios_reporte_' . date('YmdHis') . '.pdf');
         }
 
         return redirect()->back()->with('error', 'Tipo de reporte no válido.');
