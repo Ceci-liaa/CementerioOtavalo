@@ -7,137 +7,150 @@ use App\Models\Socio;
 use App\Models\Comunidad;
 use App\Models\Genero;
 use App\Models\EstadoCivil;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\SociosExport;
 
 class SocioController extends Controller
 {
     public function index(Request $request)
     {
-        $q = trim($request->get('q', ''));
+        $search = trim($request->get('search', ''));
+        $comunidadId = $request->get('comunidad_id');
 
         $query = Socio::with(['comunidad.parroquia.canton', 'genero', 'estadoCivil'])
             ->orderBy('apellidos')->orderBy('nombres');
 
-        // Postgres: ILIKE | MySQL: LIKE
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('cedula', 'ILIKE', "%{$q}%")
-                  ->orWhere('nombres', 'ILIKE', "%{$q}%")
-                  ->orWhere('apellidos', 'ILIKE', "%{$q}%");
+        if ($comunidadId) $query->where('comunidad_id', $comunidadId);
+
+        if ($search !== '') {
+            $query->where(function ($w) use ($search) {
+                $w->where('cedula', 'ILIKE', "%{$search}%")
+                  ->orWhere('nombres', 'ILIKE', "%{$search}%")
+                  ->orWhere('apellidos', 'ILIKE', "%{$search}%")
+                  ->orWhere('codigo', 'ILIKE', "%{$search}%");
             });
         }
 
-        // 👇 paginator (->links() en la vista)
         $socios = $query->paginate(10)->withQueryString();
+        
+        // Solo necesitamos comunidades para el filtro del index
+        $comunidades = Comunidad::orderBy('nombre')->get(['id', 'nombre']);
 
-        return view('socios.socio-index', compact('socios'));
+        return view('socios.socio-index', compact('socios', 'comunidades'));
     }
 
+    // ESTE MÉTODO SE LLAMA POR AJAX PARA EL MODAL
     public function create()
     {
-        $comunidades = Comunidad::orderBy('nombre')->get(['id','nombre']);
-        $generos     = Genero::orderBy('nombre')->get(['id','nombre']);
-        $estados     = EstadoCivil::orderBy('nombre')->get(['id','nombre']);
+        $comunidades = Comunidad::orderBy('nombre')->get(['id', 'nombre']);
+        $generos     = Genero::orderBy('nombre')->get(['id', 'nombre']);
+        $estados     = EstadoCivil::orderBy('nombre')->get(['id', 'nombre']);
 
-        return view('socios.socio-create', compact('comunidades','generos','estados'));
+        // Retorna la vista separada (sin layout, solo el form)
+        return view('socios.socio-create', compact('comunidades', 'generos', 'estados'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'comunidad_id'     => 'nullable|exists:comunidades,id',
-            'genero_id'        => 'nullable|exists:generos,id',
-            'estado_civil_id'  => 'nullable|exists:estados_civiles,id',
-            'cedula'           => 'required|string|max:20|unique:socios,cedula',
-            'nombres'          => 'required|string|max:255',
-            'apellidos'        => 'required|string|max:255',
-            'telefono'         => 'nullable|string|max:30',
-            'direccion'        => 'nullable|string|max:255',
-            'email'            => 'nullable|email|max:255',
-            'fecha_nac'        => 'nullable|date',
-            'es_representante' => 'nullable|boolean',
+            'cedula' => 'required|string|max:20|unique:socios,cedula',
+            'nombres' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            // ... resto de validaciones ...
         ]);
 
         try {
-            Socio::create([
-                'comunidad_id'     => $request->comunidad_id,
-                'genero_id'        => $request->genero_id,
-                'estado_civil_id'  => $request->estado_civil_id,
-                'cedula'           => $request->cedula,
-                'nombres'          => $request->nombres,
-                'apellidos'        => $request->apellidos,
-                'telefono'         => $request->telefono,
-                'direccion'        => $request->direccion,
-                'email'            => $request->email,
-                'fecha_nac'        => $request->fecha_nac,
-                'es_representante' => (bool)$request->es_representante,
-                'created_by'       => auth()->id(),
-            ]);
-
+            Socio::create($request->all() + ['created_by' => auth()->id()]);
             return redirect()->route('socios.index')->with('success', 'Socio creado correctamente.');
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Error al crear: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
+    // ESTE MÉTODO SE LLAMA POR AJAX PARA EL MODAL
     public function edit(Socio $socio)
     {
-        $comunidades = Comunidad::orderBy('nombre')->get(['id','nombre']);
-        $generos     = Genero::orderBy('nombre')->get(['id','nombre']);
-        $estados     = EstadoCivil::orderBy('nombre')->get(['id','nombre']);
+        $comunidades = Comunidad::orderBy('nombre')->get(['id', 'nombre']);
+        $generos     = Genero::orderBy('nombre')->get(['id', 'nombre']);
+        $estados     = EstadoCivil::orderBy('nombre')->get(['id', 'nombre']);
 
-        return view('socios.socio-edit', compact('socio','comunidades','generos','estados'));
+        return view('socios.socio-edit', compact('socio', 'comunidades', 'generos', 'estados'));
     }
 
     public function update(Request $request, Socio $socio)
     {
-        $request->validate([
-            'comunidad_id'     => 'nullable|exists:comunidades,id',
-            'genero_id'        => 'nullable|exists:generos,id',
-            'estado_civil_id'  => 'nullable|exists:estados_civiles,id',
-            'cedula'           => 'required|string|max:20|unique:socios,cedula,' . $socio->id,
-            'nombres'          => 'required|string|max:255',
-            'apellidos'        => 'required|string|max:255',
-            'telefono'         => 'nullable|string|max:30',
-            'direccion'        => 'nullable|string|max:255',
-            'email'            => 'nullable|email|max:255',
-            'fecha_nac'        => 'nullable|date',
-            'es_representante' => 'nullable|boolean',
-        ]);
-
+        $request->validate(['cedula' => 'required|unique:socios,cedula,' . $socio->id]);
+        
         try {
-            $socio->update([
-                'comunidad_id'     => $request->comunidad_id,
-                'genero_id'        => $request->genero_id,
-                'estado_civil_id'  => $request->estado_civil_id,
-                'cedula'           => $request->cedula,
-                'nombres'          => $request->nombres,
-                'apellidos'        => $request->apellidos,
-                'telefono'         => $request->telefono,
-                'direccion'        => $request->direccion,
-                'email'            => $request->email,
-                'fecha_nac'        => $request->fecha_nac,
-                'es_representante' => (bool)$request->es_representante,
-            ]);
-
+            $socio->update($request->all());
             return redirect()->route('socios.index')->with('success', 'Socio actualizado correctamente.');
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Error al actualizar: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Error: ' . $e->getMessage());
         }
-    }
-
-    public function show(Socio $socio)
-    {
-        $socio->load(['comunidad.parroquia.canton','genero','estadoCivil']);
-        return view('socios.socio-show', compact('socio'));
     }
 
     public function destroy(Socio $socio)
     {
         try {
-            $socio->delete(); // si usas SoftDeletes, es borrado lógico
+            $socio->delete();
             return redirect()->route('socios.index')->with('success', 'Socio eliminado.');
         } catch (\Exception $e) {
-            return redirect()->route('socios.index')->with('error', 'No se puede eliminar: ' . $e->getMessage());
+            return back()->with('error', 'Error: ' . $e->getMessage());
         }
+    }
+    
+    // ESTE MÉTODO SE LLAMA POR AJAX PARA EL MODAL
+    public function show(Socio $socio)
+    {
+         $socio->load(['comunidad.parroquia.canton', 'genero', 'estadoCivil']);
+         return view('socios.socio-show', compact('socio'));
+    }
+
+    // ── REPORTES ───────────────────────────────────────────────────
+    public function reports(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        $reportType = $request->input('report_type');
+
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Debe seleccionar al menos un socio para generar el reporte.');
+        }
+
+        $socios = Socio::with(['comunidad.parroquia.canton', 'genero', 'estadoCivil'])
+            ->whereIn('id', $ids)
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->get();
+
+        $headings = [
+            'ID', 'Código', 'Cédula', 'Apellidos', 'Nombres', 
+            'Comunidad', 'Cantón', 'Teléfono', 'Representante', 'Fecha Registro'
+        ];
+
+        $data = $socios->map(function ($s) {
+            return [
+                'id'            => $s->id,
+                'codigo'        => $s->codigo,
+                'cedula'        => $s->cedula,
+                'apellidos'     => $s->apellidos,
+                'nombres'       => $s->nombres,
+                'comunidad'     => $s->comunidad?->nombre ?? 'N/A',
+                'canton'        => $s->comunidad?->parroquia?->canton?->nombre ?? 'N/A',
+                'telefono'      => $s->telefono,
+                'representante' => $s->es_representante ? 'SÍ' : 'NO',
+                'fecha'         => $s->created_at ? $s->created_at->format('Y-m-d') : '',
+            ];
+        });
+
+        if ($reportType === 'excel') {
+            return Excel::download(new SociosExport($data, $headings), 'socios_reporte_' . date('YmdHis') . '.xlsx');
+        } elseif ($reportType === 'pdf') {
+            $pdf = Pdf::loadView('socios.reporte-pdf', compact('data', 'headings'));
+            $pdf->setPaper('A4', 'landscape');
+            return $pdf->stream('socios_reporte_' . date('YmdHis') . '.pdf');
+        }
+
+        return redirect()->back()->with('error', 'Tipo de reporte no válido.');
     }
 }

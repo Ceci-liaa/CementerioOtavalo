@@ -18,6 +18,23 @@ class Socio extends Model
         'es_representante' => 'boolean',
     ];
 
+
+    // ── Generación de Código Automático (SOC0001) ──────────────────
+    protected static function booted()
+    {
+        static::creating(function ($socio) {
+            // 1. Obtenemos el ID más alto actual
+            $ultimoId = Socio::max('id') ?? 0;
+            
+            // 2. Sumamos 1 para el nuevo ID
+            $nuevoId = $ultimoId + 1;
+            
+            // 3. Generamos el código: SOC + el número relleno con ceros a la izquierda (4 cifras)
+            // Ejemplo: Si el ID es 5, genera SOC0005. Si es 23, genera SOC0023.
+            $socio->codigo = 'SOC' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
+        });
+    }
+
     // ── Relaciones ─────────────────────────────────────────────
     public function comunidad()     { return $this->belongsTo(Comunidad::class); }
     public function genero()        { return $this->belongsTo(Genero::class); }

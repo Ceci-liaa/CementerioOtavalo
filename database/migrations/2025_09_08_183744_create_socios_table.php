@@ -12,6 +12,8 @@ return new class extends Migration {
     {
         Schema::create('socios', function (Blueprint $t) {
             $t->id();
+            // Agregamos el campo código
+            $t->string('codigo', 20)->unique()->nullable()->after('id');
             $t->foreignId('comunidad_id')->nullable()->constrained('comunidades')->nullOnDelete();
             $t->foreignId('genero_id')->nullable()->constrained('generos')->nullOnDelete();
             $t->foreignId('estado_civil_id')->nullable()->constrained('estados_civiles')->nullOnDelete();

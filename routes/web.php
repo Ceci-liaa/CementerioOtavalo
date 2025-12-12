@@ -167,7 +167,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/socios/{socio}', [SocioController::class, 'update'])->name('socios.update');
     Route::patch('/socios/{socio}', [SocioController::class, 'update']); // opcional, PATCH y PUT son equivalentes
     Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy');
-
+    Route::post('socios/reports', [SocioController::class, 'reports'])->name('socios.reports');
 
     //FALLECIDOS
     Route::get('/fallecidos', [FallecidoController::class, 'index'])->name('fallecidos.index');
