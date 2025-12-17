@@ -1,27 +1,49 @@
-<x-app-layout>
-  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-    <x-app.navbar />
+<div class="modal-header bg-info text-white">
+    <h5 class="modal-title">Detalle del Servicio</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-    <div class="px-5 py-4 container-fluid">
-      <div class="row"><div class="col-lg-8 mx-auto">
-
-        <div class="alert alert-dark text-sm"><strong style="font-size:24px;">Detalle del Servicio</strong></div>
-
-        <div class="card"><div class="card-body">
-          <p><b>ID:</b> {{ $servicio->id }}</p>
-          <p><b>Nombre:</b> {{ $servicio->nombre }}</p>
-          <p><b>Valor:</b> {{ is_null($servicio->valor) ? '—' : number_format($servicio->valor,2) }}</p>
-          <p><b>Descripción:</b><br>{{ $servicio->descripcion ?? '—' }}</p>
-        </div></div>
-
-        <div class="mt-3 d-flex gap-2">
-          <a href="{{ route('servicios.edit',$servicio) }}" class="btn btn-warning">Editar</a>
-          <a href="{{ route('servicios.index') }}" class="btn btn-secondary">Volver</a>
+<div class="modal-body">
+    <div class="row g-3">
+        {{-- Código y Precio destacados --}}
+        <div class="col-12 bg-light p-2 rounded border mb-2 d-flex justify-content-between align-items-center">
+             <div>
+                 <small class="text-muted d-block">Código</small>
+                 <span class="fw-bold text-primary">{{ $servicio->codigo }}</span>
+             </div>
+             <div class="text-end">
+                 <small class="text-muted d-block">Precio Sugerido</small>
+                 <span class="fw-bold text-success">
+                     {{ $servicio->valor ? '$ ' . number_format($servicio->valor, 2) : 'No definido' }}
+                 </span>
+             </div>
         </div>
 
-      </div></div>
-    </div>
+        <div class="col-12">
+            <label class="text-muted small d-block">Nombre del Servicio</label>
+            <div class="fw-semibold">{{ $servicio->nombre }}</div>
+        </div>
 
-    <x-app.footer />
-  </main>
-</x-app-layout>
+        <div class="col-12">
+            <label class="text-muted small d-block">Descripción</label>
+            <div class="p-2 border rounded bg-light text-sm text-secondary">
+                {{ $servicio->descripcion ?? 'Sin descripción registrada.' }}
+            </div>
+        </div>
+
+        <div class="col-12"><hr class="my-1 text-muted"></div>
+
+        <div class="col-md-6">
+            <label class="text-muted small d-block">ID Interno</label>
+            <div class="small">{{ $servicio->id }}</div>
+        </div>
+        <div class="col-md-6">
+            <label class="text-muted small d-block">Fecha Creación</label>
+            <div class="small">{{ $servicio->created_at?->format('d/m/Y H:i') }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+</div>

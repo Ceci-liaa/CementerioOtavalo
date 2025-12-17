@@ -1,45 +1,54 @@
-<x-app-layout>
-  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-    <x-app.navbar />
+{{-- CABECERA DEL MODAL --}}
+<div class="modal-header bg-dark text-white">
+    <h5 class="modal-title fw-bold text-white">Nuevo Servicio</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-    <div class="px-5 py-4 container-fluid">
-      <div class="row"><div class="col-lg-8 mx-auto">
+{{-- FORMULARIO --}}
+<form method="POST" action="{{ route('servicios.store') }}">
+    @csrf
+    
+    {{-- CUERPO DEL MODAL --}}
+    <div class="modal-body">
+        
+        {{-- Mensaje informativo --}}
+        <div class="alert alert-info py-2 mb-3 text-xs">
+            <i class="fas fa-info-circle me-1"></i> El Código del servicio se genera automáticamente (ej. S001).
+        </div>
 
-        <div class="alert alert-dark text-sm"><strong style="font-size:24px;">Nuevo Servicio</strong></div>
-
+        {{-- Mostrar errores --}}
         @if ($errors->any())
-          <div class="alert alert-danger"><b>Revisa los campos:</b><ul class="mb-0">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
+            <div class="alert alert-danger py-2 text-xs">
+                <ul class="mb-0 ps-3">
+                    @foreach ($errors->all() as $e) <li>{{ $e }}</li> @endforeach
+                </ul>
+            </div>
         @endif
 
-        <div class="card"><div class="card-body">
-          <form action="{{ route('servicios.store') }}" method="POST">
-            @csrf
-
-            <div class="mb-3">
-              <label class="form-label">Nombre *</label>
-              <input type="text" name="nombre" value="{{ old('nombre') }}" class="form-control" required>
+        <div class="row g-3">
+            {{-- Nombre --}}
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Nombre del Servicio <span class="text-danger">*</span></label>
+                <input name="nombre" value="{{ old('nombre') }}" class="form-control" placeholder="Ej. Mantenimiento General" required>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Descripción</label>
-              <textarea name="descripcion" class="form-control">{{ old('descripcion') }}</textarea>
+            {{-- Valor --}}
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Precio Sugerido ($)</label>
+                <input type="number" step="0.01" name="valor" value="{{ old('valor') }}" class="form-control" placeholder="0.00">
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Valor (sugerido)</label>
-              <input type="number" step="0.01" name="valor" value="{{ old('valor') }}" class="form-control">
+            {{-- Descripción --}}
+            <div class="col-12">
+                <label class="form-label fw-bold">Descripción</label>
+                <textarea name="descripcion" class="form-control" rows="3" placeholder="Detalle breve del servicio...">{{ old('descripcion') }}</textarea>
             </div>
-
-            <div class="mt-3 d-flex gap-2">
-              <button class="btn btn-primary">Guardar</button>
-              <a href="{{ route('servicios.index') }}" class="btn btn-secondary">Cancelar</a>
-            </div>
-          </form>
-        </div></div>
-
-      </div></div>
+        </div>
     </div>
 
-    <x-app.footer />
-  </main>
-</x-app-layout>
+    {{-- PIE DEL MODAL --}}
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Guardar</button>
+    </div>
+</form>

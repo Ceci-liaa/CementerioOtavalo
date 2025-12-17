@@ -9,9 +9,11 @@ return new class extends Migration {
     {
         Schema::create('servicios', function (Blueprint $t) {
             $t->id();
+            // Código único, ej: S001. Indexado para búsquedas rápidas.
+            $t->string('codigo', 20)->unique()->after('id'); 
             $t->string('nombre', 255);
             $t->text('descripcion')->nullable();
-            $t->decimal('valor', 10, 2)->nullable(); // precio sugerido
+            $t->decimal('valor', 10, 2)->nullable();
             $t->timestampsTz();
         });
     }

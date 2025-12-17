@@ -1,45 +1,53 @@
-<x-app-layout>
-  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-    <x-app.navbar />
+{{-- CABECERA (Amarilla para distinguir Editar) --}}
+<div class="modal-header bg-warning text-dark">
+    <h5 class="modal-title fw-bold">Editar Servicio</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-    <div class="px-5 py-4 container-fluid">
-      <div class="row"><div class="col-lg-8 mx-auto">
+{{-- FORMULARIO --}}
+<form method="POST" action="{{ route('servicios.update', $servicio) }}">
+    @csrf @method('PUT')
 
-        <div class="alert alert-dark text-sm"><strong style="font-size:24px;">Editar Servicio</strong></div>
-
+    <div class="modal-body">
+        
+        {{-- Errores --}}
         @if ($errors->any())
-          <div class="alert alert-danger"><b>Revisa los campos:</b><ul class="mb-0">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
+            <div class="alert alert-danger py-2 text-xs">
+                <ul class="mb-0 ps-3">
+                    @foreach ($errors->all() as $e) <li>{{ $e }}</li> @endforeach
+                </ul>
+            </div>
         @endif
 
-        <div class="card"><div class="card-body">
-          <form action="{{ route('servicios.update',$servicio) }}" method="POST">
-            @csrf @method('PUT')
-
-            <div class="mb-3">
-              <label class="form-label">Nombre *</label>
-              <input type="text" name="nombre" value="{{ old('nombre',$servicio->nombre) }}" class="form-control" required>
+        <div class="row g-3">
+            {{-- Código (Solo lectura) --}}
+            <div class="col-12">
+                <label class="form-label fw-bold text-muted">Código</label>
+                <input value="{{ $servicio->codigo }}" class="form-control bg-light" readonly>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Descripción</label>
-              <textarea name="descripcion" class="form-control">{{ old('descripcion',$servicio->descripcion) }}</textarea>
+            {{-- Nombre --}}
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Nombre del Servicio <span class="text-danger">*</span></label>
+                <input name="nombre" value="{{ old('nombre', $servicio->nombre) }}" class="form-control" required>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Valor (sugerido)</label>
-              <input type="number" step="0.01" name="valor" value="{{ old('valor',$servicio->valor) }}" class="form-control">
+            {{-- Valor --}}
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Precio Sugerido ($)</label>
+                <input type="number" step="0.01" name="valor" value="{{ old('valor', $servicio->valor) }}" class="form-control">
             </div>
 
-            <div class="mt-3 d-flex gap-2">
-              <button class="btn btn-primary">Actualizar</button>
-              <a href="{{ route('servicios.index') }}" class="btn btn-secondary">Cancelar</a>
+            {{-- Descripción --}}
+            <div class="col-12">
+                <label class="form-label fw-bold">Descripción</label>
+                <textarea name="descripcion" class="form-control" rows="3">{{ old('descripcion', $servicio->descripcion) }}</textarea>
             </div>
-          </form>
-        </div></div>
-
-      </div></div>
+        </div>
     </div>
 
-    <x-app.footer />
-  </main>
-</x-app-layout>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning">Actualizar</button>
+    </div>
+</form>
