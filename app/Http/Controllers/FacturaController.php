@@ -6,23 +6,31 @@ use App\Models\Factura;
 use App\Models\FacturaDetalle;
 use App\Models\Socio;
 use App\Models\Beneficio;
+use App\Models\Servicio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Servicio;
+use Barryvdh\DomPDF\Facade\Pdf; // Librería del PDF
 
 class FacturaController extends Controller
 {
+    /**
+     * Muestra el listado de facturas con filtros.
+     */
     public function index(Request $request)
     {
+        // 1. Limpiamos la búsqueda
         $q = trim($request->get('q', ''));
 
+        // 2. Consulta base ordenando por fecha y luego por ID descendente
         $query = Factura::with('socio')->orderByDesc('fecha')->orderByDesc('id');
 
+        // 3. Aplicamos filtros si existe búsqueda
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('cliente_nombre', 'ILIKE', "%{$q}%")
                     ->orWhere('cliente_apellido', 'ILIKE', "%{$q}%")
                     ->orWhere('cliente_cedula', 'ILIKE', "%{$q}%")
+                    ->orWhere('codigo', 'ILIKE', "%{$q}%") // Búsqueda también por código
                     ->orWhereHas('socio', function ($s) use ($q) {
                         $s->where('nombres', 'ILIKE', "%{$q}%")
                             ->orWhere('apellidos', 'ILIKE', "%{$q}%")
@@ -31,162 +39,178 @@ class FacturaController extends Controller
             });
         }
 
+        // 4. Paginación
         $facturas = $query->paginate(10)->withQueryString();
 
         return view('facturas.factura-index', compact('facturas', 'q'));
     }
 
+    /**
+     * Muestra el formulario de creación (Modal).
+     */
     public function create()
     {
-        $socios = Socio::orderBy('apellidos')
-            ->orderBy('nombres')
+        $socios = Socio::orderBy('apellidos')->orderBy('nombres')
             ->get(['id', 'nombres', 'apellidos', 'cedula', 'telefono', 'email']);
-
+        
         $beneficios = Beneficio::orderBy('nombre')->get();
         $servicios = Servicio::orderBy('nombre')->get();
 
         return view('facturas.factura-create', compact('socios', 'beneficios', 'servicios'));
     }
 
-
+    /**
+     * Guarda la factura inicial como BORRADOR.
+     */
     public function store(Request $request)
     {
+        // 1. Validaciones Completas
         $request->validate([
-            'socio_id' => 'nullable|exists:socios,id',
-            'cliente_nombre' => 'required|string|max:255',
-            'cliente_apellido' => 'nullable|string|max:255',
-            'cliente_cedula' => 'nullable|string|max:20',
-            'cliente_email' => 'nullable|string|max:255',
-            'cliente_telefono' => 'nullable|string|max:30',
-            'fecha' => 'required|date',
-            // arrays de items
+            'socio_id'          => 'nullable|exists:socios,id',
+            'cliente_nombre'    => 'required|string|max:255',
+            'cliente_apellido'  => 'nullable|string|max:255',
+            'cliente_cedula'    => 'nullable|string|max:20',
+            'cliente_email'     => 'nullable|string|max:255',
+            'cliente_telefono'  => 'nullable|string|max:30',
+            'fecha'             => 'required|date',
+            // Validación de Arrays de Ítems
+            'items.cantidad'       => 'required|array|min:1',
             'items.beneficio_id.*' => 'nullable|exists:beneficios,id',
-            'items.servicio_id.*' => 'nullable|exists:servicios,id',
-            'items.cantidad.*' => 'required|integer|min:1',
-            'items.precio.*' => 'required|numeric|min:0',
-
+            'items.servicio_id.*'  => 'nullable|exists:servicios,id',
+            'items.cantidad.*'     => 'required|integer|min:1',
+            'items.precio.*'       => 'required|numeric|min:0',
         ]);
 
-        // Armamos los ítems válidos (cantidad > 0)
-        $items = [];
-        $beneficioIds = $request->input('items.beneficio_id', []);
-        $servicioIds = $request->input('items.servicio_id', []);
-        $cantidades = $request->input('items.cantidad', []);
-        $precios = $request->input('items.precio', []);
+        // 2. Procesamiento de Ítems (Filtrar vacíos y calcular subtotales)
+        $itemsProcesados = [];
+        $rawBeneficios = $request->input('items.beneficio_id', []);
+        $rawServicios  = $request->input('items.servicio_id', []);
+        $rawCantidades = $request->input('items.cantidad', []);
+        $rawPrecios    = $request->input('items.precio', []);
 
-        $filas = max(
-            count($beneficioIds),
-            count($servicioIds),
-            count($cantidades),
-            count($precios),
-        );
+        foreach ($rawCantidades as $i => $cant) {
+            $cantidad = (int) $cant;
+            $precio = (float) ($rawPrecios[$i] ?? 0);
+            $beneficioId = $rawBeneficios[$i] ?? null;
+            $servicioId = $rawServicios[$i] ?? null;
 
-        for ($i = 0; $i < $filas; $i++) {
-            $beneficioId = $beneficioIds[$i] ?? null;
-            $servicioId = $servicioIds[$i] ?? null;
-            $cant = (int) ($cantidades[$i] ?? 0);
-            $precio = (float) ($precios[$i] ?? 0);
-
-            // Ignorar filas vacías o sin cantidad
-            if ($cant <= 0 || (!$beneficioId && !$servicioId)) {
+            // Ignorar si cantidad es 0 o no hay ID seleccionado
+            if ($cantidad <= 0 || (!$beneficioId && !$servicioId)) {
                 continue;
             }
-
-            // Evitar que marquen ambos a la vez
+            
+            // Validación lógica de negocio: No puede ser Beneficio y Servicio a la vez
             if ($beneficioId && $servicioId) {
-                return back()
-                    ->withInput()
-                    ->with('error', 'En cada fila debes seleccionar solo beneficio o solo servicio, no ambos.');
+                return back()->withInput()->with('error', 'Error en fila: Selecciona beneficio O servicio, no ambos.');
             }
 
-            $items[] = [
-                'beneficio_id' => $beneficioId ?: null,
-                'servicio_id' => $servicioId ?: null,
-                'cantidad' => $cant,
-                'precio' => $precio,
-                'subtotal' => $cant * $precio,
+            $itemsProcesados[] = [
+                'beneficio_id' => $beneficioId,
+                'servicio_id'  => $servicioId,
+                'cantidad'     => $cantidad,
+                'precio'       => $precio,
+                'subtotal'     => $cantidad * $precio,
             ];
         }
 
-        if (count($items) === 0) {
-            return back()->withInput()->with('error', 'Debes agregar al menos un ítem con cantidad.');
+        if (count($itemsProcesados) === 0) {
+            return back()->withInput()->with('error', 'Debes agregar al menos un ítem válido.');
         }
 
-
+        // 3. Transacción de Base de Datos
         DB::beginTransaction();
         try {
-            // Si viene socio_id pero faltan datos del cliente, los rellenamos (snapshot)
+            // Lógica de Snapshot: Si seleccionó socio, aseguramos guardar sus datos
             if ($request->filled('socio_id')) {
                 $socio = Socio::find($request->socio_id);
                 if ($socio) {
-                    $nombre = $request->cliente_nombre ?: $socio->nombres;
-                    $apellido = $request->cliente_apellido ?: $socio->apellidos;
-                    $cedula = $request->cliente_cedula ?: $socio->cedula;
-                    $email = $request->cliente_email ?: $socio->email;
-                    $tel = $request->cliente_telefono ?: $socio->telefono;
                     $request->merge([
-                        'cliente_nombre' => $nombre,
-                        'cliente_apellido' => $apellido,
-                        'cliente_cedula' => $cedula,
-                        'cliente_email' => $email,
-                        'cliente_telefono' => $tel,
+                        'cliente_nombre'   => $request->cliente_nombre ?: $socio->nombres,
+                        'cliente_apellido' => $request->cliente_apellido ?: $socio->apellidos,
+                        'cliente_cedula'   => $request->cliente_cedula ?: $socio->cedula,
+                        'cliente_email'    => $request->cliente_email ?: $socio->email,
+                        'cliente_telefono' => $request->cliente_telefono ?: $socio->telefono,
                     ]);
                 }
             }
 
-            $total = array_sum(array_column($items, 'subtotal'));
+            // Cálculos finales
+            $total = array_sum(array_column($itemsProcesados, 'subtotal'));
+            $codigoGenerado = $this->generarCodigoUnico(); 
 
+            // Crear Cabecera
             $factura = Factura::create([
-                'socio_id' => $request->socio_id,
-                'cliente_nombre' => $request->cliente_nombre,
+                'codigo'           => $codigoGenerado,
+                'socio_id'         => $request->socio_id,
+                'cliente_nombre'   => $request->cliente_nombre,
                 'cliente_apellido' => $request->cliente_apellido,
-                'cliente_cedula' => $request->cliente_cedula,
-                'cliente_email' => $request->cliente_email,
+                'cliente_cedula'   => $request->cliente_cedula,
+                'cliente_email'    => $request->cliente_email,
                 'cliente_telefono' => $request->cliente_telefono,
-                'fecha' => $request->fecha,
-                'total' => $total,
-                'estado' => 'PENDIENTE',
+                'fecha'            => $request->fecha,
+                'total'            => $total,
+                'estado'           => 'BORRADOR', // <--- IMPORTANTE: Nace editable
             ]);
 
-            foreach ($items as $it) {
+            // Crear Detalles
+            foreach ($itemsProcesados as $it) {
                 $it['factura_id'] = $factura->id;
                 FacturaDetalle::create($it);
             }
 
             DB::commit();
-            return redirect()->route('facturas.show', $factura)->with('success', 'Factura creada correctamente.');
+
+            // 4. Redirección al Index (No al Show)
+            return redirect()->route('facturas.index')
+                ->with('success', "Factura $codigoGenerado guardada como BORRADOR. Puede editarla o emitirla.");
+                
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'Error al crear la factura: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Error grave al crear: ' . $e->getMessage());
         }
     }
 
-public function show(Factura $factura)
-{
-    $factura->load(['socio','detalles.beneficio','detalles.servicio']);
-    return view('facturas.factura-show', compact('factura'));
-}
+    /**
+     * Muestra el detalle de la factura.
+     */
+    public function show(Factura $factura)
+    {
+        $factura->load(['socio','detalles.beneficio','detalles.servicio']);
+        return view('facturas.factura-show', compact('factura'));
+    }
 
-
-    // Edición simple: estado o datos del cliente (opcional)
+    /**
+     * Formulario de edición (Solo Borradores).
+     */
     public function edit(Factura $factura)
     {
+        if ($factura->estado !== 'BORRADOR') {
+            return back()->with('error', 'No se puede editar una factura que ya fue emitida o anulada.');
+        }
         return view('facturas.factura-edit', compact('factura'));
     }
 
+    /**
+     * Actualiza datos del cliente (Solo Borradores).
+     */
     public function update(Request $request, Factura $factura)
     {
+        // 1. Bloqueo de seguridad
+        if ($factura->estado !== 'BORRADOR') {
+             return back()->with('error', 'Factura bloqueada. No se permiten cambios.');
+        }
+
+        // 2. Validaciones de datos del cliente
         $request->validate([
-            'estado' => 'required|string|max:20',
-            'cliente_nombre' => 'required|string|max:255',
+            'cliente_nombre'   => 'required|string|max:255',
             'cliente_apellido' => 'nullable|string|max:255',
-            'cliente_cedula' => 'nullable|string|max:20',
-            'cliente_email' => 'nullable|string|max:255',
+            'cliente_cedula'   => 'nullable|string|max:20',
+            'cliente_email'    => 'nullable|string|max:255',
             'cliente_telefono' => 'nullable|string|max:30',
         ]);
 
+        // 3. Actualización
         $factura->update($request->only([
-            'estado',
             'cliente_nombre',
             'cliente_apellido',
             'cliente_cedula',
@@ -194,16 +218,112 @@ public function show(Factura $factura)
             'cliente_telefono'
         ]));
 
-        return redirect()->route('facturas.show', $factura)->with('success', 'Factura actualizada.');
+        return redirect()->route('facturas.index')->with('success', 'Datos de la factura actualizados.');
     }
 
+    /**
+     * ELIMINAR BLOQUEADO: Obligamos a usar Anular para mantener secuencia.
+     */
     public function destroy(Factura $factura)
     {
-        try {
-            $factura->delete();
-            return redirect()->route('facturas.index')->with('success', 'Factura eliminada.');
-        } catch (\Throwable $e) {
-            return back()->with('error', 'No se pudo eliminar: ' . $e->getMessage());
+        // Política estricta: No borrar para no perder el consecutivo (FAC-XXXX)
+        // Incluso si es borrador, es mejor dejarla como ANULADA para auditoría.
+        return back()->with('error', 'Por seguridad y auditoría, las facturas no se deben eliminar. Utilice la opción ANULAR.');
+    }
+
+    /**
+     * Acción: EMITIR (Finalizar)
+     * Cambia el estado a EMITIDA y bloquea edición.
+     */
+    public function emitir(Factura $factura)
+    {
+        if ($factura->estado !== 'BORRADOR') {
+            return back()->with('error', 'Solo se pueden emitir facturas que estén en estado BORRADOR.');
         }
+        
+        $factura->update([
+            'estado'      => 'EMITIDA',
+            'emitida_at'  => now(),
+            'emitida_por' => auth()->id() ?? null
+        ]);
+        
+        return redirect()->route('facturas.index')
+            ->with('success', "Factura {$factura->codigo} emitida correctamente. Ya está disponible el PDF.");
+    }
+
+    /**
+     * Acción: ANULAR
+     * Requiere un motivo y cambia el estado a ANULADA.
+     */
+    public function anular(Request $request, Factura $factura)
+    {
+        // Validación obligatoria del motivo
+        $request->validate([
+            'motivo' => 'required|string|min:5|max:500'
+        ], [
+            'motivo.required' => 'Debe especificar el motivo de la anulación.',
+            'motivo.min'      => 'El motivo debe ser más descriptivo.'
+        ]);
+
+        if ($factura->estado === 'ANULADA') {
+            return back()->with('error', 'Esta factura ya se encuentra anulada.');
+        }
+
+        // Actualizamos estado y guardamos auditoría
+        $factura->update([
+            'estado'           => 'ANULADA',
+            'anulada_at'       => now(),
+            'anulada_por'      => auth()->id() ?? null,
+            'motivo_anulacion' => $request->input('motivo')
+        ]);
+
+        return redirect()->route('facturas.index')
+            ->with('success', "La Factura {$factura->codigo} ha sido ANULADA.");
+    }
+
+    /**
+     * Acción: GENERAR PDF (Mágica)
+     * Si es borrador, la emite automáticamente.
+     */
+    public function generarPdf(Factura $factura)
+    {
+        // 1. Lógica de Auto-Emisión
+        if ($factura->estado === 'BORRADOR') {
+            $factura->update([
+                'estado'      => 'EMITIDA',
+                'emitida_at'  => now(),
+                'emitida_por' => auth()->id() ?? null
+            ]);
+        }
+        
+        // 2. Preparar datos para la vista
+        $factura->load(['detalles', 'socio']);
+        
+        // 3. Generar PDF
+        $pdf = Pdf::loadView('facturas.factura-pdf', compact('factura'));
+
+        // 4. Descargar PDF
+        return $pdf->download("Factura-{$factura->codigo}.pdf");
+    }
+
+    /**
+     * Helper privado para generar código único consecutivo.
+     */
+    private function generarCodigoUnico()
+    {
+        $ultimaFactura = Factura::latest('id')->first();
+
+        if (!$ultimaFactura) {
+            return 'FAC-00001';
+        }
+
+        // Extraer números (FAC-00045 -> 45)
+        $numeroUltimo = intval(preg_replace('/[^0-9]/', '', $ultimaFactura->codigo));
+        
+        // Sumar 1
+        $nuevoNumero = $numeroUltimo + 1;
+        
+        // Formatear (FAC-00046)
+        return 'FAC-' . str_pad($nuevoNumero, 5, '0', STR_PAD_LEFT);
     }
 }

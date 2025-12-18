@@ -1,279 +1,295 @@
-<x-app-layout>
-  <main class="main-content">
-    <x-app.navbar />
+{{-- ESTRUCTURA DEL MODAL: HEADER (Fijo) + BODY (Scroll) + FOOTER (Fijo) --}}
 
-    <div class="container py-4">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="m-0">Nueva factura</h4>
-        <a href="{{ route('facturas.index') }}" class="btn btn-secondary">Volver</a>
-      </div>
+{{-- 1. HEADER --}}
+<div class="modal-header bg-dark text-white py-2">
+    <h5 class="modal-title fw-bold" style="font-size: 1.1rem;">
+        <i class="fas fa-file-invoice-dollar me-2"></i>Nueva Factura
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-      {{-- Errores --}}
-      @if ($errors->any())
-        <div class="alert alert-danger">
-          <b>Hay errores en el formulario:</b>
-          <ul class="mb-0">
-            @foreach ($errors->all() as $e) <li>{{ $e }}</li> @endforeach
-          </ul>
+{{-- FORMULARIO --}}
+<form method="POST" action="{{ route('facturas.store') }}" id="formFactura" class="d-flex flex-column" style="height: calc(100vh - 200px); min-height: 400px;">
+    @csrf
+
+    {{-- 2. BODY CON SCROLL (overflow-y: auto) --}}
+    <div class="modal-body p-0" style="overflow-y: auto;">
+        
+        <div class="container-fluid py-3">
+            {{-- AVISO --}}
+            <div class="alert alert-light border-start border-primary border-4 py-2 mb-3 shadow-sm">
+                <div class="d-flex align-items-center small">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    <span><strong>Automático:</strong> El código de factura se generará al guardar.</span>
+                </div>
+            </div>
+
+            {{-- SECCIÓN DATOS CLIENTE --}}
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-light py-2 border-bottom">
+                    <h6 class="mb-0 fw-bold text-primary small text-uppercase">1. Datos del Cliente</h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    {{-- Buscador Socio --}}
+                    <div class="mb-2">
+                        <select name="socio_id" id="select_socio" class="form-select form-select-sm border-secondary-subtle">
+                            <option value="">-- Cliente Particular (Llenado manual) --</option>
+                            @foreach ($socios as $socio)
+                                <option value="{{ $socio->id }}" 
+                                        data-nombre="{{ $socio->nombres }}"
+                                        data-apellido="{{ $socio->apellidos }}"
+                                        data-cedula="{{ $socio->cedula }}"
+                                        data-email="{{ $socio->email }}"
+                                        data-telefono="{{ $socio->telefono }}">
+                                    👤 SOCIO: {{ $socio->apellidos }} {{ $socio->nombres }} ({{ $socio->cedula }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold mb-0 text-muted">Nombres *</label>
+                            <input name="cliente_nombre" id="in_nombre" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold mb-0 text-muted">Apellidos</label>
+                            <input name="cliente_apellido" id="in_apellido" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold mb-0 text-muted">Cédula/RUC</label>
+                            <input name="cliente_cedula" id="in_cedula" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold mb-0 text-muted">Teléfono</label>
+                            <input name="cliente_telefono" id="in_telefono" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold mb-0 text-muted">Fecha Emisión</label>
+                            <input type="date" name="fecha" value="{{ date('Y-m-d') }}" class="form-control form-control-sm" required>
+                        </div>
+                        <input type="hidden" name="cliente_email" id="in_email">
+                    </div>
+                </div>
+            </div>
+
+            {{-- SECCIÓN DETALLE (Tabla Editable) --}}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold small text-uppercase">2. Detalle de Ítems</h6>
+                    <button type="button" class="btn btn-sm btn-light text-primary fw-bold" id="btn_add_linea">
+                        <i class="fa fa-plus me-1"></i> Agregar Línea
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle mb-0" style="min-width: 600px;">
+                            <thead class="bg-light text-secondary">
+                                <tr style="font-size: 0.8rem;">
+                                    <th style="width: 130px;" class="ps-3">Tipo</th>
+                                    <th>Descripción / Ítem</th>
+                                    <th style="width: 80px;" class="text-center">Cant.</th>
+                                    <th style="width: 100px;" class="text-end">Precio</th>
+                                    <th style="width: 110px;" class="text-end">Subtotal</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_items">
+                                {{-- Las filas se generan con JS --}}
+                            </tbody>
+                            <tfoot class="border-top bg-white">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold py-3 pe-3 text-secondary">TOTAL A PAGAR:</td>
+                                    <td class="text-end fw-bold py-3 fs-5 text-dark" id="total_display">$ 0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    {{-- Mensaje vacío --}}
+                    <div id="empty_msg" class="text-center py-4 text-muted">
+                        <i class="fas fa-arrow-up mb-2"></i><br>
+                        Pulsa <b>"Agregar Línea"</b> para comenzar.
+                    </div>
+                </div>
+            </div>
         </div>
-      @endif
-
-      @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-      @endif
-
-      <div class="card">
-        <div class="card-body">
-          <form action="{{ route('facturas.store') }}" method="POST">
-            @csrf
-
-            {{-- Datos del cliente --}}
-            <div class="card mb-3">
-              <div class="card-header">
-                Datos del cliente
-              </div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label for="socio_id" class="form-label">Socio (opcional)</label>
-                  <select name="socio_id" id="socio_id" class="form-select">
-                    <option value="">-- Seleccione un socio --</option>
-                    @foreach ($socios as $socio)
-                      <option value="{{ $socio->id }}" {{ old('socio_id') == $socio->id ? 'selected' : '' }} >
-                        {{ $socio->apellidos }} {{ $socio->nombres }} ({{ $socio->cedula }})
-                      </option>
-                    @endforeach
-                  </select>
-                  <div class="form-text">
-                    Si seleccionas un socio, los datos del cliente se pueden rellenar automáticamente.
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Nombre *</label>
-                    <input type="text" name="cliente_nombre" class="form-control"
-                           value="{{ old('cliente_nombre') }}" required>
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Apellido</label>
-                    <input type="text" name="cliente_apellido" class="form-control"
-                           value="{{ old('cliente_apellido') }}">
-                  </div>
-                </div>
-
-                <div class="row">
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Cédula</label>
-                    <input type="text" name="cliente_cedula" class="form-control"
-                           value="{{ old('cliente_cedula') }}">
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <input type="text" name="cliente_telefono" class="form-control"
-                           value="{{ old('cliente_telefono') }}">
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="cliente_email" class="form-control"
-                           value="{{ old('cliente_email') }}">
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Fecha *</label>
-                  <input type="date" name="fecha" class="form-control"
-                         value="{{ old('fecha', now()->format('Y-m-d')) }}" required>
-                </div>
-              </div>
-            </div>
-
-            {{-- Selección de tipo de ítem --}}
-            <div class="card mb-3">
-              <div class="card-header">
-                Selecciona el tipo de ítem
-              </div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label for="tipo_item" class="form-label">¿Qué tipo de ítem deseas agregar?</label>
-                  <select name="tipo_item" id="tipo_item" class="form-select" required>
-                    <option value="">— Selecciona —</option>
-                    <option value="beneficio">Beneficio</option>
-                    <option value="servicio">Servicio</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {{-- Detalle --}}
-            <div class="card mb-3" id="detalle-items" style="display:none;">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Detalle de la factura</span>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-item">
-                  + Agregar ítem
-                </button>
-              </div>
-              <div class="card-body">
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle" id="tabla-items">
-                    <thead class="table-light">
-                      <tr>
-                        <th style="width: 35%;">Descripción</th>
-                        <th style="width: 15%;">Cantidad</th>
-                        <th style="width: 20%;">Precio</th>
-                        <th style="width: 20%;">Subtotal</th>
-                        <th style="width: 10%;"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr class="item-row">
-                        <td>
-                          <!-- Este campo se actualizará según el tipo de ítem -->
-                          <select name="items[descripcion][]" class="form-select descripcion-select" required>
-                            <option value="">— Selecciona un ítem —</option>
-                          </select>
-                        </td>
-                        <td>
-                          <input type="number" name="items[cantidad][]" class="form-control cantidad-input"
-                                 value="1" min="1" required>
-                        </td>
-                        <td>
-                          <input type="number" step="0.01" min="0"
-                                 name="items[precio][]" class="form-control precio-input"
-                                 value="0.00" required>
-                        </td>
-                        <td class="text-end subtotal-text">
-                          $ 0.00
-                        </td>
-                        <td class="text-center">
-                          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item">
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div class="text-end mt-2">
-                  <strong>Total estimado: $ <span id="total-estimado">0.00</span></strong>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-3 d-flex gap-2 justify-content-between">
-              <a href="{{ route('facturas.index') }}" class="btn btn-secondary">Cancelar</a>
-              <button type="submit" class="btn btn-primary">Guardar factura</button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        const tipoItemSelect = document.getElementById('tipo_item');
-        const detalleItemsDiv = document.getElementById('detalle-items');
-        const tabla = document.querySelector('#tabla-items tbody');
-        const btnAdd = document.getElementById('btn-add-item');
+    {{-- 3. FOOTER (Fijo) --}}
+    <div class="modal-footer bg-light py-2 border-top shadow-sm mt-auto">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">
+            <i class="fas fa-save me-2"></i> Guardar Factura
+        </button>
+    </div>
+</form>
 
-        tipoItemSelect.addEventListener('change', function () {
-          const tipoItem = tipoItemSelect.value;
-          if (tipoItem === 'beneficio') {
-            detalleItemsDiv.style.display = 'block';
-            // Mostrar solo el select de Beneficio
-            document.querySelectorAll('.descripcion-select').forEach(select => {
-              select.innerHTML = '<option value="">— Selecciona un Beneficio —</option>';
-              @foreach ($beneficios as $beneficio)
-                select.innerHTML += `<option value="{{ $beneficio->id }}" data-valor="{{ $beneficio->valor }}">
-                                      {{ $beneficio->nombre }} (${{ number_format($beneficio->valor, 2) }})
-                                      </option>`;
-              @endforeach
-            });
-          } else if (tipoItem === 'servicio') {
-            detalleItemsDiv.style.display = 'block';
-            // Mostrar solo el select de Servicio
-            document.querySelectorAll('.descripcion-select').forEach(select => {
-              select.innerHTML = '<option value="">— Selecciona un Servicio —</option>';
-              @foreach ($servicios as $servicio)
-                select.innerHTML += `<option value="{{ $servicio->id }}" data-valor="{{ $servicio->valor }}">
-                                      {{ $servicio->nombre }} (${{ number_format($servicio->valor, 2) }})
-                                      </option>`;
-              @endforeach
-            });
-          } else {
-            detalleItemsDiv.style.display = 'none';
-          }
+{{-- SCRIPTS --}}
+<script>
+    // 1. PREPARAMOS LOS DATOS (Arrays de Laravel a JS)
+    const catalogo = {
+        beneficio: @json($beneficios),
+        servicio: @json($servicios)
+    };
+
+    const tbody = document.getElementById('tbody_items');
+    const emptyMsg = document.getElementById('empty_msg');
+    const totalDisplay = document.getElementById('total_display');
+
+    // 2. FUNCIÓN PARA AGREGAR LÍNEA (Editable)
+    function agregarLinea() {
+        emptyMsg.style.display = 'none';
+
+        const tr = document.createElement('tr');
+        tr.className = 'item-row';
+        tr.innerHTML = `
+            <td class="ps-2 py-2">
+                <select class="form-select form-select-sm select-tipo bg-light" required>
+                    <option value="">Selecc...</option>
+                    <option value="beneficio">Beneficio</option>
+                    <option value="servicio">Servicio</option>
+                </select>
+                <input type="hidden" name="items[beneficio_id][]" class="input-beneficio">
+                <input type="hidden" name="items[servicio_id][]" class="input-servicio">
+            </td>
+            <td class="py-2">
+                <select class="form-select form-select-sm select-item" disabled required>
+                    <option value="">← Elija tipo</option>
+                </select>
+            </td>
+            <td class="py-2">
+                <input type="number" name="items[cantidad][]" class="form-control form-control-sm text-center input-cant" value="1" min="1" required>
+            </td>
+            <td class="py-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text px-1 text-muted">$</span>
+                    <input type="number" name="items[precio][]" class="form-control text-end input-precio px-1" step="0.01" value="0.00" required>
+                </div>
+            </td>
+            <td class="text-end align-middle fw-bold text-dark span-subtotal pe-2">
+                $ 0.00
+            </td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-link text-danger p-0 btn-delete" title="Quitar fila">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+        activarLogicaFila(tr);
+    }
+
+    // 3. LÓGICA DE CADA FILA (Eventos)
+    function activarLogicaFila(row) {
+        const selTipo = row.querySelector('.select-tipo');
+        const selItem = row.querySelector('.select-item');
+        const inBeneficio = row.querySelector('.input-beneficio');
+        const inServicio = row.querySelector('.input-servicio');
+        const inCant = row.querySelector('.input-cant');
+        const inPrecio = row.querySelector('.input-precio');
+        const spanSub = row.querySelector('.span-subtotal');
+        const btnDel = row.querySelector('.btn-delete');
+
+        // A. Cambio de TIPO
+        selTipo.addEventListener('change', function() {
+            const tipo = this.value;
+            
+            // Resetear inputs
+            selItem.innerHTML = '<option value="">Seleccione ítem...</option>';
+            selItem.disabled = true;
+            inPrecio.value = "0.00";
+            inBeneficio.value = "";
+            inServicio.value = "";
+
+            if (tipo && catalogo[tipo]) {
+                selItem.disabled = false;
+                catalogo[tipo].forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.text = item.nombre;
+                    opt.setAttribute('data-precio', item.valor); // Asumimos columna 'valor'
+                    selItem.appendChild(opt);
+                });
+            }
+            calcularFila();
         });
 
-        // Agregar fila de ítem
-        btnAdd.addEventListener('click', function () {
-          const primeraFila = tabla.querySelector('tr.item-row');
-          const nuevaFila = primeraFila.cloneNode(true);
+        // B. Cambio de ÍTEM
+        selItem.addEventListener('change', function() {
+            const op = this.options[this.selectedIndex];
+            const precio = op.getAttribute('data-precio') || 0;
+            const tipo = selTipo.value;
 
-          // Resetear select
-          nuevaFila.querySelector('.descripcion-select').innerHTML = '<option value="">— Selecciona un ítem —</option>';
+            // Poner precio sugerido
+            inPrecio.value = parseFloat(precio).toFixed(2);
 
-          if (tipoItemSelect.value === 'beneficio') {
-            nuevaFila.querySelector('.descripcion-select').innerHTML = '<option value="">— Selecciona un Beneficio —</option>';
-            @foreach ($beneficios as $beneficio)
-              nuevaFila.querySelector('.descripcion-select').innerHTML += `<option value="{{ $beneficio->id }}" data-valor="{{ $beneficio->valor }}">
-                {{ $beneficio->nombre }} (${{ number_format($beneficio->valor, 2) }})
-                </option>`;
-            @endforeach
-          } else if (tipoItemSelect.value === 'servicio') {
-            nuevaFila.querySelector('.descripcion-select').innerHTML = '<option value="">— Selecciona un Servicio —</option>';
-            @foreach ($servicios as $servicio)
-              nuevaFila.querySelector('.descripcion-select').innerHTML += `<option value="{{ $servicio->id }}" data-valor="{{ $servicio->valor }}">
-                {{ $servicio->nombre }} (${{ number_format($servicio->valor, 2) }})
-                </option>`;
-            @endforeach
-          }
-
-          // Resetear valores de cantidad y precio
-          nuevaFila.querySelector('.cantidad-input').value = 1;
-          nuevaFila.querySelector('.precio-input').value = '0.00';
-          nuevaFila.querySelector('.subtotal-text').textContent = '$ 0.00';
-
-          tabla.appendChild(nuevaFila);
+            // Asignar ID al input hidden correcto
+            if(tipo === 'beneficio') {
+                inBeneficio.value = this.value;
+                inServicio.value = "";
+            } else {
+                inServicio.value = this.value;
+                inBeneficio.value = "";
+            }
+            calcularFila();
         });
 
-        // Actualizar el subtotal y total de la factura
-        function actualizarSubtotalFila(row) {
-          const cantidad = parseFloat(row.querySelector('.cantidad-input').value) || 0;
-          const precio = parseFloat(row.querySelector('.precio-input').value) || 0;
-          const subtotal = cantidad * precio;
-          row.querySelector('.subtotal-text').textContent = '$ ' + subtotal.toFixed(2);
-          return subtotal;
+        // C. Cálculos
+        function calcularFila() {
+            const c = parseFloat(inCant.value) || 0;
+            const p = parseFloat(inPrecio.value) || 0;
+            const sub = c * p;
+            spanSub.textContent = "$ " + sub.toFixed(2);
+            actualizarTotalGlobal();
         }
 
-        function actualizarTotal() {
-          let total = 0;
-          document.querySelectorAll('#tabla-items tbody tr.item-row').forEach(row => {
-            total += actualizarSubtotalFila(row);
-          });
-          document.getElementById('total-estimado').textContent = total.toFixed(2);
-        }
+        inCant.addEventListener('input', calcularFila);
+        inPrecio.addEventListener('input', calcularFila);
 
-        tabla.addEventListener('change', function () {
-          actualizarTotal();
-        });
-
-        tabla.addEventListener('input', function () {
-          actualizarTotal();
-        });
-
-        tabla.addEventListener('click', function (e) {
-          if (e.target.classList.contains('btn-remove-item')) {
-            const row = e.target.closest('tr.item-row');
+        // D. Eliminar
+        btnDel.addEventListener('click', function() {
             row.remove();
-            actualizarTotal();
-          }
+            if(tbody.children.length === 0) emptyMsg.style.display = 'block';
+            actualizarTotalGlobal();
         });
+    }
 
-        actualizarTotal();
-      });
-    </script>
+    // 4. TOTAL GLOBAL
+    function actualizarTotalGlobal() {
+        let total = 0;
+        document.querySelectorAll('#tbody_items tr').forEach(row => {
+            const c = parseFloat(row.querySelector('.input-cant').value) || 0;
+            const p = parseFloat(row.querySelector('.input-precio').value) || 0;
+            total += (c * p);
+        });
+        totalDisplay.textContent = "$ " + total.toFixed(2);
+    }
 
-    <x-app.footer />
-  </main>
-</x-app-layout>
+    // 5. INICIAR (Evento Botón y Cliente)
+    document.getElementById('btn_add_linea').addEventListener('click', agregarLinea);
+
+    // Lógica Cliente (Igual que antes)
+    document.getElementById('select_socio').addEventListener('change', function() {
+        const op = this.options[this.selectedIndex];
+        if (this.value) {
+            document.getElementById('in_nombre').value = op.getAttribute('data-nombre');
+            document.getElementById('in_apellido').value = op.getAttribute('data-apellido');
+            document.getElementById('in_cedula').value = op.getAttribute('data-cedula');
+            document.getElementById('in_telefono').value = op.getAttribute('data-telefono');
+            document.getElementById('in_email').value = op.getAttribute('data-email');
+        } else {
+            document.getElementById('in_nombre').value = '';
+            document.getElementById('in_apellido').value = '';
+            document.getElementById('in_cedula').value = '';
+            document.getElementById('in_telefono').value = '';
+            document.getElementById('in_email').value = '';
+        }
+    });
+
+    // Agregar una línea por defecto al abrir
+    agregarLinea();
+
+</script>

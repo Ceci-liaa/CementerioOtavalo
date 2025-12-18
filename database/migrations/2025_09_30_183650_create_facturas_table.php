@@ -14,6 +14,8 @@ return new class extends Migration {
         Schema::create('facturas', function (Blueprint $t) {
             $t->id();
 
+            $t->string('codigo', 20)->unique()->after('id');
+
             // Relación opcional con socio
             $t->foreignId('socio_id')->nullable()->constrained('socios')->nullOnDelete();
 

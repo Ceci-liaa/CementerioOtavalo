@@ -1,217 +1,87 @@
-<x-app-layout>
-  <main class="main-content">
-    <x-app.navbar />
+{{-- CABECERA DEL MODAL (Azul Informativo) --}}
+<div class="modal-header bg-info text-white border-bottom-0 pb-0">
+    <h5 class="modal-title fw-bold">Detalle de Factura</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-    <div class="container py-4">
-
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="m-0">
-          Factura N° {{ sprintf('%06d', $factura->id) }}
-        </h4>
-
-        <div class="d-flex gap-2">
-          <a href="{{ route('facturas.index') }}" class="btn btn-secondary btn-sm">
-            ← Volver al listado
-          </a>
-          <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">
-            🖨 Imprimir
-          </button>
+<div class="modal-body pt-3">
+    
+    {{-- Tarjeta destacada --}}
+    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 p-3 shadow-sm">
+        <div>
+            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código</small>
+            <span class="fw-bold text-dark fs-5">{{ $factura->codigo }}</span>
         </div>
-      </div>
-
-      @if (session('success'))
-        <div class="alert alert-success py-2">{{ session('success') }}</div>
-      @endif
-      @if (session('error'))
-        <div class="alert alert-danger py-2">{{ session('error') }}</div>
-      @endif
-
-      <div class="card shadow-sm">
-        <div class="card-body">
-
-          {{-- Encabezado empresa --}}
-          <div class="row mb-4">
-            <div class="col-md-7">
-              <h2 class="h5 mb-1">Cementerio Municipal</h2>
-              <div>Dirección del cementerio</div>
-              <div>Teléfono: 000-000-000</div>
-              <div>Correo: info@cementerio.test</div>
-            </div>
-            <div class="col-md-5 text-md-end mt-3 mt-md-0">
-              <div><strong>Factura N°:</strong> {{ sprintf('%06d', $factura->id) }}</div>
-              <div><strong>Fecha:</strong> {{ $factura->fecha?->format('d/m/Y') }}</div>
-              <div>
-                <strong>Estado:</strong>
-                @php
-                  $estado = strtoupper($factura->estado ?? 'PENDIENTE');
-                  $badgeClass = [
-                      'PENDIENTE' => 'warning',
-                      'EMITIDA'   => 'info',
-                      'PAGADA'    => 'success',
-                      'ANULADA'   => 'danger',
-                  ][$estado] ?? 'secondary';
-                @endphp
-                <span class="badge bg-{{ $badgeClass }}">
-                  {{ $estado }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <hr>
-
-          {{-- Datos del cliente --}}
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <h3 class="h6">Datos del cliente</h3>
-              <div><strong>Nombre:</strong>
-                {{ $factura->cliente_nombre }}
-                @if($factura->cliente_apellido)
-                  {{ ' ' . $factura->cliente_apellido }}
-                @endif
-              </div>
-              @if($factura->cliente_cedula)
-                <div><strong>Cédula / RUC:</strong> {{ $factura->cliente_cedula }}</div>
-              @endif
-              @if($factura->cliente_telefono)
-                <div><strong>Teléfono:</strong> {{ $factura->cliente_telefono }}</div>
-              @endif
-              @if($factura->cliente_email)
-                <div><strong>Email:</strong> {{ $factura->cliente_email }}</div>
-              @endif
-            </div>
-
-            @if($factura->socio)
-              <div class="col-md-6 mt-3 mt-md-0">
-                <h3 class="h6">Socio asociado</h3>
-                <div><strong>Nombre:</strong> {{ $factura->socio->nombres }} {{ $factura->socio->apellidos }}</div>
-                @if($factura->socio->cedula)
-                  <div><strong>Cédula:</strong> {{ $factura->socio->cedula }}</div>
-                @endif
-                @if($factura->socio->telefono)
-                  <div><strong>Teléfono:</strong> {{ $factura->socio->telefono }}</div>
-                @endif
-                @if($factura->socio->email)
-                  <div><strong>Email:</strong> {{ $factura->socio->email }}</div>
-                @endif
-              </div>
-            @endif
-          </div>
-
-          {{-- Detalle --}}
-          <h3 class="h6 mb-2">Detalle</h3>
-
-          <div class="table-responsive mb-3">
-            <table class="table table-sm align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th style="width: 40px;">#</th>
-                  <th>Tipo</th>
-                  <th>Descripción</th>
-                  <th class="text-end" style="width: 90px;">Cantidad</th>
-                  <th class="text-end" style="width: 120px;">Precio unitario</th>
-                  <th class="text-end" style="width: 120px;">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                @php $totalCalculado = 0; @endphp
-                @forelse($factura->detalles as $i => $detalle)
-                  @php $totalCalculado += $detalle->subtotal; @endphp
-                  <tr>
-                    <td>{{ $i + 1 }}</td>
-                    <td>
-                      <span class="badge bg-secondary">
-                        {{ $detalle->tipo_item }}
-                      </span>
-                    </td>
-                    <td>{{ $detalle->nombre_item }}</td>
-                    <td class="text-end">
-                      {{ number_format($detalle->cantidad, 0) }}
-                    </td>
-                    <td class="text-end">
-                      $ {{ number_format($detalle->precio, 2) }}
-                    </td>
-                    <td class="text-end">
-                      $ {{ number_format($detalle->subtotal, 2) }}
-                    </td>
-                  </tr>
-                @empty
-                  <tr>
-                    <td colspan="6" class="text-center text-muted py-3">
-                      No hay ítems registrados en esta factura.
-                    </td>
-                  </tr>
-                @endforelse
-              </tbody>
-            </table>
-          </div>
-
-          {{-- Totales --}}
-          <div class="row justify-content-end">
-            <div class="col-md-5">
-              <table class="table table-sm">
-                <tr>
-                  <th class="text-end">Total calculado (detalle):</th>
-                  <td class="text-end">
-                    $ {{ number_format($totalCalculado, 2) }}
-                  </td>
-                </tr>
-                <tr>
-                  <th class="text-end">Total registrado en factura:</th>
-                  <td class="text-end">
-                    $ {{ number_format($factura->total, 2) }}
-                  </td>
-                </tr>
-                @if(abs($totalCalculado - $factura->total) > 0.01)
-                  <tr>
-                    <td colspan="2" class="text-end text-warning small">
-                      ⚠ Diferencia entre detalle y total guardado.
-                    </td>
-                  </tr>
-                @endif
-              </table>
-            </div>
-          </div>
-
-          <div class="mt-4">
-            <p class="small text-muted mb-1">
-              Gracias por confiar en la administración del cementerio.
-            </p>
-            <p class="small text-muted mb-0">
-              Conserve este comprobante como respaldo de su pago.
-            </p>
-          </div>
-
+        <div class="text-end">
+             <span class="badge bg-{{ $factura->estado == 'PAGADA' ? 'success' : ($factura->estado == 'ANULADA' ? 'danger' : 'warning') }}">
+                {{ $factura->estado }}
+             </span>
         </div>
-      </div>
     </div>
 
-    <style>
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
+    <div class="row g-3">
+        {{-- Cliente --}}
+        <div class="col-12">
+            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Cliente</h6>
+        </div>
+        <div class="col-md-6">
+            <label class="d-block text-muted small mb-0">Razón Social</label>
+            <div class="fw-bold text-dark">{{ $factura->cliente_nombre }} {{ $factura->cliente_apellido }}</div>
+        </div>
+        <div class="col-md-6">
+            <label class="d-block text-muted small mb-0">Cédula / RUC</label>
+            <div>{{ $factura->cliente_cedula ?? 'S/N' }}</div>
+        </div>
+        @if($factura->socio)
+            <div class="col-12">
+                <small class="text-success"><i class="fas fa-link me-1"></i>Vinculado al Socio: {{ $factura->socio->nombres }}</small>
+            </div>
+        @endif
 
-        .btn,
-        .navbar,
-        .footer,
-        .alert,
-        a[href]:after {
-          display: none !important;
-        }
+        {{-- Detalle Tabla --}}
+        <div class="col-12 mt-3">
+            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Items</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0 text-sm">
+                    <thead>
+                        <tr>
+                            <th>Desc.</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-end">P. Unit</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($factura->detalles as $det)
+                        <tr>
+                            <td>
+                                {{ $det->nombre_item }}
+                                <br><small class="text-muted">{{ $det->tipo_item }}</small>
+                            </td>
+                            <td class="text-center">{{ $det->cantidad }}</td>
+                            <td class="text-end">$ {{ number_format($det->precio, 2) }}</td>
+                            <td class="text-end">$ {{ number_format($det->subtotal, 2) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="border-top">
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">TOTAL:</td>
+                            <td class="text-end fw-bold fs-6">$ {{ number_format($factura->total, 2) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
 
-        .card {
-          border: none !important;
-          box-shadow: none !important;
-        }
+        {{-- Auditoría --}}
+        <div class="col-12 mt-3 pt-2 border-top d-flex justify-content-between text-xs text-muted">
+            <span>Fecha: {{ $factura->fecha->format('d/m/Y') }}</span>
+            <span>Creado: {{ $factura->created_at->format('d/m/Y H:i') }}</span>
+        </div>
+    </div>
+</div>
 
-        .container {
-          max-width: 100% !important;
-        }
-      }
-    </style>
-
-    <x-app.footer />
-  </main>
-</x-app-layout>
+<div class="modal-footer border-top-0 pt-0">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+</div>

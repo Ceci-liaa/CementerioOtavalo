@@ -254,8 +254,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/facturas/{factura}/edit', [FacturaController::class, 'edit'])->name('facturas.edit');
     // Actualizar factura existente
     Route::put('/facturas/{factura}', [FacturaController::class, 'update'])->name('facturas.update');
-    // Eliminar factura
-    Route::delete('/facturas/{factura}', [FacturaController::class, 'destroy'])->name('facturas.destroy');
+    Route::put('/facturas/{factura}/emitir', [FacturaController::class, 'emitir'])->name('facturas.emitir');
+    Route::put('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular');
+    Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'generarPdf'])->name('facturas.pdf');
 });
 
 
