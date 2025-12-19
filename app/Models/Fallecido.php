@@ -49,4 +49,13 @@ class Fallecido extends Model
     public function genero()      { return $this->belongsTo(Genero::class); }
     public function estadoCivil() { return $this->belongsTo(EstadoCivil::class, 'estado_civil_id'); }
     public function creador()     { return $this->belongsTo(User::class, 'created_by'); }
+
+    // Relación con Nichos (Usando el modelo Pivot corregido)
+    public function nichos()
+    {
+        return $this->belongsToMany(Nicho::class, 'fallecido_nicho')
+                    ->using(FallecidoNicho::class)
+                    ->withPivot('posicion', 'fecha_inhumacion', 'fecha_exhumacion')
+                    ->withTimestamps();
+    }
 }

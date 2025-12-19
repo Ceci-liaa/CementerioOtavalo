@@ -46,18 +46,21 @@ class Nicho extends Model
         return $this->belongsTo(User::class, 'created_by'); 
     }
 
-    // Relaciones Pivot (necesarias para el reporte)
-    public function fallecidos()
-    {
-        return $this->belongsToMany(Fallecido::class, 'fallecido_nicho')
-                    ->withPivot('posicion', 'fecha_inhumacion', 'observacion')
-                    ->withTimestamps();
-    }
-
+// Relación con Socios (Usando el modelo Pivot corregido)
     public function socios()
     {
         return $this->belongsToMany(Socio::class, 'socio_nicho')
+                    ->using(SocioNicho::class) // <--- ESTO ES LO NUEVO
                     ->withPivot('rol', 'desde', 'hasta')
+                    ->withTimestamps();
+    }
+
+    // Relación con Fallecidos (Usando el modelo Pivot corregido)
+    public function fallecidos()
+    {
+        return $this->belongsToMany(Fallecido::class, 'fallecido_nicho')
+                    ->using(FallecidoNicho::class) // <--- ESTO ES LO NUEVO
+                    ->withPivot('posicion', 'fecha_inhumacion', 'fecha_exhumacion', 'observacion')
                     ->withTimestamps();
     }
 }

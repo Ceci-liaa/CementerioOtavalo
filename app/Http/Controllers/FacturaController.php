@@ -182,16 +182,28 @@ class FacturaController extends Controller
     /**
      * Formulario de edición (Solo Borradores).
      */
+    /**
+     * Formulario de edición (Solo Borradores).
+     */
     public function edit(Factura $factura)
     {
         if ($factura->estado !== 'BORRADOR') {
             return back()->with('error', 'No se puede editar una factura que ya fue emitida o anulada.');
         }
-        return view('facturas.factura-edit', compact('factura'));
+
+        // --- CORRECCIÓN: Cargar catálogos y detalles ---
+        $socios = Socio::orderBy('apellidos')->get(); // Opcional si permites cambiar socio
+        $beneficios = Beneficio::orderBy('nombre')->get();
+        $servicios = Servicio::orderBy('nombre')->get();
+        
+        // Cargar los detalles para pintarlos en la tabla
+        $factura->load('detalles');
+
+        return view('facturas.factura-edit', compact('factura', 'socios', 'beneficios', 'servicios'));
     }
 
     /**
-     * Actualiza datos del cliente (Solo Borradores).
+     * Actualiza datos del cliente Y LOS ÍTEMS (Solo Borradores).
      */
     public function update(Request $request, Factura $factura)
     {
@@ -200,27 +212,83 @@ class FacturaController extends Controller
              return back()->with('error', 'Factura bloqueada. No se permiten cambios.');
         }
 
-        // 2. Validaciones de datos del cliente
+        // 2. Validaciones completas (Cliente + Items)
         $request->validate([
             'cliente_nombre'   => 'required|string|max:255',
             'cliente_apellido' => 'nullable|string|max:255',
             'cliente_cedula'   => 'nullable|string|max:20',
             'cliente_email'    => 'nullable|string|max:255',
             'cliente_telefono' => 'nullable|string|max:30',
+            'fecha'            => 'required|date',
+            // Validar items igual que en store
+            'items.cantidad'       => 'required|array|min:1',
+            'items.beneficio_id.*' => 'nullable|exists:beneficios,id',
+            'items.servicio_id.*'  => 'nullable|exists:servicios,id',
+            'items.cantidad.*'     => 'required|integer|min:1',
+            'items.precio.*'       => 'required|numeric|min:0',
         ]);
 
-        // 3. Actualización
-        $factura->update($request->only([
-            'cliente_nombre',
-            'cliente_apellido',
-            'cliente_cedula',
-            'cliente_email',
-            'cliente_telefono'
-        ]));
+        // 3. Procesar Items (Lógica idéntica al store)
+        $itemsProcesados = [];
+        $rawBeneficios = $request->input('items.beneficio_id', []);
+        $rawServicios  = $request->input('items.servicio_id', []);
+        $rawCantidades = $request->input('items.cantidad', []);
+        $rawPrecios    = $request->input('items.precio', []);
 
-        return redirect()->route('facturas.index')->with('success', 'Datos de la factura actualizados.');
+        foreach ($rawCantidades as $i => $cant) {
+            $cantidad = (int) $cant;
+            $precio = (float) ($rawPrecios[$i] ?? 0);
+            $beneficioId = $rawBeneficios[$i] ?? null;
+            $servicioId = $rawServicios[$i] ?? null;
+
+            if ($cantidad <= 0 || (!$beneficioId && !$servicioId)) continue;
+
+            $itemsProcesados[] = [
+                'beneficio_id' => $beneficioId,
+                'servicio_id'  => $servicioId,
+                'cantidad'     => $cantidad,
+                'precio'       => $precio,
+                'subtotal'     => $cantidad * $precio,
+            ];
+        }
+
+        if (empty($itemsProcesados)) {
+            return back()->withInput()->with('error', 'La factura debe tener al menos un ítem.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 4. Calcular nuevo total
+            $total = array_sum(array_column($itemsProcesados, 'subtotal'));
+
+            // 5. Actualizar Cabecera
+            $factura->update([
+                'cliente_nombre'   => $request->cliente_nombre,
+                'cliente_apellido' => $request->cliente_apellido,
+                'cliente_cedula'   => $request->cliente_cedula,
+                'cliente_email'    => $request->cliente_email,
+                'cliente_telefono' => $request->cliente_telefono,
+                'fecha'            => $request->fecha,
+                'total'            => $total, // Actualizamos el total
+                // El estado sigue siendo BORRADOR
+            ]);
+
+            // 6. Actualizar Detalles (Estrategia: Borrar todo y volver a crear)
+            $factura->detalles()->delete();
+
+            foreach ($itemsProcesados as $item) {
+                $item['factura_id'] = $factura->id;
+                FacturaDetalle::create($item);
+            }
+
+            DB::commit();
+            return redirect()->route('facturas.index')->with('success', 'Factura actualizada correctamente.');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Error al actualizar: ' . $e->getMessage());
+        }
     }
-
     /**
      * ELIMINAR BLOQUEADO: Obligamos a usar Anular para mantener secuencia.
      */

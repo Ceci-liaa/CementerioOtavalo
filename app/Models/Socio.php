@@ -60,4 +60,11 @@ class Socio extends Model
                ->orWhere('apellidos', 'ILIKE', "%{$term}%");
         });
     }
+    public function nichos()
+    {
+        return $this->belongsToMany(Nicho::class, 'socio_nicho')
+                    ->using(SocioNicho::class)
+                    ->withPivot('rol', 'desde', 'hasta')
+                    ->withTimestamps();
+    }
 }

@@ -24,6 +24,7 @@ use App\Http\Controllers\BeneficioController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\BloqueGeomController;
 use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\AsignacionController;
 
 
 /*
@@ -257,6 +258,51 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/facturas/{factura}/emitir', [FacturaController::class, 'emitir'])->name('facturas.emitir');
     Route::put('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular');
     Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'generarPdf'])->name('facturas.pdf');
+
+
+    // ─── ASIGNACIONES (GESTIÓN DE NICHOS) ─────────────────────────────
+
+    // 1. Listado principal (Index)
+    Route::get('/asignaciones', [AsignacionController::class, 'index'])->name('asignaciones.index');
+
+    // 2. Formulario para Nueva Asignación (Modal Create)
+    Route::get('/asignaciones/create', [AsignacionController::class, 'create'])->name('asignaciones.create');
+
+    // 3. Guardar la Asignación (Store)
+    Route::post('/asignaciones', [AsignacionController::class, 'store'])->name('asignaciones.store');
+
+    // 4. Ver detalle e historial (Modal Show)
+    Route::get('/asignaciones/{id}', [AsignacionController::class, 'show'])->name('asignaciones.show');
+
+    // 5. Formulario para Editar/Corregir (Modal Edit)
+    Route::get('/asignaciones/{id}/edit', [AsignacionController::class, 'edit'])->name('asignaciones.edit');
+
+    // 6. Actualizar los datos corregidos (Update)
+    Route::put('/asignaciones/{id}', [AsignacionController::class, 'update'])->name('asignaciones.update');
+
+
+    // ─── ACCIONES ESPECÍFICAS (EXHUMAR Y ELIMINAR) ────────────────────
+
+    // Vista exclusiva para Exhumar (Formulario)
+    Route::get('/asignaciones/{id}/exhumar', [AsignacionController::class, 'exhumarForm'])->name('asignaciones.exhumarForm');
+
+    // Procesar la Exhumación (Guardar fecha de salida)
+    Route::post('/asignaciones/exhumar', [AsignacionController::class, 'exhumar'])->name('asignaciones.exhumar');
+
+    // Eliminar un registro por error (Destroy)
+    Route::delete('/asignaciones/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'destroy'])->name('asignacion.destroy');
+
+
+    // ─── REPORTES PDF (ESTOS FALTABAN) ────────────────────────────────
+
+    // 1. Reporte General de todos los nichos ocupados
+    Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])->name('asignaciones.pdf.general');
+
+    // 2. Reporte de Historial de Exhumados
+    Route::get('/asignaciones/reporte-exhumados', [AsignacionController::class, 'pdfReporteExhumados'])->name('asignaciones.pdf.exhumados');
+
+    // 3. Certificado Individual de Exhumación
+    Route::get('/asignaciones/certificado/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'pdfCertificadoExhumacion'])->name('asignaciones.pdf.certificado');
 });
 
 

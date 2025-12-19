@@ -199,6 +199,13 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ route('asignaciones.index') }}" class="nav-link">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <span>Asignación</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ route('beneficios.index') }}" class="nav-link">
                     <i class="fa-solid fa-handshake"></i>
                     <span>Beneficios</span>

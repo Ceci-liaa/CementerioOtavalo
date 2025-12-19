@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class SocioNicho extends Model
+class SocioNicho extends Pivot 
 {
     protected $table = 'socio_nicho';
-    protected $guarded = [];
+    public $incrementing = true; // IMPORTANTE: Tu tabla tiene columna 'id'
 
-    public function socio()   { return $this->belongsTo(Socio::class); }
-    public function nicho()   { return $this->belongsTo(Nicho::class); }
+    protected $casts = [
+        'desde' => 'date',
+        'hasta' => 'date',
+    ];
 }
