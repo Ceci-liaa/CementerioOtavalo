@@ -96,7 +96,7 @@ class AsignacionController extends Controller
     // LÓGICA DE NEGOCIO (STORE, UPDATE, EXHUMAR, DESTROY)
     // =========================================================================
 
-    public function store(Request $request)
+public function store(Request $request)
     {
         $request->validate([
             'nicho_id' => 'required|exists:nichos,id',
@@ -110,7 +110,7 @@ class AsignacionController extends Controller
 
                 $nicho = Nicho::findOrFail($request->nicho_id);
 
-                // 1. Validar capacidad (Solo cuentan los NO exhumados)
+                // 1. Validar capacidad
                 $ocupantesActivos = $nicho->fallecidos()
                     ->wherePivot('fecha_exhumacion', null)
                     ->count();
@@ -127,14 +127,24 @@ class AsignacionController extends Controller
                     ]
                 ]);
 
-                // 3. Asignar Fallecido
+                // --- 3. GENERAR CÓDIGO (LÓGICA NUEVA) ---
+                // Buscamos el ID más alto actual y sumamos 1
+                // Usamos DB::table directo porque es más rápido para obtener el ID max
+                $ultimoId = DB::table('fallecido_nicho')->max('id') ?? 0;
+                $siguienteId = $ultimoId + 1;
+                
+                // Genera formato: ASG-00001
+                $codigoGenerado = 'ASG-' . str_pad($siguienteId, 5, '0', STR_PAD_LEFT);
+
+                // 4. Asignar Fallecido (Incluyendo el código)
                 $nicho->fallecidos()->attach($request->fallecido_id, [
-                    'posicion' => $ocupantesActivos + 1,
+                    'codigo'           => $codigoGenerado, // <--- AQUÍ SE GUARDA
+                    'posicion'         => $ocupantesActivos + 1,
                     'fecha_inhumacion' => now(),
-                    'observacion' => 'Ingreso registrado'
+                    'observacion'      => 'Ingreso registrado'
                 ]);
 
-                // 4. Actualizar Estado
+                // 5. Actualizar Estado del Nicho
                 $totalAhora = $ocupantesActivos + 1;
                 $nicho->update([
                     'estado' => ($totalAhora >= 3 ? 'LLENO' : 'OCUPADO'),

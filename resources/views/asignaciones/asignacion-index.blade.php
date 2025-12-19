@@ -1,27 +1,44 @@
 <x-app-layout>
-    {{-- 1. ESTILOS --}}
+    {{-- 1. ESTILOS (Formato Idéntico a tu solicitud) --}}
     <style>
         /* ESTILO ALERTAS (VERDE PASTEL) */
-        .alert-success { background-color: #e4f4db !important; color: #708736 !important; border-color: #e4f4db !important; }
+        .alert-success {
+            background-color: #e4f4db !important;
+            color: #708736 !important;
+            border-color: #e4f4db !important;
+            font-weight: 400 !important;
+            font-size: 14px !important;
+        }
         .alert-success .btn-close { filter: none !important; opacity: 0.5; color: #708736; }
         .alert-success .btn-close:hover { opacity: 1; }
-        
+
         /* ESTILO ALERTAS ERROR (ROJO SUAVE) */
-        .alert-danger { background-color: #f8d7da !important; color: #842029 !important; border-color: #f5c2c7 !important; }
+        .alert-danger {
+            background-color: #f8d7da !important;
+            color: #842029 !important;
+            border-color: #f5c2c7 !important;
+        }
 
-        /* Estilos para inputs */
+        /* Estilos para input groups y focus */
         .input-group-text { border-color: #dee2e6; }
-        .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
+        .form-control:focus, .form-select:focus {
+            border-color: #5ea6f7;
+            box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25);
+        }
 
-        /* Clase para inputs "delgados" */
-        .compact-filter { width: auto; min-width: 140px; max-width: 180px; }
+        /* Clase para inputs "delgados" como botones */
+        .compact-filter {
+            width: auto; 
+            min-width: 140px; 
+            max-width: 180px;
+        }
 
         /* Badges de Estado del Nicho */
         .badge-disponible { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .badge-ocupado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         .badge-lleno { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        
-        /* Botones de acción pequeños */
+
+        /* Botones de acción alineados */
         .btn-action { margin-right: 4px; }
     </style>
 
@@ -36,13 +53,13 @@
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Asignaciones</h3>
                         <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
-                            Total: {{ $nichos->total() }}
+                            Total Nichos: {{ $nichos->total() }}
                         </span>
                     </div>
-                    <p class="mb-0 text-secondary text-sm">Administra la ocupación de nichos, socios y fallecidos.</p>
+                    <p class="mb-0 text-secondary text-sm">Administra la ocupación de nichos, códigos de acta y responsables.</p>
                 </div>
 
-                {{-- Botón Nuevo (Abre Modal) --}}
+                {{-- Botón Nuevo (Verde sólido) --}}
                 <button type="button" class="btn btn-success px-4 open-modal" 
                         style="height: fit-content;"
                         data-url="{{ route('asignaciones.create') }}">
@@ -58,7 +75,7 @@
                 </div>
             @endif
             @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show alert-temporal mb-3" role="alert">
+                <div class="alert alert-danger text-white alert-dismissible fade show alert-temporal mb-3" role="alert">
                     <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
@@ -69,7 +86,7 @@
                 
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                     
-                    {{-- Botón Generar Reporte (Estilo Dropdown Azul) --}}
+                    {{-- Botón Generar Reporte (Azul) --}}
                     <div class="dropdown w-100 w-md-auto">
                         <button class="btn text-white dropdown-toggle mb-0 px-4 w-100 w-md-auto" 
                                 style="background-color: #5ea6f7; border-radius: 6px; font-weight: 600;" 
@@ -79,12 +96,12 @@
                         <ul class="dropdown-menu" aria-labelledby="dropdownGenerate">
                             <li>
                                 <a href="{{ route('asignaciones.pdf.general') }}" target="_blank" class="dropdown-item">
-                                    <i class="fas fa-list-alt text-primary me-2"></i> Reporte General
+                                    <i class="fas fa-file-pdf text-danger me-2"></i> Reporte General
                                 </a>
                             </li>
                             <li>
                                 <a href="{{ route('asignaciones.pdf.exhumados') }}" target="_blank" class="dropdown-item">
-                                    <i class="fas fa-person-digging text-dark me-2"></i> Ver Exhumados
+                                    <i class="fas fa-scroll text-dark me-2"></i> Ver Exhumados
                                 </a>
                             </li>
                         </ul>
@@ -93,7 +110,7 @@
                     {{-- Filtros (Compactos) --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         
-                        {{-- Filtro de Estado (Reemplaza al de Comunidad) --}}
+                        {{-- Filtro de Estado --}}
                         <select name="estado" class="form-select form-select-sm compact-filter ps-2" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Todos los Estados</option>
                             <option value="OCUPADO" @selected(request('estado') == 'OCUPADO')>Ocupados</option>
@@ -105,7 +122,7 @@
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
                             <input type="text" name="search" class="form-control border-0 ps-1 shadow-none" 
-                                   placeholder="Socio, Fallecido, Nicho..." 
+                                   placeholder="Código, Socio..." 
                                    value="{{ request('search') }}">
                         </div>
                     </div>
@@ -125,7 +142,7 @@
                                     <th style="text-align: left; padding-left: 15px;">Socio Responsable</th>
                                     <th>Estado</th>
                                     <th>Ocupación</th>
-                                    <th style="width:160px;">Acciones</th>
+                                    <th style="width:170px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -140,15 +157,21 @@
                                             <div class="text-xs font-weight-normal text-secondary">{{ $nicho->bloque->descripcion ?? '' }}</div>
                                         </td>
                                         
-                                        {{-- Fallecidos (Lista) --}}
+                                        {{-- Fallecidos (Lista con CÓDIGO ASG) --}}
                                         <td class="text-start ps-3">
                                             @php 
                                                 $ocupantes = $nicho->fallecidos->where('pivot.fecha_exhumacion', null); 
                                             @endphp
                                             @forelse($ocupantes as $f)
-                                                <div class="text-sm"><i class="text-xs me-1 text-muted"></i> {{ $f->apellidos }} {{ $f->nombres }}</div>
+                                                <div class="text-sm border-bottom pb-1 mb-1 border-light">
+                                                    {{-- MUESTRA EL CÓDIGO GENERADO --}}
+                                                    <span class="badge bg-light text-dark border me-1" style="font-size: 0.7rem;">
+                                                        {{ $f->pivot->codigo ?? 'S/C' }}
+                                                    </span>
+                                                    <i class="fas fa-user text-xs me-1 text-muted"></i> {{ $f->apellidos }} {{ $f->nombres }}
+                                                </div>
                                             @empty
-                                                <span class="text-muted small fst-italic">-- Sin ocupantes --</span>
+                                                <span class="text-muted small fst-italic">-- Vacío --</span>
                                             @endforelse
                                         </td>
                                         
@@ -184,41 +207,42 @@
                                         
                                         {{-- Acciones --}}
                                         <td>
-                                            {{-- SHOW (Ver) --}}
-                                            <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
-                                                    data-url="{{ route('asignaciones.show', $nicho->id) }}" title="Ver Detalles">
-                                                <i class="fa fa-eye"></i>
-                                            </button>
-
-                                            @if($ocupantes->count() > 0 || $nicho->socios->count() > 0)
-                                                {{-- EDIT (Corregir) --}}
-                                                <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
-                                                        data-url="{{ route('asignaciones.edit', $nicho->id) }}" title="Editar/Corregir">
-                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                            <div class="d-flex justify-content-center">
+                                                
+                                                {{-- SHOW (Ver) --}}
+                                                <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
+                                                        data-url="{{ route('asignaciones.show', $nicho->id) }}" title="Ver Detalles">
+                                                    <i class="fa fa-eye"></i>
                                                 </button>
-                                            @endif
 
-                                            {{-- EXHUMAR (Solo si hay ocupantes) --}}
-                                            @if($ocupantes->count() > 0)
-                                                {{-- OJO: Este botón abre la VISTA SEPARADA que pediste (exhumarForm) --}}
-                                                <button type="button" class="btn btn-sm btn-dark mb-0 btn-action open-modal" 
-                                                        data-url="{{ route('asignaciones.exhumarForm', $nicho->id) }}" 
-                                                        title="Registrar Exhumación">
-                                                    <i class="fa-solid fa-person-digging"></i>
-                                                </button>
-                                            @endif
+                                                @if($ocupantes->count() > 0 || $nicho->socios->count() > 0)
+                                                    {{-- EDIT (Corregir) --}}
+                                                    <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
+                                                            data-url="{{ route('asignaciones.edit', $nicho->id) }}" title="Editar/Corregir">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                @endif
 
-                                            {{-- ELIMINAR (Solo si hay historial) --}}
-                                            @if($nicho->fallecidos->count() > 0)
-                                                {{-- Nota: Mandamos el ID del último fallecido para la ruta destroy, 
-                                                     pero el usuario debe confirmar. Es para borrar errores de dedo. --}}
-                                                <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                        data-url="{{ route('asignacion.destroy', [$nicho->id, $nicho->fallecidos->last()->id]) }}"
-                                                        data-item="Asignación del Nicho {{ $nicho->codigo }}" 
-                                                        title="Eliminar Registro (Error)">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            @endif
+                                                {{-- EXHUMAR (Vista Separada - Solo si hay ocupantes) --}}
+                                                @if($ocupantes->count() > 0)
+                                                    <button type="button" class="btn btn-sm btn-dark mb-0 btn-action open-modal" 
+                                                            data-url="{{ route('asignaciones.exhumarForm', $nicho->id) }}" 
+                                                            title="Registrar Exhumación">
+                                                        <i class="fas fa-person-digging"></i>
+                                                    </button>
+                                                @endif
+
+                                                {{-- ELIMINAR (Solo si hay historial) --}}
+                                                @if($nicho->fallecidos->count() > 0)
+                                                    {{-- Mandamos el ID del último fallecido para eliminar --}}
+                                                    <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
+                                                            data-url="{{ route('asignacion.destroy', [$nicho->id, $nicho->fallecidos->last()->id]) }}"
+                                                            data-item="Asignación {{ $nicho->codigo }}" 
+                                                            title="Eliminar Registro (Error)">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -246,7 +270,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                // Alertas
+                // Alertas Temporales
                 setTimeout(() => { 
                     document.querySelectorAll('.alert-temporal').forEach(alert => { 
                         alert.style.transition = "opacity 0.5s"; alert.style.opacity = 0; 
@@ -270,7 +294,7 @@
                     btn.addEventListener('click', function() {
                         Swal.fire({
                             title: '¿Eliminar Registro?', 
-                            html: `¿Deseas eliminar <b>"${this.getAttribute('data-item')}"</b>?<br><small class="text-danger">Esta acción borrará el historial de asignación.</small>`, 
+                            html: `¿Deseas eliminar el último registro de <b>"${this.getAttribute('data-item')}"</b>?<br><small class="text-danger">Esta acción borrará el historial de asignación.</small>`, 
                             icon: 'warning', 
                             showCancelButton: true, 
                             confirmButtonColor: '#d33', 
