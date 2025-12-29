@@ -1,16 +1,13 @@
-{{-- CABECERA (Amarilla para distinguir Editar) --}}
 <div class="modal-header bg-warning text-dark">
     <h5 class="modal-title fw-bold">Editar Socio</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-{{-- FORMULARIO --}}
 <form method="POST" action="{{ route('socios.update', $socio) }}">
     @csrf @method('PUT')
 
     <div class="modal-body">
         
-        {{-- Mostrar errores dentro del modal --}}
         @if ($errors->any())
             <div class="alert alert-danger py-2 text-xs">
                 <ul class="mb-0 ps-3">
@@ -20,7 +17,7 @@
         @endif
 
         <div class="row g-3">
-            {{-- Código (Solo lectura) --}}
+            {{-- Código --}}
             <div class="col-12">
                 <label class="form-label fw-bold text-muted">Código</label>
                 <input value="{{ $socio->codigo }}" class="form-control bg-light" readonly>
@@ -42,20 +39,15 @@
                 <input name="cedula" value="{{ old('cedula', $socio->cedula) }}" class="form-control" required>
             </div>
             <div class="col-md-4">
+                <label class="form-label fw-bold">Fecha Nacimiento <span class="text-danger">*</span></label>
+                <input type="date" name="fecha_nac" value="{{ old('fecha_nac', optional($socio->fecha_nac)->format('Y-m-d')) }}" class="form-control" required>
+            </div>
+            <div class="col-md-4">
                 <label class="form-label fw-bold">Género</label>
                 <select name="genero_id" class="form-select">
                     <option value="">—</option>
                     @foreach($generos as $g)
                         <option value="{{ $g->id }}" @selected(old('genero_id', $socio->genero_id)==$g->id)>{{ $g->nombre }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-bold">Estado Civil</label>
-                <select name="estado_civil_id" class="form-select">
-                    <option value="">—</option>
-                    @foreach($estados as $e)
-                        <option value="{{ $e->id }}" @selected(old('estado_civil_id', $socio->estado_civil_id)==$e->id)>{{ $e->nombre }}</option>
                     @endforeach
                 </select>
             </div>
@@ -85,8 +77,39 @@
                 <input type="email" name="email" value="{{ old('email', $socio->email) }}" class="form-control">
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-bold">Fecha Nacimiento</label>
-                <input type="date" name="fecha_nac" value="{{ old('fecha_nac', optional($socio->fecha_nac)->format('Y-m-d')) }}" class="form-control">
+                <label class="form-label fw-bold">Estado Civil</label>
+                <select name="estado_civil_id" class="form-select">
+                    <option value="">—</option>
+                    @foreach($estados as $e)
+                        <option value="{{ $e->id }}" @selected(old('estado_civil_id', $socio->estado_civil_id)==$e->id)>{{ $e->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-12"><hr class="my-2 text-muted"></div>
+
+            {{-- NUEVOS CAMPOS (Edit) --}}
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-primary">Fecha Inscripción <span class="text-danger">*</span></label>
+                <input type="date" name="fecha_inscripcion" value="{{ old('fecha_inscripcion', optional($socio->fecha_inscripcion)->format('Y-m-d')) }}" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-primary">Beneficio</label>
+                {{-- ID select_beneficio es importante para el JS del Index --}}
+                <select name="tipo_beneficio" id="select_beneficio" class="form-select fw-bold border-primary">
+                    <option value="sin_subsidio" @selected($socio->tipo_beneficio == 'sin_subsidio')>Sin Subsidio</option>
+                    <option value="con_subsidio" @selected($socio->tipo_beneficio == 'con_subsidio')>Con Subsidio</option>
+                    <option value="exonerado" @selected($socio->tipo_beneficio == 'exonerado') class="text-success font-weight-bold">Exonerado (75+)</option>
+                </select>
+            </div>
+
+            {{-- Fecha Exoneración (Controlada por JS) --}}
+            <div class="col-md-4" id="div_fecha_exo" style="display: none;">
+                <label class="form-label fw-bold text-success">Fecha Exoneración <span class="text-danger">*</span></label>
+                <input type="date" name="fecha_exoneracion" 
+                       value="{{ old('fecha_exoneracion', optional($socio->fecha_exoneracion)->format('Y-m-d')) }}" 
+                       class="form-control border-success">
             </div>
 
             {{-- Checkbox --}}
@@ -100,7 +123,6 @@
     </div>
 
     <div class="modal-footer">
-        {{-- Data-bs-dismiss cierra el modal sin recargar --}}
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-warning">Actualizar</button>
     </div>

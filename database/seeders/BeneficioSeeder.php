@@ -22,10 +22,10 @@ class BeneficioSeeder extends Seeder
                 'valor'       => 64.00, 
             ],
             [
-                'nombre'      => 'Inscripción Especial (Solteros/Recién Casados)',
+                'nombre'      => 'Inscripción Especial (Solteros/Madre Soltera/Recién Casados)',
                 'descripcion' => 'Tarifa reducida para solteros o uniones de hecho menores a 1 año.',
                 'tipo'        => 'INSCRIPCION',
-                'valor'       => 25.00, 
+                'valor'       => 35.00, 
             ],
 
             // --- APORTES ANUALES (Art. 22.a.1) ---

@@ -178,6 +178,14 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ route('pagos.general') }}"
+                    class="nav-link {{ request()->routeIs('pagos.general') ? 'active' : '' }}">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    <span>Historial Pagos</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ route('fallecidos.index') }}" class="nav-link">
                     <i class="fa-solid fa-cross"></i>
                     <span>Fallecidos</span>

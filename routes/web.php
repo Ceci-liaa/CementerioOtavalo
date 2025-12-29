@@ -303,6 +303,15 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // 3. Certificado Individual de Exhumación
     Route::get('/asignaciones/certificado/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'pdfCertificadoExhumacion'])->name('asignaciones.pdf.certificado');
+
+
+    // ─── RUTAS PARA GESTIÓN DE PAGOS DE SOCIOS ────────────────────────
+    Route::get('socios/{socio}/pagos', [App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
+    Route::post('socios/{socio}/pagos', [App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
+    Route::delete('pagos/{pago}', [App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
+    Route::get('/pagos-general', [App\Http\Controllers\PagoController::class, 'general'])->name('pagos.general');
+    Route::get('/pagos/nuevo-pago', [App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
+
 });
 
 
