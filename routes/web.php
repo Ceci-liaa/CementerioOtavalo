@@ -306,12 +306,19 @@ Route::middleware(['web', 'auth'])->group(function () {
 
 
     // ─── RUTAS PARA GESTIÓN DE PAGOS DE SOCIOS ────────────────────────
+    Route::delete('pagos/{pago}', [App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
+
+    // Gestión de Pagos (Crear)
     Route::get('socios/{socio}/pagos', [App\Http\Controllers\PagoController::class, 'index'])->name('pagos.index');
     Route::post('socios/{socio}/pagos', [App\Http\Controllers\PagoController::class, 'store'])->name('pagos.store');
-    Route::delete('pagos/{pago}', [App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
-    Route::get('/pagos-general', [App\Http\Controllers\PagoController::class, 'general'])->name('pagos.general');
-    Route::get('/pagos/nuevo-pago', [App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
 
+    // Gestión de Recibos (Historial, Ver, Editar, Borrar)
+    Route::get('pagos-general', [App\Http\Controllers\PagoController::class, 'general'])->name('pagos.general');
+    Route::get('pagos/nuevo-pago', [App\Http\Controllers\PagoController::class, 'create'])->name('pagos.create');
+    Route::get('recibos/{recibo}', [App\Http\Controllers\PagoController::class, 'show'])->name('pagos.show');
+    Route::get('recibos/{recibo}/edit', [App\Http\Controllers\PagoController::class, 'edit'])->name('pagos.edit');
+    Route::put('recibos/{recibo}', [App\Http\Controllers\PagoController::class, 'update'])->name('pagos.update');
+    Route::delete('recibos/{recibo}', [App\Http\Controllers\PagoController::class, 'destroy'])->name('pagos.destroy');
 });
 
 

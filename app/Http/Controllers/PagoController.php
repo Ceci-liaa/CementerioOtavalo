@@ -5,119 +5,192 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Socio;
 use App\Models\Pago;
-// use App\Models\Beneficio; // Descomenta si usas tu modelo Beneficio
+use App\Models\Recibo; // <--- Importante
+use Illuminate\Support\Facades\DB;
 
 class PagoController extends Controller
 {
-    public function index(Socio $socio)
-    {
-        $socio->load('pagos');
-        $aniosPendientes = $socio->anios_deuda; // Usa la lógica del modelo Socio
-        return view('pagos.index-modal', compact('socio', 'aniosPendientes'));
-    }
-
-    // Muestra el Modal con el BUSCADOR de socios para cobrar
-    public function create(Request $request)
+    // --- 1. HISTORIAL GENERAL (Ahora muestra RECIBOS agrupados) ---
+    public function general(Request $request)
     {
         $search = trim($request->get('search', ''));
         
-        $socios = \App\Models\Socio::query()
-            ->orderBy('apellidos')
-            ->orderBy('nombres');
+        // Consultamos RECIBOS, no pagos sueltos
+        $query = Recibo::with(['socio', 'pagos'])->orderBy('created_at', 'desc');
 
-        // ─── EL BUSCADOR BLINDADO (El mismo que te di antes) ───
         if ($search !== '') {
-            $socios->where(function ($w) use ($search) {
-                 $w->whereRaw("CAST(cedula AS TEXT) ILIKE ?", ["%{$search}%"]) // Busca cédula como texto
-                   ->orWhere('codigo', 'ILIKE', "%{$search}%")
-                   // Busca Nombre Completo unido
-                   ->orWhereRaw("CONCAT(nombres, ' ', apellidos) ILIKE ?", ["%{$search}%"])
-                   ->orWhereRaw("CONCAT(apellidos, ' ', nombres) ILIKE ?", ["%{$search}%"]);
+            $query->whereHas('socio', function($q) use ($search) {
+                $q->whereRaw("CAST(cedula AS TEXT) ILIKE ?", ["%{$search}%"])
+                  ->orWhereRaw("CONCAT(apellidos, ' ', nombres) ILIKE ?", ["%{$search}%"]);
             });
         }
 
-        // Solo mostramos 5 para no llenar el modal, a menos que busque
-        $resultados = $socios->paginate(5)->withQueryString();
+        $recibos = $query->paginate(10)->withQueryString();
+        $totalRecaudado = Recibo::sum('total');
 
-        // Si es una petición AJAX (cuando escribes en el buscador), devolvemos solo la lista
-        if ($request->ajax()) {
-            return view('pagos.partials.lista-socios', compact('resultados'))->render();
-        }
-
-        return view('pagos.create', compact('resultados'));
+        // Retornamos la vista 'general' (la actualizaremos en el paso 4)
+        return view('pagos.general', compact('recibos', 'totalRecaudado'));
     }
-    public function store(Request $request, Socio $socio)
+
+    // --- 2. MOSTRAR MODAL DE COBRO (Igual que antes) ---
+    public function index(Socio $socio)
+    {
+        $socio->load('pagos');
+        $aniosPendientes = $socio->anios_deuda;
+        return view('pagos.index-modal', compact('socio', 'aniosPendientes'));
+    }
+
+    // --- 3. GUARDAR PAGO (Crea 1 Recibo + Varios Pagos) ---
+public function store(Request $request, Socio $socio)
     {
         $request->validate([
-            'anios_pagados' => 'required|array|min:1', // Debe marcar al menos uno
+            'anios_pagados' => 'required|array|min:1',
             'fecha_pago'    => 'required|date',
         ]);
 
-        // ─── DEFINICIÓN DEL PRECIO AUTOMÁTICO ───
-        
-        // OPCIÓN A: Sacarlo de la BD (Si ya tienes el modelo Beneficio)
-        // $rubro = \App\Models\Beneficio::where('nombre', 'Pago Anual')->first();
-        // $precio = $rubro ? $rubro->monto : 0.00;
-        
-        // OPCIÓN B: Valor fijo (Úsalo para probar ya mismo)
-        $precio = 25.00; 
+        $precio = 25.00; // Tu precio base
 
         try {
-            \DB::transaction(function () use ($request, $socio, $precio) {
-                // Recorremos cada casilla marcada (Ej: 2023, 2024)
-                foreach ($request->anios_pagados as $anio) {
-                    
-                    // Verificar si ya pagó ese año (Evitar error de duplicado)
-                    $existe = Pago::where('socio_id', $socio->id)
-                                  ->where('anio_pagado', $anio)
-                                  ->exists();
+            DB::transaction(function () use ($request, $socio, $precio) {
+                
+                // 1. BUSCAR SI YA EXISTE UN RECIBO DE ESTE SOCIO EN ESTA FECHA
+                $recibo = Recibo::where('socio_id', $socio->id)
+                                ->where('fecha_pago', $request->fecha_pago) // Misma fecha
+                                ->first();
 
-                    if (!$existe) {
-                        Pago::create([
-                            'socio_id'    => $socio->id,
-                            'anio_pagado' => $anio,
-                            'monto'       => $precio, // Se guarda el precio automático
-                            'fecha_pago'  => $request->fecha_pago,
-                            'observacion' => $request->observacion,
-                            'created_by'  => auth()->id(),
+                // 2. SI NO EXISTE, LO CREAMOS (Lógica anterior)
+                if (!$recibo) {
+                    $recibo = Recibo::create([
+                        'socio_id'    => $socio->id,
+                        'fecha_pago'  => $request->fecha_pago,
+                        'total'       => 0, // Se actualizará abajo
+                        'observacion' => $request->observacion,
+                        'created_by'  => auth()->id(),
+                    ]);
+                } else {
+                    // SI YA EXISTE, SOLO ACTUALIZAMOS LA OBSERVACIÓN (OPCIONAL)
+                    if ($request->observacion) {
+                        $recibo->update([
+                            'observacion' => $recibo->observacion . ' | ' . $request->observacion
                         ]);
                     }
                 }
+
+                // 3. AGREGAMOS LOS NUEVOS AÑOS A ESE RECIBO (Sea nuevo o viejo)
+                $nuevosPagosCount = 0;
+
+                foreach ($request->anios_pagados as $anio) {
+                    
+                    // Verificamos que no estemos duplicando un año que ya tenía
+                    $existePago = Pago::where('socio_id', $socio->id)
+                                      ->where('anio_pagado', $anio)
+                                      ->exists();
+
+                    if (!$existePago) {
+                        Pago::create([
+                            'recibo_id'   => $recibo->id, // Usamos el ID del recibo encontrado/creado
+                            'socio_id'    => $socio->id,
+                            'anio_pagado' => $anio,
+                            'monto'       => $precio,
+                            'fecha_pago'  => $request->fecha_pago,
+                        ]);
+                        $nuevosPagosCount++;
+                    }
+                }
+
+                // 4. RECALCULAR EL TOTAL DEL RECIBO
+                // Sumamos lo que ya tenía + lo nuevo
+                $recibo->increment('total', $nuevosPagosCount * $precio);
             });
 
-            return back()->with('success', 'Pagos registrados correctamente.');
+            return back()->with('success', 'Pago registrado/actualizado correctamente.');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
-    public function destroy(Pago $pago)
+    // --- 4. VER RECIBO (Solo lectura) ---
+    public function show(Recibo $recibo)
     {
-        $pago->delete();
-        return back()->with('success', 'Pago eliminado.');
+        $recibo->load(['socio', 'pagos']);
+        return view('pagos.show', compact('recibo'));
     }
 
-public function general(Request $request)
+    // --- 5. EDITAR RECIBO (Corregir años) ---
+    public function edit(Recibo $recibo)
     {
-        $search = trim($request->get('search', ''));
+        $recibo->load('pagos');
+        $socio = $recibo->socio;
+        
+        // Calcular años disponibles para corregir
+        $aniosPagadosPorOtros = Pago::where('socio_id', $socio->id)
+                                    ->where('recibo_id', '!=', $recibo->id)
+                                    ->pluck('anio_pagado')->toArray();
+                                    
+        $anioInicio = $socio->fecha_inscripcion ? $socio->fecha_inscripcion->year : now()->year;
+        $todosAnios = range($anioInicio, now()->year + 1);
+        
+        $aniosDisponibles = array_diff($todosAnios, $aniosPagadosPorOtros);
+        $aniosMarcados = $recibo->pagos->pluck('anio_pagado')->toArray();
 
-        // Consulta base ordenando por fecha reciente
-        $query = Pago::with('socio')->orderBy('created_at', 'desc');
+        return view('pagos.edit', compact('recibo', 'aniosDisponibles', 'aniosMarcados'));
+    }
 
+    // --- 6. ACTUALIZAR RECIBO ---
+    public function update(Request $request, Recibo $recibo)
+    {
+        $request->validate(['anios_pagados' => 'required|array|min:1']);
+        $precio = 25.00; 
+
+        try {
+            DB::transaction(function () use ($request, $recibo, $precio) {
+                // Borrar pagos viejos de este recibo y crear los nuevos seleccionados
+                $recibo->pagos()->delete();
+
+                foreach ($request->anios_pagados as $anio) {
+                    Pago::create([
+                        'recibo_id'   => $recibo->id,
+                        'socio_id'    => $recibo->socio_id,
+                        'anio_pagado' => $anio,
+                        'monto'       => $precio,
+                        'fecha_pago'  => $recibo->fecha_pago,
+                    ]);
+                }
+                // Actualizar total
+                $recibo->update([
+                    'total' => count($request->anios_pagados) * $precio,
+                    'observacion' => $request->observacion
+                ]);
+            });
+            return back()->with('success', 'Recibo actualizado.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    // --- 7. ELIMINAR RECIBO ---
+    public function destroy(Recibo $recibo)
+    {
+        $recibo->delete(); 
+        return back()->with('success', 'Recibo eliminado.');
+    }
+    
+    // --- 8. BUSCADOR DE SOCIO (El que ya tenías) ---
+    public function create(Request $request) {
+        // ... (Copia aquí tu función create del paso anterior tal cual estaba) ...
+        // Si no la tienes a mano, avísame y te la pongo.
+        // Es la que busca al socio para iniciar el cobro.
+         $search = trim($request->get('search', ''));
+        $socios = Socio::query()->orderBy('apellidos')->orderBy('nombres');
         if ($search !== '') {
-            $query->whereHas('socio', function($q) use ($search) {
-                $q->where('cedula', 'ILIKE', "%{$search}%")
-                  ->orWhere('nombres', 'ILIKE', "%{$search}%")
-                  ->orWhere('apellidos', 'ILIKE', "%{$search}%")
-                  // ESTA LÍNEA ES LA MAGIA: Une Nombre + Espacio + Apellido
-                  ->orWhereRaw("nombres || ' ' || apellidos ILIKE ?", ["%{$search}%"]);
+            $socios->where(function ($w) use ($search) {
+                 $w->whereRaw("CAST(cedula AS TEXT) ILIKE ?", ["%{$search}%"])
+                   ->orWhereRaw("CONCAT(apellidos, ' ', nombres) ILIKE ?", ["%{$search}%"]);
             });
         }
-
-        $pagos = $query->paginate(15)->withQueryString();
-        $totalRecaudado = Pago::sum('monto');
-
-        return view('pagos.general', compact('pagos', 'totalRecaudado'));
+        $resultados = $socios->paginate(5)->withQueryString();
+        if ($request->ajax()) return view('pagos.partials.lista-socios', compact('resultados'))->render();
+        return view('pagos.create', compact('resultados'));
     }
 }

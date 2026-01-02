@@ -18,4 +18,8 @@ class Pago extends Model
     {
         return $this->belongsTo(Socio::class);
     }
+    public function recibo()
+    {
+        return $this->belongsTo(Recibo::class);
+    }
 }
