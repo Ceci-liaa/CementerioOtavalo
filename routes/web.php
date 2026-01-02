@@ -118,14 +118,14 @@ Route::middleware(['web', 'auth'])->group(function () {
     // =========================
     // Cantones
     // =========================
+
     Route::get('cantones', [CantonController::class, 'index'])->name('cantones.index');
-    Route::get('cantones/create', [CantonController::class, 'create'])->name('cantones.create');
+    Route::get('cantones/create', [CantonController::class, 'create'])->name('cantones.create'); // Ahora esta llamará a la vista correctamente
     Route::post('cantones', [CantonController::class, 'store'])->name('cantones.store');
     Route::get('cantones/{canton}', [CantonController::class, 'show'])->name('cantones.show');
-    Route::get('cantones/{canton}/edit', [CantonController::class, 'edit'])->name('cantones.edit');
+    Route::get('cantones/{canton}/edit', [CantonController::class, 'edit'])->name('cantones.edit'); // Esta también
     Route::put('cantones/{canton}', [CantonController::class, 'update'])->name('cantones.update');
     Route::delete('cantones/{canton}', [CantonController::class, 'destroy'])->name('cantones.destroy');
-
     // =========================
     // Parroquias
     // =========================
@@ -149,15 +149,6 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('comunidades/{comunidad}', [ComunidadController::class, 'update'])->name('comunidades.update');
     Route::delete('comunidades/{comunidad}', [ComunidadController::class, 'destroy'])->name('comunidades.destroy');
     Route::post('comunidades/reports', [App\Http\Controllers\ComunidadController::class, 'reports'])->name('comunidades.reports');
-
-    // =========================
-    // Rutas AJAX dependientes
-    // =========================
-    Route::get('cantones/{canton}/parroquias', [ParroquiaController::class, 'byCanton'])
-        ->name('cantones.parroquias');
-
-    Route::get('parroquias/{parroquia}/comunidades', [ComunidadController::class, 'byParroquia'])
-        ->name('parroquias.comunidades');
 
     //SOCIOS
     Route::get('/socios', [SocioController::class, 'index'])->name('socios.index');

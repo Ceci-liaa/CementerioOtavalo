@@ -16,10 +16,10 @@ class CantonController extends Controller
 
         if ($q !== '') {
             // 2. Búsqueda avanzada: busca por nombre O por código
-            $query->where(function($sub) use ($q) {
+            $query->where(function ($sub) use ($q) {
                 // Detectar si es Postgres o MySQL para el operador (ILIKE vs LIKE)
                 $operator = \DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
-                
+
                 $sub->where('nombre', $operator, "%{$q}%")
                     ->orWhere('codigo', $operator, "%{$q}%");
             });
@@ -30,9 +30,25 @@ class CantonController extends Controller
         return view('cantones.canton-index', compact('cantones'));
     }
 
-    public function create() { return redirect()->route('cantones.index'); }
-    public function edit(Canton $canton) { return redirect()->route('cantones.index'); }
+// --- CORREGIDO: CREATE ---
+    public function create()
+    {
+        // Detectamos si es AJAX para decirle a la vista que es un Modal
+        $isModal = request()->ajax();
+        
+        // Retornamos la vista (asegúrate que el archivo sea 'create.blade.php' en la carpeta 'cantones')
+        return view('cantones.canton-create', compact('isModal'));
+    }
 
+    // --- CORREGIDO: EDIT ---
+    public function edit(Canton $canton)
+    {
+        // Detectamos si es AJAX
+        $isModal = request()->ajax();
+
+        // Retornamos la vista con los datos del cantón
+        return view('cantones.canton-edit', compact('canton', 'isModal'));
+    }
     public function store(Request $request)
     {
         $request->validate([
@@ -49,7 +65,7 @@ class CantonController extends Controller
             ]);
             return redirect()->route('cantones.index')->with('success', 'Cantón creado correctamente.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error al crear: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al crear: ' . $e->getMessage());
         }
     }
 
@@ -65,7 +81,7 @@ class CantonController extends Controller
             ]);
             return redirect()->route('cantones.index')->with('success', 'Cantón actualizado correctamente.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error al actualizar: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al actualizar: ' . $e->getMessage());
         }
     }
 
@@ -78,7 +94,7 @@ class CantonController extends Controller
             return redirect()->route('cantones.index')->with('error', 'No se puede eliminar: tiene parroquias asociadas.');
         }
     }
-    
+
     // Show se mantiene igual por si quieres ver detalles
     public function show(Canton $canton)
     {

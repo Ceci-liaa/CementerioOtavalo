@@ -1,32 +1,69 @@
-<x-app-layout>
-    <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-        <x-app.navbar />
-        <div class="px-5 py-4 container-fluid">
-            <div class="alert alert-dark text-sm"><strong style="font-size:24px;">Cantón: {{ $canton->nombre }}</strong></div>
+{{-- CABECERA DEL MODAL (Azul Informativo) --}}
+<div class="modal-header bg-info text-white border-bottom-0 pb-0">
+    <h5 class="modal-title fw-bold">Detalle del Cantón</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div><b>ID:</b> {{ $canton->id }}</div>
-                    <div><b>Nombre:</b> {{ $canton->nombre }}</div>
-                </div>
-            </div>
-
-            <h5>Parroquias</h5>
-            <div class="card">
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        @forelse($canton->parroquias as $p)
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>{{ $p->nombre }}</span>
-                                <a href="{{ route('parroquias.edit',$p) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
-                            </li>
-                        @empty
-                            <li class="list-group-item text-muted">Sin parroquias</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
+{{-- CUERPO DEL MODAL --}}
+<div class="modal-body pt-3">
+    
+    {{-- Tarjeta destacada para Código e ID --}}
+    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 p-3 shadow-sm">
+        <div>
+            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código del Cantón</small>
+            <span class="fw-bold text-dark fs-5">{{ $canton->codigo }}</span>
         </div>
-        <x-app.footer />
-    </main>
-</x-app-layout>
+        <div class="text-end border-start ps-3">
+            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">ID Interno</small>
+            <span class="fw-bold text-dark fs-5">#{{ $canton->id }}</span>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {{-- Información General --}}
+        <div class="col-12">
+            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Información General</h6>
+        </div>
+
+        <div class="col-12">
+            <label class="d-block text-muted small mb-0">Nombre del Cantón</label>
+            <div class="fw-bold text-dark fs-6">{{ $canton->nombre }}</div>
+        </div>
+
+        {{-- Parroquias Asociadas --}}
+        <div class="col-12 mt-3">
+            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">
+                Parroquias Asociadas <span class="badge bg-primary ms-1">{{ $canton->parroquias->count() }}</span>
+            </h6>
+        </div>
+
+        <div class="col-12">
+            @if($canton->parroquias->count() > 0)
+                <div class="bg-light p-3 rounded border">
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach($canton->parroquias as $parroquia)
+                            <span class="badge bg-white text-dark border shadow-sm">
+                                <i class="fas fa-map-marker-alt text-danger me-1" style="font-size: 0.7rem;"></i> 
+                                {{ $parroquia->nombre }}
+                            </span>
+                        @endforeach
+                    </div>
+                </div>
+            @else
+                <div class="text-muted small fst-italic">No hay parroquias registradas en este cantón.</div>
+            @endif
+        </div>
+
+        {{-- AUDITORÍA --}}
+        <div class="col-12 mt-3 pt-2 border-top d-flex justify-content-between text-xs text-muted">
+            {{-- Aquí mostramos el usuario LOGUEADO si no hay relación, o el creador si existe --}}
+            <span>Registrado por: <strong>{{ auth()->user()->name ?? 'Sistema' }}</strong></span>
+            <span>Fecha: {{ $canton->created_at ? $canton->created_at->format('d/m/Y H:i') : '—' }}</span>
+        </div>
+    </div>
+</div>
+
+{{-- PIE DEL MODAL --}}
+<div class="modal-footer border-top-0 pt-0">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+</div>
