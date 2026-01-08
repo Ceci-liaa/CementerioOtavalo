@@ -53,8 +53,8 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-bold">Estado Civil</label>
-                <select name="estado_civil_id" class="form-select">
+                <label class="form-label fw-bold">Estado Civil <span class="text-danger">*</span></label>
+                <select name="estado_civil_id" class="form-select" required>
                     <option value="">Seleccionar...</option>
                     @foreach($estados as $e)
                         <option value="{{ $e->id }}" @selected(old('estado_civil_id')==$e->id)>{{ $e->nombre }}</option>
@@ -62,8 +62,8 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-bold">Comunidad</label>
-                <select name="comunidad_id" class="form-select">
+                <label class="form-label fw-bold">Comunidad <span class="text-danger">*</span></label>
+                <select name="comunidad_id" class="form-select" required>
                     <option value="">Seleccionar...</option>
                     @foreach($comunidades as $c)
                         <option value="{{ $c->id }}" @selected(old('comunidad_id')==$c->id)>{{ $c->nombre }}</option>
@@ -88,17 +88,35 @@
             <div class="col-12"><hr class="my-2 text-muted"></div>
 
             {{-- Fila 5: NUEVOS CAMPOS --}}
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <label class="form-label fw-bold text-primary">Fecha Inscripción <span class="text-danger">*</span></label>
                 <input type="date" name="fecha_inscripcion" value="{{ old('fecha_inscripcion', date('Y-m-d')) }}" class="form-control" required>
             </div>
 
-            <div class="col-md-6">
-                <label class="form-label fw-bold text-primary">Beneficio Inicial</label>
-                <select name="tipo_beneficio" class="form-select">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-primary">Beneficio Inicial <span class="text-danger">*</span></label>
+                <select name="tipo_beneficio" class="form-select" required>
                     <option value="sin_subsidio">Sin Subsidio</option>
                     <option value="con_subsidio">Con Subsidio</option>
                     <option value="exonerado">Exonerado (Solo mayores de 75)</option>
+                </select>
+            </div>
+
+            {{-- CAMPOS NUEVOS SOLICITADOS --}}
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-dark">Condición <span class="text-danger">*</span></label>
+                <select name="condicion" class="form-select" required>
+                    <option value="ninguna">Ninguna</option>
+                    <option value="discapacidad">Discapacidad</option>
+                    <option value="enfermedad_terminal">Enfermedad Terminal</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-dark">Estatus <span class="text-danger">*</span></label>
+                <select name="estatus" class="form-select" required>
+                    <option value="vivo">Vivo</option>
+                    <option value="fallecido">Fallecido</option>
                 </select>
             </div>
 

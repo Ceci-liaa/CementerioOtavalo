@@ -113,7 +113,7 @@
                                                 <button type="button" class="btn btn-sm btn-warning mb-0 open-modal" 
                                                         data-url="{{ route('roles.edit', $role->id) }}"
                                                         title="Editar">
-                                                    <i class="fa-solid fa-pen-to-square" style="font-size:.8rem;"></i>
+                                                    <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                 </button>
 
                                                 {{-- Eliminar (SweetAlert) --}}
@@ -121,7 +121,7 @@
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 js-delete-btn"
                                                             data-url="{{ route('roles.destroy', $role->id) }}"
                                                             data-item="{{ $role->name }}">
-                                                        <i class="fa-solid fa-trash" style="font-size:.8rem;"></i>
+                                                        <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                 @else
                                                     <button class="btn btn-sm btn-secondary mb-0" disabled title="Rol Protegido">

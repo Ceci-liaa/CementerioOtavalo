@@ -145,7 +145,7 @@
                                                         data-bs-target="#editUserModal"
                                                         data-id="{{ $user->id }}"
                                                         title="Editar">
-                                                    <i class="fa-solid fa-pen-to-square" style="font-size:.8rem;"></i>
+                                                    <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                 </button>
                                             </td>
                                         </tr>

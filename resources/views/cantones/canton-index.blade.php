@@ -140,20 +140,20 @@
                                             {{-- Ver --}}
                                             <button type="button" class="btn btn-sm btn-info mb-0 me-1 open-modal"
                                                 data-url="{{ route('cantones.show', $canton->id) }}" title="Ver">
-                                                <i class="fa-solid fa-eye text-white" style="font-size:.8rem;"></i>
+                                                <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                             </button>
 
                                             {{-- Editar --}}
                                             <button type="button" class="btn btn-sm btn-warning mb-0 me-1 open-modal"
                                                 data-url="{{ route('cantones.edit', $canton->id) }}" title="Editar">
-                                                <i class="fa-solid fa-pen-to-square" style="font-size:.8rem;"></i>
+                                                <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                             </button>
 
                                             {{-- Eliminar --}}
                                             <button type="button" class="btn btn-sm btn-danger mb-0 js-delete-btn"
                                                 data-url="{{ route('cantones.destroy', $canton) }}"
                                                 data-item="{{ $canton->nombre }}">
-                                                <i class="fa-solid fa-trash" style="font-size:.8rem;"></i>
+                                                <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                             </button>
                                         </td>
                                     </tr>

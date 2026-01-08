@@ -64,14 +64,14 @@
                         @foreach ($headings as $index => $heading)
                             @if ($index > 0) {{-- Saltamos ID --}}
                                 <th 
-                                    @if ($heading == 'Código') style="width: 50px;" 
-                                    @elseif ($heading == 'Cédula') style="width: 70px;"
-                                    {{-- CAMBIO: Damos más espacio a la columna unida --}}
+                                    @if ($heading == 'Código') style="width: 45px;" 
+                                    @elseif ($heading == 'Cédula') style="width: 60px;"
                                     @elseif ($heading == 'Apellidos y Nombres') style="text-align: left; padding-left:8px;"
-                                    @elseif ($heading == 'Comunidad') style="width: 90px;"
-                                    @elseif ($heading == 'Teléfono') style="width: 60px;"
-                                    @elseif ($heading == 'Rep.') style="width: 30px;"
-                                    @elseif ($heading == 'Fecha') style="width: 50px;"
+                                    @elseif ($heading == 'Comunidad') style="width: 70px;"
+                                    @elseif ($heading == 'Condición') style="width: 60px;"
+                                    @elseif ($heading == 'Estatus') style="width: 40px;"
+                                    @elseif ($heading == 'Rep.') style="width: 25px;"
+                                    @elseif ($heading == 'Fecha') style="width: 45px;"
                                     @endif
                                 >
                                     {{ $heading }}
@@ -88,7 +88,7 @@
                             {{-- Convertimos objeto a array y saltamos el ID (index 0) --}}
                             @foreach (array_slice((array)$row, 1) as $cellIndex => $cell)
                                 <td 
-                                    {{-- CAMBIO: El índice 2 corresponde ahora a 'Apellidos y Nombres' --}}
+                                    {{-- El índice 2 corresponde a 'Apellidos y Nombres' --}}
                                     {{-- (0:codigo, 1:cedula, 2:nombres_completos) --}}
                                     @if ($cellIndex == 2) class="text-left" @endif
                                 >

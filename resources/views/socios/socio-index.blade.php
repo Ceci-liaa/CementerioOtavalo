@@ -25,10 +25,23 @@
             max-width: 180px;
         }
 
-        /* Estilo lista candidatos */
         .candidate-list-item:hover {
             background-color: rgba(0, 0, 0, 0.05);
             border-radius: 4px;
+        }
+
+        .alert-danger {
+            background-color: #fde1e1 !important;
+            color: #cf304a !important;
+            border-color: #fde1e1 !important;
+            font-weight: 400 !important;
+            font-size: 14px !important;
+        }
+
+        .alert-danger .btn-close {
+            filter: none !important;
+            opacity: 0.5;
+            color: #cf304a;
         }
     </style>
 
@@ -62,7 +75,7 @@
                 </div>
             @endif
             @if (session('error'))
-                <div class="alert alert-danger text-white alert-dismissible fade show alert-temporal mb-3">
+                <div class="alert alert-danger alert-dismissible fade show alert-temporal mb-3">
                     <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -199,14 +212,14 @@
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-info mb-0 me-1 open-modal"
                                                     data-url="{{ route('socios.show', $s) }}"><i
-                                                        class="fa fa-eye"></i></button>
+                                                        class="fa fa-eye" style="font-size: 0.7rem;"></i></button>
                                                 <button type="button" class="btn btn-sm btn-warning mb-0 me-1 open-modal"
                                                     data-url="{{ route('socios.edit', $s) }}"><i
-                                                        class="fa-solid fa-pen-to-square"></i></button>
+                                                        class="fa-solid fa-pen-to-square"style="font-size: 0.7rem;"></i></button>
                                                 <button type="button" class="btn btn-sm btn-danger mb-0 js-delete-btn"
                                                     data-url="{{ route('socios.destroy', $s) }}"
                                                     data-item="{{ $s->apellidos }}"><i
-                                                        class="fa-solid fa-trash"></i></button>
+                                                        class="fa-solid fa-trash"style="font-size: 0.7rem;"></i></button>
                                             </td>
                                         </tr>
                                     @empty

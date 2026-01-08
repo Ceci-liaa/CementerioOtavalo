@@ -188,20 +188,20 @@
                                                 {{-- Ver (Ajax Modal) --}}
                                                 <button type="button" class="btn btn-sm btn-info mb-0 me-1 open-modal"
                                                     data-url="{{ route('comunidades.show', $c->id) }}" title="Ver">
-                                                    <i class="fa-solid fa-eye text-white" style="font-size:.8rem;"></i>
+                                                    <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                 </button>
 
                                                 {{-- Editar (Ajax Modal) --}}
                                                 <button type="button" class="btn btn-sm btn-warning mb-0 me-1 open-modal"
                                                     data-url="{{ route('comunidades.edit', $c->id) }}" title="Editar">
-                                                    <i class="fa-solid fa-pen-to-square"style="font-size:.8rem;"></i>
+                                                    <i class="fa-solid fa-pen-to-square"style="font-size: 0.7rem;"></i>
                                                 </button>
 
                                                 {{-- Eliminar (SweetAlert) --}}
                                                 <button type="button" class="btn btn-sm btn-danger mb-0 js-delete-btn"
                                                     data-url="{{ route('comunidades.destroy', $c) }}"
                                                     data-item="{{ $c->nombre }}">
-                                                    <i class="fa-solid fa-trash"style="font-size:.8rem;"></i>
+                                                    <i class="fa-solid fa-trash"style="font-size: 0.7rem;"></i>
                                                 </button>
                                             </td>
                                         </tr>
