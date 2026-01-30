@@ -1,20 +1,34 @@
-{{-- 1. CABECERA DEL MODAL (Agregada para que tenga título y botón de cerrar) --}}
 <div class="modal-header bg-warning text-dark">
     <h5 class="modal-title fw-bold">Editar Registro de Nicho</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-{{-- 2. FORMULARIO --}}
 <form method="POST" action="{{ route('nichos.update', $nicho) }}">
     @csrf @method('PUT')
     
     <div class="modal-body">
         
         <div class="row g-3">
-            {{-- Código --}}
+            {{-- Código (Visual) --}}
             <div class="col-md-12">
-                <label class="form-label fw-bold">Código</label>
-                <input name="codigo" value="{{ old('codigo', $nicho->codigo) }}" class="form-control" required>
+                <label class="form-label fw-bold">Código Actual</label>
+                <input name="codigo" value="{{ old('codigo', $nicho->codigo) }}" class="form-control bg-light" readonly>
+                <small class="text-muted text-xs">Para cambiar el código, selecciona otra ubicación en el mapa.</small>
+            </div>
+
+            {{-- SELECCIÓN DE MAPA --}}
+            <div class="col-12">
+                <label class="form-label fw-bold text-primary">Vincular con Mapa (GIS)</label>
+                <select name="nicho_geom_id" class="form-select">
+                    <option value="">-- Sin Mapa (Manual) --</option>
+                    @isset($nichosGeom)
+                        @foreach($nichosGeom as $ng)
+                            <option value="{{ $ng->id }}" @selected(old('nicho_geom_id', $nicho->nicho_geom_id) == $ng->id)>
+                                {{ $ng->codigo }}
+                            </option>
+                        @endforeach
+                    @endisset
+                </select>
             </div>
 
             {{-- Bloque --}}
@@ -27,38 +41,35 @@
                 </select>
             </div>
 
-            {{-- Socio (CON PROTECCIÓN DE ERRORES) --}}
+            {{-- Socio --}}
             <div class="col-md-6">
                 <label class="form-label fw-bold">Socio Titular</label>
                 <select name="socio_id" class="form-select">
                     <option value="">-- Sin asignar --</option>
                     @foreach($socios as $s)
                         <option value="{{ $s->id }}" @selected(old('socio_id', $nicho->socio_id)==$s->id)>
-                             {{-- Usamos ?? para que no falle si cambia el nombre de la columna --}}
                              {{ $s->apellidos ?? $s->apellido ?? '' }} {{ $s->nombres ?? $s->nombre ?? '' }}
                         </option>
                     @endforeach
                 </select>
             </div>
 
-            {{-- Tipo --}}
+            {{-- Resto de campos iguales... --}}
             <div class="col-md-6">
-                <label class="form-label fw-bold">Tipo <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold">Tipo</label>
                 <select name="tipo_nicho" class="form-select" required>
                     <option value="PROPIO" @selected(old('tipo_nicho', $nicho->tipo_nicho) == 'PROPIO')>PROPIO</option>
                     <option value="COMPARTIDO" @selected(old('tipo_nicho', $nicho->tipo_nicho) == 'COMPARTIDO')>COMPARTIDO</option>
                 </select>
             </div>
 
-            {{-- Capacidad --}}
             <div class="col-md-6">
-                <label class="form-label fw-bold">Capacidad <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold">Capacidad</label>
                 <input type="number" min="1" name="capacidad" value="{{ old('capacidad',$nicho->capacidad) }}" class="form-control" required>
             </div>
             
-            {{-- Estado --}}
             <div class="col-md-12">
-                <label class="form-label fw-bold">Estado <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold">Estado</label>
                 <select name="estado" class="form-select" required>
                     @foreach(['disponible','ocupado','mantenimiento'] as $e)
                         <option value="{{ $e }}" @selected(old('estado',$nicho->estado)==$e)>{{ ucfirst($e) }}</option>
@@ -66,7 +77,6 @@
                 </select>
             </div>
 
-            {{-- Descripción --}}
             <div class="col-12">
                 <label class="form-label fw-bold">Descripción</label>
                 <textarea name="descripcion" class="form-control" rows="2">{{ old('descripcion', $nicho->descripcion) }}</textarea>

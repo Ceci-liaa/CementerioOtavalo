@@ -1,18 +1,39 @@
-{{-- 1. CABECERA (Necesaria para cerrar el modal) --}}
 <div class="modal-header bg-dark text-white">
     <h5 class="modal-title fw-bold text-white">Nuevo Registro de Nicho</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-{{-- 2. FORMULARIO --}}
 <form method="POST" action="{{ route('nichos.store') }}">
     @csrf
     <div class="modal-body">
         
+        <div class="alert alert-info py-2 mb-3 text-xs">
+            <i class="fas fa-info-circle me-1"></i> 
+            Si seleccionas una <b>Ubicación en Mapa</b>, el código se copiará automáticamente.
+        </div>
+
         <div class="row g-3">
+            
+            {{-- SELECCIÓN DE MAPA (NUEVO) --}}
+            <div class="col-12">
+                <label class="form-label fw-bold text-primary">Ubicación en Mapa (Código GIS)</label>
+                <select name="nicho_geom_id" class="form-select select2">
+                    <option value="">-- Generar Código Automático (Manual) --</option>
+                    @isset($nichosGeom)
+                        @foreach($nichosGeom as $ng)
+                            {{-- Muestra: B8-NB97 --}}
+                            <option value="{{ $ng->id }}" @selected(old('nicho_geom_id') == $ng->id)>
+                                {{ $ng->codigo }}
+                            </option>
+                        @endforeach
+                    @endisset
+                </select>
+                <small class="text-muted text-xs">Ej: B14-C01-N1 (Viene del mapa)</small>
+            </div>
+
             {{-- Bloque --}}
             <div class="col-md-6">
-                <label class="form-label fw-bold">Bloque <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold">Bloque Físico <span class="text-danger">*</span></label>
                 <select name="bloque_id" class="form-select" required>
                     <option value="">-- Seleccione --</option>
                     @foreach($bloques as $b)
@@ -28,8 +49,7 @@
                     <option value="">-- Sin asignar --</option>
                     @foreach($socios as $s)
                         <option value="{{ $s->id }}">
-                            {{-- Usamos ?? para evitar errores si falta el campo --}}
-                            {{ $s->apellidos ?? $s->apellido ?? 'Socio' }} {{ $s->nombres ?? $s->nombre ?? '' }}
+                             {{ $s->apellidos ?? $s->apellido ?? '' }} {{ $s->nombres ?? $s->nombre ?? '' }}
                         </option>
                     @endforeach
                 </select>
