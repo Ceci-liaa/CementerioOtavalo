@@ -59,12 +59,14 @@
                     <p class="mb-0 text-secondary text-sm">Administra la ocupación de nichos, códigos de acta y responsables.</p>
                 </div>
 
-                {{-- Botón Nuevo (Verde sólido) --}}
+                {{-- PERMISO: CREAR ASIGNACIÓN --}}
+                @can('crear asignacion')
                 <button type="button" class="btn btn-success px-4 open-modal" 
                         style="height: fit-content;"
                         data-url="{{ route('asignaciones.create') }}">
                     <i class="fa-solid fa-plus me-2"></i> Nueva Asignación
                 </button>
+                @endcan
             </div>
 
             {{-- 3. ALERTAS --}}
@@ -86,7 +88,8 @@
                 
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                     
-                    {{-- Botón Generar Reporte (Azul) --}}
+                    {{-- PERMISO: REPORTAR ASIGNACIÓN --}}
+                    @can('reportar asignacion')
                     <div class="dropdown w-100 w-md-auto">
                         <button class="btn text-white dropdown-toggle mb-0 px-4 w-100 w-md-auto" 
                                 style="background-color: #5ea6f7; border-radius: 6px; font-weight: 600;" 
@@ -106,6 +109,7 @@
                             </li>
                         </ul>
                     </div>
+                    @endcan
 
                     {{-- Filtros (Compactos) --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
@@ -210,37 +214,44 @@
                                             <div class="d-flex justify-content-center">
                                                 
                                                 {{-- SHOW (Ver) --}}
+                                                @can('ver asignacion')
                                                 <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
                                                         data-url="{{ route('asignaciones.show', $nicho->id) }}" title="Ver Detalles">
                                                     <i class="fa fa-eye"></i>
                                                 </button>
+                                                @endcan
 
                                                 @if($ocupantes->count() > 0 || $nicho->socios->count() > 0)
                                                     {{-- EDIT (Corregir) --}}
+                                                    @can('editar asignacion')
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
                                                             data-url="{{ route('asignaciones.edit', $nicho->id) }}" title="Editar/Corregir">
                                                         <i class="fa-solid fa-pen-to-square"></i>
                                                     </button>
+                                                    @endcan
                                                 @endif
 
                                                 {{-- EXHUMAR (Vista Separada - Solo si hay ocupantes) --}}
                                                 @if($ocupantes->count() > 0)
+                                                    @can('exhumar cuerpo') {{-- AQUÍ ESTÁ EL PERMISO IMPORTANTE --}}
                                                     <button type="button" class="btn btn-sm btn-dark mb-0 btn-action open-modal" 
                                                             data-url="{{ route('asignaciones.exhumarForm', $nicho->id) }}" 
                                                             title="Registrar Exhumación">
                                                         <i class="fas fa-person-digging"></i>
                                                     </button>
+                                                    @endcan
                                                 @endif
 
                                                 {{-- ELIMINAR (Solo si hay historial) --}}
                                                 @if($nicho->fallecidos->count() > 0)
-                                                    {{-- Mandamos el ID del último fallecido para eliminar --}}
+                                                    @can('eliminar asignacion')
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
                                                             data-url="{{ route('asignacion.destroy', [$nicho->id, $nicho->fallecidos->last()->id]) }}"
                                                             data-item="Asignación {{ $nicho->codigo }}" 
                                                             title="Eliminar Registro (Error)">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
+                                                    @endcan
                                                 @endif
                                             </div>
                                         </td>
@@ -289,7 +300,7 @@
                     });
                 });
 
-                // SweetAlert Eliminar (Tu lógica exacta)
+                // SweetAlert Eliminar
                 document.querySelectorAll('.js-delete-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         Swal.fire({

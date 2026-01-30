@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-class BloqueGeom extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+class BloqueGeom extends Model implements Auditable
 {
     use HasFactory;
-
+    use \OwenIt\Auditing\Auditable;
     protected $table = 'bloques_geom';
     protected $guarded = [];
 
@@ -61,12 +62,12 @@ class BloqueGeom extends Model
     public function toGeoJsonFeature(): array
     {
         return [
-            'type'       => 'Feature',
-            'id'         => $this->id,
+            'type' => 'Feature',
+            'id' => $this->id,
             'properties' => [
                 'nombre' => $this->nombre,
             ],
-            'geometry'   => $this->geom_geojson,
+            'geometry' => $this->geom_geojson,
         ];
     }
 

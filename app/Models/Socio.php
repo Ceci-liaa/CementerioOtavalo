@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 use App\Models\Pago;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Socio extends Model
+class Socio extends Model implements Auditable
 {
     use SoftDeletes;
+    use \OwenIt\Auditing\Auditable;
 
     protected $table = 'socios';
     protected $guarded = []; // Esto permite los nuevos campos automáticamente

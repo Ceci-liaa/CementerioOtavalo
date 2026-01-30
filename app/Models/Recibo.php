@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
-class Recibo extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+class Recibo extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
+
     protected $guarded = [];
     protected $casts = ['fecha_pago' => 'date'];
 

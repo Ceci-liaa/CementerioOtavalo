@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Servicio extends Model
+class Servicio extends Model implements Auditable
 {
-    use HasFactory; // Recomendado dejarlo
+    use HasFactory; 
+    use \OwenIt\Auditing\Auditable;
 
     protected $table = 'servicios';
     protected $guarded = [];

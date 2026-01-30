@@ -5,8 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Comunidad extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+class Comunidad extends Model implements Auditable
 {
+    use HasFactory;
+    use \OwenIt\Auditing\Auditable;
     protected $table = 'comunidades';
     // Asegúrate de que 'codigo_unico' no esté en $guarded si defines $fillable
     // o que esté permitido si usas $guarded = []

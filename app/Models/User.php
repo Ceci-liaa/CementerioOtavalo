@@ -8,15 +8,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use OwenIt\Auditing\Contracts\Auditable;
 
 // Laravel Auditing
-use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
-use OwenIt\Auditing\Auditable as AuditableTrait;
+// use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+// use OwenIt\Auditing\Auditable as AuditableTrait;
 
 
-class User extends Authenticatable
+class User extends Authenticatable implements Auditable
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use \OwenIt\Auditing\Auditable;
 
     protected $guarded = [];
 

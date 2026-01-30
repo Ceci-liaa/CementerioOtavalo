@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Bloque extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+
+class Bloque extends Model implements Auditable
 {
     use HasFactory, SoftDeletes;
 
+    use \OwenIt\Auditing\Auditable;
+    
     protected $table = 'bloques';
     protected $guarded = [];
 

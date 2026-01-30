@@ -5,8 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class EstadoCivil extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+
+class EstadoCivil extends Model implements Auditable
 {
+    use HasFactory;
+    use \OwenIt\Auditing\Auditable;
     protected $table = 'estados_civiles';
     public $timestamps = false;
     protected $guarded = [];

@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
-class Factura extends Model
+use OwenIt\Auditing\Contracts\Auditable;
+class Factura extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
     protected $table = 'facturas';
     protected $guarded = [];
 

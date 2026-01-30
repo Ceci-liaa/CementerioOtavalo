@@ -36,10 +36,6 @@
         <meta name="data-turbolinks-track" content="false">
     @endif
 
-    <!-- antiguo -->
-    <!-- <link rel="apple-touch-icon" sizes="76x76" href="../assets/img/apple-icon.png">
-    <link rel="icon" type="image/png" href="../assets/img/favicon.png"> -->
-
     <!-- nuevo -->
      <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets/img/apple-icon.png') }}">
@@ -108,9 +104,6 @@
     <!-- solo esta linea -->
 
     <div class="fixed-plugin">
-        <!-- <a class="fixed-plugin-button text-dark position-fixed px-3 py-2"> 
-            <i class="fa fa-cog py-2" style="font-size: 50px;"></i> 
-        </a> -->
         <div class="card shadow-lg ">
             <div class="card-header pb-0 pt-3 ">
                 <div class="float-start">
@@ -128,23 +121,6 @@
             <hr class="horizontal dark my-1">
             <div class="card-body pt-sm-3 pt-0">
                 <!-- Sidebar Backgrounds -->
-                <!-- <div>
-                    <h6 class="mb-0">Colores del icono de Dashboard</h6>
-                </div>
-                <a href="javascript:void(0)" class="switch-trigger background-color">
-                    <div class="badge-colors my-2 text-start">
-                        <span class="badge filter bg-gradient-primary active" data-color="primary"
-                            onclick="sidebarColor(this)"></span>
-                        <span class="badge filter bg-gradient-info" data-color="info"
-                            onclick="sidebarColor(this)"></span>
-                        <span class="badge filter bg-gradient-success" data-color="success"
-                            onclick="sidebarColor(this)"></span>
-                        <span class="badge filter bg-gradient-warning" data-color="warning"
-                            onclick="sidebarColor(this)"></span>
-                        <span class="badge filter bg-gradient-danger" data-color="danger"
-                            onclick="sidebarColor(this)"></span>
-                    </div>
-                </a> -->
                 <!-- Sidenav Type -->
                 <div class="mt-3">
                     <h6 class="mb-0">Tipo de Navegación lateral</h6>
@@ -168,13 +144,6 @@
             </div>
         </div>
     </div>
-    <!--   Core JS Files antiguo  -->
-    <!-- <script src="../assets/js/core/popper.min.js"></script>
-    <script src="../assets/js/core/bootstrap.min.js"></script>
-    <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
-    <script src="../assets/js/plugins/smooth-scrollbar.min.js"></script>
-    <script src="../assets/js/plugins/chartjs.min.js"></script>
-    <script src="../assets/js/plugins/swiper-bundle.min.js" type="text/javascript"></script> -->
 
     <!-- Core JS Files nuevo-->
     <script src="{{ asset('assets/js/core/popper.min.js') }}"></script>
@@ -449,9 +418,8 @@
     </script>
     <!-- Github buttons -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>
-    <!-- Control Center for Corporate UI Dashboard: parallax effects, scripts for the example pages etc antigou-->
     <!-- <script src="../assets/js/corporate-ui-dashboard.min.js?v=1.0.0"></script> -->
-
+ 
     <!-- Control Center for Corporate UI Dashboard Nuevo-->
     <script src="{{ asset('assets/js/corporate-ui-dashboard.min.js') }}?v=1.0.0"></script>
 

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class Parroquia extends Model
+class Parroquia extends Model implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
     protected $table = 'parroquias';
     
     // 'codigo' debe estar en fillable para que se guarde

@@ -4,8 +4,11 @@ namespace App\Models;
 
 use Spatie\Permission\Models\Role as SpatieRole;
 
-class Role extends SpatieRole
+use OwenIt\Auditing\Contracts\Auditable;
+
+class Role extends SpatieRole implements Auditable
 {
+    use \OwenIt\Auditing\Auditable;
     protected static function booted()
     {
         static::created(function ($role) {
