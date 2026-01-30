@@ -3,63 +3,114 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-// ❌ BORRA O COMENTA ESTA LÍNEA: use Spatie\Permission\Models\Role;
-use App\Models\Role; // ✅ AGREGA ESTA LÍNEA (Para que use tu lógica del R001)
+use App\Models\Role; 
 use Spatie\Permission\Models\Permission;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Roles base
-        $roles = ['Administrador', 'Auditor', 'Usuario'];
-        foreach ($roles as $name) {
-            // Al usar App\Models\Role, aquí se dispara el evento "created" 
-            // y se genera el código R001, R002, etc. automáticamente.
-            Role::firstOrCreate(['name' => $name], ['guard_name' => 'web']);
-        }
+        // 1. Limpiar caché de permisos
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Permisos base (cementerio)
-        $permissions = [
-            'crear carpeta',
-            'editar carpeta',
-            'eliminar carpeta',
-            'ver carpeta',
-            'subir archivo',
-            'editar archivo',
-            'eliminar archivo',
-            'ver archivo',
-            'editar usuario',
-            'eliminar usuario',
-            'ver usuario',
-            'crear formato',
-            'editar formato',
-            'eliminar formato',
-            'ver formato',
-            'ver auditoria',
-        ];
+        // =================================================================
+        // DEFINICIÓN DE PERMISOS (El Menú de Opciones)
+        // =================================================================
+        
+        // 1. GESTIÓN DE USUARIOS (Administrar a otros)
+        $this->createCrudWithReportAndCustom('usuario', ['cambiar estado']); 
+        
+        // 2. ROLES Y PERMISOS
+        $this->createCrud('rol');
+        $this->createPermission('gestionar permisos'); 
 
-        foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p], ['guard_name' => 'web']);
-        }
+        // 3. UBICACIÓN
+        $this->createCrudWithReport('canton');
+        $this->createCrudWithReport('parroquia');
+        $this->createCrudWithReport('comunidad');
 
-        // ✅ Admin: todos los permisos
-        $adminRole = Role::findByName('Administrador');
-        $adminRole->syncPermissions(Permission::all());
+        // 4. PERSONAS
+        $this->createCrudWithReport('socio');
+        $this->createCrudWithReport('fallecido');
 
-        // Usuario: permisos específicos
-        $userRole = Role::findByName('Usuario');
-        $userRole->syncPermissions([
-            'subir archivo', 'editar archivo', 'eliminar archivo', 'ver archivo', 'ver formato'
+        // 5. CEMENTERIO
+        $this->createCrudWithReport('bloque');
+        $this->createCrudWithReport('servicio');
+        $this->createCrudWithReport('beneficio');
+        $this->createCrudWithReport('nicho');
+        $this->createPermission('ver qr nicho'); 
+
+        // 6. ASIGNACIONES (Operativo)
+        $this->createCrudWithReport('asignacion');
+        $this->createPermission('exhumar cuerpo');
+        $this->createPermission('generar certificado');
+
+        // 7. FINANCIERO
+        // Pagos
+        $this->createPermission('ver pago');
+        $this->createPermission('crear pago');
+        $this->createPermission('editar pago');
+        $this->createPermission('eliminar pago');
+        $this->createPermission('ver historial socio');
+        // Facturas
+        $this->createCrud('factura'); 
+        $this->createPermission('emitir factura');
+        $this->createPermission('anular factura');
+        $this->createPermission('descargar factura');
+
+        // 8. AUDITORÍA
+        $this->createPermission('ver auditoria');
+
+        // 9. MI PERFIL (¡ESTO FALTABA!)
+        // Estos son los permisos para que un usuario vea SU propio perfil
+        $this->createPermission('ver perfil');
+        $this->createPermission('editar perfil');
+
+
+        // =================================================================
+        // ASIGNACIÓN DE ROLES
+        // =================================================================
+
+        // 1. ADMINISTRADOR
+        $admin = Role::firstOrCreate(['name' => 'Administrador']);
+        $admin->syncPermissions(Permission::all());
+
+        // 2. AUDITOR
+        $auditor = Role::firstOrCreate(['name' => 'Auditor']);
+        $auditor->syncPermissions(['ver auditoria', 'ver perfil', 'editar perfil']);
+
+        // 3. USUARIO (Rol Básico)
+        $usuario = Role::firstOrCreate(['name' => 'Usuario']);
+        
+        // AHORA SÍ FUNCIONARÁ: Asignamos los permisos que acabamos de crear arriba
+        $usuario->syncPermissions([
+            'ver perfil', 
+            'editar perfil'
         ]);
+    }
 
-        // Auditor: ver auditoría
-        $auditorRole = Role::findByName('Auditor');
-        $auditorRole->syncPermissions(['ver auditoria']);
+    // --- FUNCIONES DE AYUDA ---
 
-        // Limpiar caché del paquete
-        app('cache')
-            ->store(config('permission.cache.store') != 'default' ? config('permission.cache.store') : null)
-            ->forget(config('permission.cache.key'));
+    private function createCrud($modulo) {
+        foreach (['ver', 'crear', 'editar', 'eliminar'] as $action) {
+            $this->createPermission("$action $modulo");
+        }
+    }
+
+    private function createCrudWithReport($modulo) {
+        $this->createCrud($modulo);
+        $this->createPermission("reportar $modulo");
+    }
+
+    private function createCrudWithReportAndCustom($modulo, $customs = []) {
+        $this->createCrudWithReport($modulo);
+        foreach ($customs as $custom) {
+            $this->createPermission("$custom $modulo");
+        }
+    }
+
+    private function createPermission($name) {
+        // Usamos firstOrCreate para evitar duplicados si corres el seeder varias veces
+        Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
     }
 }
