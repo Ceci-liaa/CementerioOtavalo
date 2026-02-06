@@ -308,10 +308,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/asignaciones/certificado/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'pdfCertificadoExhumacion'])
         ->name('asignaciones.pdf.certificado')->middleware('can:generar certificado');
 
-
-    Route::get('/buscar/nichos', [App\Http\Controllers\AsignacionController::class, 'searchNichos'])->name('buscar.nichos');
-    Route::get('/buscar/socios', [App\Http\Controllers\AsignacionController::class, 'searchSocios'])->name('buscar.socios');
-    Route::get('/buscar/fallecidos', [App\Http\Controllers\AsignacionController::class, 'searchFallecidos'])->name('buscar.fallecidos');
 });
 
 // ========================================================================
