@@ -42,11 +42,17 @@ use App\Http\Controllers\PagoController;
 // 1. RUTAS PÚBLICAS Y DE AUTENTICACIÓN (Guest)
 // ========================================================================
 
-Route::get('/', function () { return redirect('/dashboard'); })->middleware('auth');
+Route::get('/', function () {
+    return redirect('/dashboard');
+})->middleware('auth');
 
 Route::middleware('guest')->group(function () {
-    Route::get('/signin', function () { return view('account-pages.signin'); })->name('signin');
-    Route::get('/signup', function () { return view('account-pages.signup'); })->name('signup');
+    Route::get('/signin', function () {
+        return view('account-pages.signin');
+    })->name('signin');
+    Route::get('/signup', function () {
+        return view('account-pages.signup');
+    })->name('signup');
     Route::get('/sign-up', [RegisterController::class, 'create'])->name('sign-up');
     Route::post('/sign-up', [RegisterController::class, 'store']);
     Route::get('/sign-in', [LoginController::class, 'create'])->name('sign-in');
@@ -66,13 +72,23 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 
 Route::middleware(['auth'])->group(function () {
     // Dashboard (Todos los autenticados pueden ver)
-    Route::get('/dashboard', function () { return view('dashboard'); })->name('dashboard');
-    
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
     // Vistas estáticas (Si las usas)
-    Route::get('/tables', function () { return view('tables'); })->name('tables');
-    Route::get('/wallet', function () { return view('wallet'); })->name('wallet');
-    Route::get('/RTL', function () { return view('RTL'); })->name('RTL');
-    Route::get('/profile-static', function () { return view('account-pages.profile'); })->name('profile');
+    Route::get('/tables', function () {
+        return view('tables');
+    })->name('tables');
+    Route::get('/wallet', function () {
+        return view('wallet');
+    })->name('wallet');
+    Route::get('/RTL', function () {
+        return view('RTL');
+    })->name('RTL');
+    Route::get('/profile-static', function () {
+        return view('account-pages.profile');
+    })->name('profile');
 
     // PERFIL DE USUARIO (Editar sus propios datos)
     // Protegido con los permisos 'ver perfil' y 'editar perfil'
@@ -88,7 +104,7 @@ Route::middleware(['auth'])->group(function () {
 // ========================================================================
 
 Route::middleware(['auth', 'role:Administrador'])->group(function () {
-    
+
     // Gestor de Permisos (Matriz de Checkboxes)
     Route::get('/roles/permissions-manager', [PermissionManagerController::class, 'index'])
         ->name('roles.permissions.manager')->middleware('can:gestionar permisos');
@@ -97,7 +113,7 @@ Route::middleware(['auth', 'role:Administrador'])->group(function () {
 
     // CRUD de Roles
     Route::resource('roles', RoleController::class)->except(['show']); // Index, create, store, edit, update, destroy
-    
+
     // Asignación manual (Legacy)
     Route::get('/roles/{role}/permissions', [RolePermissionController::class, 'edit'])->name('roles.permissions.edit');
     Route::put('/roles/{role}/permissions', [RolePermissionController::class, 'update'])->name('roles.permissions.update');
@@ -134,7 +150,7 @@ Route::middleware(['auth'])->group(function () {
 // ========================================================================
 
 Route::middleware(['auth'])->group(function () {
-    
+
     // --- CANTONES ---
     Route::resource('cantones', CantonController::class)->except(['show']); // Usar middleware en __construct o aquí
     // Aplicando permisos específicos a rutas resource manualmente para claridad:
@@ -154,7 +170,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('parroquias/{parroquia}', [ParroquiaController::class, 'update'])->name('parroquias.update')->middleware('can:editar parroquia');
     Route::delete('parroquias/{parroquia}', [ParroquiaController::class, 'destroy'])->name('parroquias.destroy')->middleware('can:eliminar parroquia');
     Route::get('parroquias/{parroquia}', [ParroquiaController::class, 'show'])->name('parroquias.show')->middleware('can:ver parroquia');
-    
+
     Route::post('/parroquias/reportes', [ParroquiaController::class, 'generateReports'])->name('parroquias.reports')->middleware('can:reportar parroquia');
     Route::get('cantones/{canton}/parroquias', [ParroquiaController::class, 'byCanton'])->name('cantones.parroquias');
 
@@ -166,7 +182,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('comunidades/{comunidad}', [ComunidadController::class, 'update'])->name('comunidades.update')->middleware('can:editar comunidad');
     Route::delete('comunidades/{comunidad}', [ComunidadController::class, 'destroy'])->name('comunidades.destroy')->middleware('can:eliminar comunidad');
     Route::get('comunidades/{comunidad}', [ComunidadController::class, 'show'])->name('comunidades.show')->middleware('can:ver comunidad');
-    
+
     Route::post('comunidades/reports', [ComunidadController::class, 'reports'])->name('comunidades.reports')->middleware('can:reportar comunidad');
 });
 
@@ -185,7 +201,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/socios/{socio}/edit', [SocioController::class, 'edit'])->name('socios.edit')->middleware('can:editar socio');
     Route::match(['put', 'patch'], '/socios/{socio}', [SocioController::class, 'update'])->name('socios.update')->middleware('can:editar socio');
     Route::delete('/socios/{socio}', [SocioController::class, 'destroy'])->name('socios.destroy')->middleware('can:eliminar socio');
-    
+
     Route::post('socios/reports', [SocioController::class, 'reports'])->name('socios.reports')->middleware('can:reportar socio');
 
     // --- FALLECIDOS ---
@@ -196,7 +212,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/fallecidos/{fallecido}/edit', [FallecidoController::class, 'edit'])->name('fallecidos.edit')->middleware('can:editar fallecido');
     Route::match(['put', 'patch'], '/fallecidos/{fallecido}', [FallecidoController::class, 'update'])->name('fallecidos.update')->middleware('can:editar fallecido');
     Route::delete('/fallecidos/{fallecido}', [FallecidoController::class, 'destroy'])->name('fallecidos.destroy')->middleware('can:eliminar fallecido');
-    
+
     Route::post('fallecidos/reports', [FallecidoController::class, 'reports'])->name('fallecidos.reports')->middleware('can:reportar fallecido');
 });
 
@@ -229,7 +245,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/nichos/{nicho}', [NichoController::class, 'update'])->name('nichos.update')->middleware('can:editar nicho');
     Route::delete('/nichos/{nicho}', [NichoController::class, 'destroy'])->name('nichos.destroy')->middleware('can:eliminar nicho');
     Route::post('nichos/reports', [NichoController::class, 'reports'])->name('nichos.reports')->middleware('can:reportar nicho');
-    
+
     // QR de Nichos
     Route::get('nichos/{nicho}/qr', [NichoController::class, 'downloadQr'])->name('nichos.qr')->middleware('can:ver qr nicho');
     Route::get('nichos/{nicho}/qr-image', [NichoController::class, 'downloadQrImage'])->name('nichos.qr.image')->middleware('can:ver qr nicho');
@@ -241,7 +257,7 @@ Route::middleware(['auth'])->group(function () {
     // --- SERVICIOS ---
     Route::resource('servicios', ServicioController::class);
     Route::post('servicios/reports', [ServicioController::class, 'reports'])->name('servicios.reports')->middleware('can:reportar servicio');
-    
+
     // --- SOCIO-NICHO (Relación auxiliar) ---
     Route::resource('socio-nicho', SocioNichoController::class);
 });
@@ -252,7 +268,7 @@ Route::middleware(['auth'])->group(function () {
 // ========================================================================
 
 Route::middleware(['auth'])->group(function () {
-    
+
     // --- 1. REPORTES (Van primero para evitar conflictos con {id}) ---
     Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])
         ->name('asignaciones.pdf.general')->middleware('can:reportar asignacion');
@@ -291,6 +307,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/asignaciones/certificado/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'pdfCertificadoExhumacion'])
         ->name('asignaciones.pdf.certificado')->middleware('can:generar certificado');
+
+
+    Route::get('/buscar/nichos', [App\Http\Controllers\AsignacionController::class, 'searchNichos'])->name('buscar.nichos');
+    Route::get('/buscar/socios', [App\Http\Controllers\AsignacionController::class, 'searchSocios'])->name('buscar.socios');
+    Route::get('/buscar/fallecidos', [App\Http\Controllers\AsignacionController::class, 'searchFallecidos'])->name('buscar.fallecidos');
 });
 
 // ========================================================================
@@ -303,7 +324,7 @@ Route::middleware(['auth'])->group(function () {
     // Historial general y Ver
     Route::get('pagos-general', [PagoController::class, 'general'])->name('pagos.general')->middleware('can:ver pago');
     Route::get('recibos/{recibo}', [PagoController::class, 'show'])->name('pagos.show')->middleware('can:ver pago');
-    
+
     // Historial de un Socio Específico
     Route::get('/pagos/historial/{socio}', [PagoController::class, 'historialSocio'])
         ->name('pagos.historial_socio')->middleware('can:ver historial socio');
@@ -322,22 +343,22 @@ Route::middleware(['auth'])->group(function () {
     // --- FACTURAS ---
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('can:ver factura');
     Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('can:ver factura');
-    
+
     // Crear borrador
     Route::get('/facturas/create', [FacturaController::class, 'create'])->name('facturas.create')->middleware('can:crear factura');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('can:crear factura');
-    
+
     // Editar
     Route::get('/facturas/{factura}/edit', [FacturaController::class, 'edit'])->name('facturas.edit')->middleware('can:editar factura');
     Route::put('/facturas/{factura}', [FacturaController::class, 'update'])->name('facturas.update')->middleware('can:editar factura');
-    
+
     // [CRÍTICO] Acciones Financieras
     Route::put('/facturas/{factura}/emitir', [FacturaController::class, 'emitir'])
         ->name('facturas.emitir')->middleware('can:emitir factura');
-        
+
     Route::put('/facturas/{factura}/anular', [FacturaController::class, 'anular'])
         ->name('facturas.anular')->middleware('can:anular factura');
-        
+
     Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'generarPdf'])
         ->name('facturas.pdf')->middleware('can:descargar factura');
 });

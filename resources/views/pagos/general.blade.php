@@ -1,5 +1,5 @@
 <x-app-layout>
-    {{-- 1. ESTILOS (Idénticos al Index de Socios) --}}
+    {{-- 1. ESTILOS (Idénticos al Index de Socios + Estilos de Tabla Cantones) --}}
     <style>
         /* INPUTS */
         .input-group-text {
@@ -19,6 +19,17 @@
             font-weight: 700;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
+
+        /* ESTILOS DE TABLA (Agregados para igualar a la vista de Cantones) */
+        .table thead th {
+            font-size: 14px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            font-weight: 700 !important;
+            padding-top: 15px !important;
+            padding-bottom: 15px !important;
+        }
+        .btn-action { margin-right: 4px; }
     </style>
 
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -35,14 +46,14 @@
                 </div>
 
                 <div class="d-flex gap-3 align-items-center mt-3 mt-md-0">
-                    {{-- Tarjeta de Total (Estilizada sutilmente para no desentonar) --}}
+                    {{-- Tarjeta de Total --}}
                     <div class="bg-white border rounded px-3 py-2 shadow-sm d-flex align-items-center gap-3">
                         <small class="text-secondary fw-bold text-uppercase" style="font-size: 0.7rem;">Total
                             Histórico</small>
                         <h4 class="mb-0 fw-bolder text-success">${{ number_format($totalRecaudado, 2) }}</h4>
                     </div>
 
-                    {{-- BOTÓN REGISTRAR PAGO (Cambiado a btn-success para igualar a 'Nuevo Socio') --}}
+                    {{-- BOTÓN REGISTRAR PAGO --}}
                     <button type="button" class="btn btn-success px-4 py-2 shadow-sm mb-0 open-modal"
                         style="height: fit-content;" data-url="{{ route('pagos.create') }}">
                         <i class="fas fa-plus me-2"></i> Registrar Pago
@@ -50,7 +61,7 @@
                 </div>
             </div>
 
-            {{-- 3. BUSCADOR (A la derecha, pequeño y con botón) --}}
+            {{-- 3. BUSCADOR --}}
             <div class="d-flex justify-content-end mb-4">
                 <form method="GET">
                     <div class="input-group input-group-sm" style="width: 260px;">
@@ -64,36 +75,38 @@
                 </form>
             </div>
 
-            {{-- 4. TABLA (Estilo table-dark y bordered igual al Index de Socios) --}}
+            {{-- 4. TABLA (Estilo Actualizado a Cantones) --}}
             <div class="card shadow-sm border">
-                <div class="card-body p-3">
+                {{-- Cambié p-3 a p-0 pb-2 para que la tabla toque los bordes como en Cantones --}}
+                <div class="card-body p-0 pb-2">
                     <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle text-center mb-0">
-                            {{-- Encabezado OSCURO --}}
-                            <thead class="table-dark">
+                        {{-- Quité table-bordered para limpieza visual, agregué estilos de cabecera --}}
+                        <table class="table table-hover align-middle text-center mb-0">
+                            <thead class="bg-dark text-white">
                                 <tr>
-                                    <th style="width: 80px;"># Recibo</th>
-                                    <th class="text-start ps-4">Socio</th>
-                                    <th>Años Cancelados</th>
-                                    <th>Fecha</th>
-                                    <th>Total</th>
-                                    <th>Acciones</th>
+                                    <th class="opacity-10" style="width: 80px;"># Recibo</th>
+                                    <th class="opacity-10 text-start ps-4">Socio</th>
+                                    <th class="opacity-10">Años Cancelados</th>
+                                    <th class="opacity-10">Fecha</th>
+                                    <th class="opacity-10">Total</th>
+                                    <th class="opacity-10" style="width:180px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($recibos as $recibo)
                                     <tr>
-                                        <td class="text-secondary fw-bold">{{ $recibo->id }}</td>
+                                        <td class="text-sm fw-bold text-secondary">{{ $recibo->id }}</td>
 
                                         <td class="text-start ps-4">
                                             <div class="d-flex flex-column">
-                                                <span class="fw-bold text-dark">{{ $recibo->socio->apellidos }}
-                                                    {{ $recibo->socio->nombres }}</span>
+                                                <span class="fw-bold text-dark text-sm">
+                                                    {{ $recibo->socio->apellidos }} {{ $recibo->socio->nombres }}
+                                                </span>
                                                 <span class="text-xs text-secondary">{{ $recibo->socio->cedula }}</span>
                                             </div>
                                         </td>
 
-                                        {{-- Años: Badge estilo píldora azul sólido con sombra --}}
+                                        {{-- Años --}}
                                         <td>
                                             <span class="badge badge-pill-custom"
                                                 style="background-color: #0d6efd; color: white;">
@@ -106,31 +119,24 @@
                                         </td>
 
                                         <td>
-                                            <span
-                                                class="fs-6 fw-bold text-dark">${{ number_format($recibo->total, 2) }}</span>
+                                            <span class="fs-6 fw-bold text-dark">${{ number_format($recibo->total, 2) }}</span>
                                         </td>
 
                                         <td>
-                                            {{-- Botones de acción iguales al estilo anterior --}}
-                                            <button type="button" class="btn btn-sm btn-info mb-0 me-1 open-modal"
-                                                data-url="{{ route('pagos.historial_socio', $recibo->socio_id) }}" 
-                                                title="Ver Historial Completo de este Socio">
-                                                <i class="fas fa-eye text-white" style="font-size: 0.7rem;"></i>
-                                            </button>
-
-                                            <button type="button" class="btn btn-sm btn-warning mb-0 me-1 open-modal"
-                                                data-url="{{ route('pagos.edit', $recibo->id) }}" title="Corregir">
-                                                <i class="fas fa-pen" style="font-size: 0.7rem;"></i>
-                                            </button>
-
-                                            <!-- <form action="{{ route('pagos.destroy', $recibo->id) }}" method="POST"
-                                                class="d-inline"
-                                                onsubmit="return confirm('¿Eliminar este recibo completo?');">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger mb-0" title="Eliminar">
-                                                    <i class="fas fa-trash" style="font-size: 0.7rem;"></i>
+                                            {{-- Botones de acción --}}
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal"
+                                                    data-url="{{ route('pagos.historial_socio', $recibo->socio_id) }}" 
+                                                    title="Ver Historial Completo de este Socio">
+                                                    <i class="fas fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                 </button>
-                                            </form> -->
+
+                                                <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal"
+                                                    data-url="{{ route('pagos.edit', $recibo->id) }}" title="Corregir">
+                                                    <i class="fas fa-pen" style="font-size: 0.7rem;"></i>
+                                                </button>
+
+                                                </div>
                                         </td>
                                     </tr>
                                 @empty

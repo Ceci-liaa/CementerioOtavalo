@@ -189,30 +189,27 @@
 
                                             <td>
                                                 <div class="d-flex justify-content-center align-items-center">
-                                                    {{-- Botón QR Dropdown --}}
-                                                    <div class="dropdown me-1">
-                                                        <button class="btn btn-sm btn-dark mb-0 btn-action" type="button" data-bs-toggle="dropdown">
-                                                            <i class="fas fa-qrcode" style="font-size: 0.7rem;"></i>
-                                                        </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end p-2 shadow-sm border-0">
-                                                            <li>
-                                                                <a class="dropdown-item rounded small" 
-                                                                   href="{{ route('nichos.qr', ['nicho' => $n->id, 'mode' => 'text']) }}" 
-                                                                   target="_blank">
-                                                                    <i class="fas fa-file-alt me-2 text-secondary"></i> Ver QR
-                                                                </a>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
+                                                    {{-- Botón QR DIRECTO (Sin dropdown) --}}
+                                                    <a href="{{ route('nichos.qr', ['nicho' => $n->id, 'mode' => 'text']) }}" 
+                                                       target="_blank" 
+                                                       class="btn btn-sm btn-dark mb-0 btn-action" 
+                                                       title="Ver QR">
+                                                        <i class="fas fa-qrcode" style="font-size: 0.7rem;"></i>
+                                                    </a>
 
+                                                    {{-- Botón Ver --}}
                                                     <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal"
                                                         data-url="{{ route('nichos.show', $n->id) }}" title="Ver">
                                                         <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                     </button>
+                                                    
+                                                    {{-- Botón Editar --}}
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal"
                                                         data-url="{{ route('nichos.edit', $n->id) }}" title="Editar">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
+                                                    
+                                                    {{-- Botón Eliminar --}}
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
                                                         data-url="{{ route('nichos.destroy', $n) }}"
                                                         data-item="{{ $n->codigo }}" title="Eliminar">
@@ -274,7 +271,6 @@
                 function applyFilters() {
                     const qValue = encodeURIComponent(searchInput.value);
                     const bloqueValue = encodeURIComponent(bloqueFilter.value);
-                    // Importante: Usamos 'q' y 'bloque_id' como en tu controlador original
                     window.location.href = "{{ route('nichos.index') }}?q=" + qValue + "&bloque_id=" + bloqueValue;
                 }
 

@@ -50,7 +50,7 @@ class Bloque extends Model implements Auditable
                 
                 // Usamos un prefijo distinto (INT) para diferenciar los
                 // que creaste manualmente sin mapa, de los que vienen del GIS (B-XX).
-                $bloque->codigo = 'INT-' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
+                $bloque->codigo = 'BIT-' . str_pad($nuevoId, 2, '0', STR_PAD_LEFT);
             }
         });
     }

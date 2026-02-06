@@ -259,7 +259,7 @@ class BloqueController extends Controller
         } elseif ($reportType === 'pdf') {
             $pdf = Pdf::loadView('bloques.reports-pdf', compact('data', 'headings'));
             $pdf->setPaper('A4', 'portrait');
-            return $pdf->download('bloques_reporte.pdf');
+            return $pdf->download('bloques_reporte_'.date('YmdHis').'.pdf');
         }
         return redirect()->back();
     }
