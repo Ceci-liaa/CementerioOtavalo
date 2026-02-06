@@ -254,6 +254,15 @@
 
         {{-- SCRIPTS --}}
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        
+        {{-- ESTILOS PARA BÚSQUEDA EN MODALES --}}
+        <style>
+            .search-match { background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%) !important; font-weight: 600 !important; }
+            .search-first-match { background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important; color: white !important; font-weight: 700 !important; }
+            .search-input-found { border: 2px solid #28a745 !important; box-shadow: 0 0 8px rgba(40, 167, 69, 0.4) !important; }
+            .search-input-empty { border: 2px solid #dc3545 !important; box-shadow: 0 0 8px rgba(220, 53, 69, 0.4) !important; }
+        </style>
+
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 // Alertas Temporales
@@ -264,14 +273,21 @@
                     }); 
                 }, 3000);
 
-                // Modal AJAX
+                // Modal AJAX - MODIFICADO para inicializar búsqueda después de cargar
                 const modalEl = document.getElementById('dynamicModal');
                 const modal = new bootstrap.Modal(modalEl);
+                
                 document.querySelectorAll('.open-modal').forEach(btn => {
                     btn.addEventListener('click', function () {
                         modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
                         modal.show();
-                        fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                        fetch(this.getAttribute('data-url'))
+                            .then(r => r.text())
+                            .then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                // INICIALIZAR BÚSQUEDA DESPUÉS DE CARGAR EL CONTENIDO
+                                setTimeout(() => initSearchableSelects(), 100);
+                            });
                     });
                 });
 
@@ -307,6 +323,157 @@
                 let urlBase = "{{ route('asignaciones.pdf.general') }}";
                 const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}`;
                 window.open(urlFinal, '_blank');
+            }
+
+            // ========== FUNCIÓN DE BÚSQUEDA PARA SELECTS ==========
+            function initSearchableSelects() {
+                const configs = [
+                    { inputId: 'buscarNicho', selectId: 'selectNicho', labelId: 'nichoSeleccionado' },
+                    { inputId: 'buscarSocio', selectId: 'selectSocio', labelId: 'socioSeleccionado' },
+                    { inputId: 'buscarFallecido', selectId: 'selectFallecido', labelId: 'fallecidoSeleccionado' }
+                ];
+
+                configs.forEach(config => {
+                    const input = document.getElementById(config.inputId);
+                    const select = document.getElementById(config.selectId);
+                    const label = document.getElementById(config.labelId);
+                    
+                    if (!input || !select) return;
+                    if (input.dataset.initialized === 'true') return;
+                    input.dataset.initialized = 'true';
+                    
+                    // Guardar opciones originales
+                    const allOptions = [];
+                    Array.from(select.options).forEach(opt => {
+                        allOptions.push({
+                            value: opt.value,
+                            text: opt.text,
+                            searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+                        });
+                    });
+                    
+                    // Función para actualizar opciones
+                    function updateOptions(searchTerm) {
+                        const term = searchTerm.toLowerCase().trim();
+                        select.innerHTML = '';
+                        let matchCount = 0;
+                        let firstMatchIndex = -1;
+                        
+                        allOptions.forEach((optData) => {
+                            const matches = optData.value === '' || 
+                                           optData.searchData.includes(term) || 
+                                           optData.text.toLowerCase().includes(term);
+                            
+                            if (term === '' || matches) {
+                                const option = document.createElement('option');
+                                option.value = optData.value;
+                                option.textContent = optData.text;
+                                
+                                if (term !== '' && optData.value !== '' && matches) {
+                                    matchCount++;
+                                    if (firstMatchIndex === -1) {
+                                        firstMatchIndex = select.options.length;
+                                        option.className = 'search-first-match';
+                                    } else {
+                                        option.className = 'search-match';
+                                    }
+                                }
+                                select.appendChild(option);
+                            }
+                        });
+                        
+                        // Estilos del input
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (term !== '') {
+                            if (matchCount > 0) {
+                                input.classList.add('search-input-found');
+                                if (firstMatchIndex !== -1) {
+                                    select.selectedIndex = firstMatchIndex;
+                                    updateLabel();
+                                }
+                            } else {
+                                input.classList.add('search-input-empty');
+                            }
+                        }
+                        return { matchCount, firstMatchIndex };
+                    }
+                    
+                    // Función para actualizar etiqueta
+                    function updateLabel() {
+                        if (!label) return;
+                        const selectedOpt = select.options[select.selectedIndex];
+                        if (selectedOpt && selectedOpt.value !== '') {
+                            label.textContent = selectedOpt.text;
+                            label.classList.remove('text-primary');
+                            label.classList.add('text-success');
+                        } else {
+                            label.textContent = 'Ninguno';
+                            label.classList.remove('text-success');
+                            label.classList.add('text-primary');
+                        }
+                    }
+                    
+                    // Evento: escribir
+                    input.addEventListener('input', function() {
+                        updateOptions(this.value);
+                    });
+                    
+                    // Evento: teclas
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            const selectedOpt = select.options[select.selectedIndex];
+                            if (selectedOpt && selectedOpt.value !== '') {
+                                const selectedValue = selectedOpt.value;
+                                const selectedText = selectedOpt.text;
+                                
+                                this.value = '';
+                                this.classList.remove('search-input-found', 'search-input-empty');
+                                updateOptions('');
+                                
+                                // Re-seleccionar
+                                for (let i = 0; i < select.options.length; i++) {
+                                    if (select.options[i].value === selectedValue) {
+                                        select.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                                updateLabel();
+                                
+                                // Feedback visual
+                                const originalPlaceholder = this.placeholder;
+                                this.placeholder = '✅ ' + selectedText.substring(0, 35);
+                                this.style.background = '#d4edda';
+                                setTimeout(() => {
+                                    this.placeholder = originalPlaceholder;
+                                    this.style.background = '';
+                                }, 1500);
+                            }
+                            return false;
+                        }
+                        
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            if (select.selectedIndex < select.options.length - 1) {
+                                select.selectedIndex++;
+                                updateLabel();
+                            }
+                        }
+                        if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            if (select.selectedIndex > 0) {
+                                select.selectedIndex--;
+                                updateLabel();
+                            }
+                        }
+                    });
+                    
+                    // Eventos del select
+                    select.addEventListener('change', updateLabel);
+                    select.addEventListener('click', updateLabel);
+                });
             }
         </script>
     </main>
