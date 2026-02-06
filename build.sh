@@ -14,8 +14,12 @@ fi
 # Crear enlace simbólico para storage
 php artisan storage:link
 
-# Limpiar y cachear configuración
+# Limpiar cachés antes de cachear
 php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# Cachear configuración
 php artisan config:cache
 
 # Cachear rutas
@@ -29,3 +33,5 @@ php artisan migrate --force
 
 # Optimizar autoloader
 composer dump-autoload --optimize
+
+echo "Build completado exitosamente"
