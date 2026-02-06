@@ -1,4 +1,3 @@
-
 <style>
     .badge-oscuro {
         background-color: #999da0ff !important; 
@@ -15,16 +14,10 @@
 {{-- CUERPO DEL MODAL --}}
 <div class="modal-body pt-3">
     
-    {{-- Tarjeta destacada para Código e ID --}}
-    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 p-3 shadow-sm">
-        <div>
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código</small>
-            <span class="fw-bold text-dark fs-5">{{ $parroquia->codigo }}</span>
-        </div>
-        <div class="text-end border-start ps-3">
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">ID Interno</small>
-            <span class="fw-bold text-dark fs-5">#{{ $parroquia->id }}</span>
-        </div>
+    {{-- Tarjeta destacada SOLO con el Código (Centrado) --}}
+    <div class="alert alert-light border text-center mb-3 p-3 shadow-sm">
+        <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código</small>
+        <span class="fw-bold text-dark fs-4">{{ $parroquia->codigo }}</span>
     </div>
 
     <div class="row g-3">

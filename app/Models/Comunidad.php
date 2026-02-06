@@ -26,7 +26,7 @@ class Comunidad extends Model implements Auditable
             // Pero para simplificar, usaremos un enfoque directo si el ID es autoincremental
             $lastId = self::max('id') ?? 0; // Obtener el último ID o 0 si la tabla está vacía
             $newId = $lastId + 1;
-            $comunidad->codigo_unico = 'COM' . str_pad($newId, 3, '0', STR_PAD_LEFT);
+            $comunidad->codigo_unico = 'CO-' . str_pad($newId, 2, '0', STR_PAD_LEFT);
         });
     }
 

@@ -30,7 +30,7 @@ class Parroquia extends Model implements Auditable
 
             // 3. Generamos el string: PAR + 3 dígitos (001, 002, 010, etc.)
             // str_pad rellena con ceros a la izquierda
-            $parroquia->codigo = 'PAR' . str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
+            $parroquia->codigo = 'PR-' . str_pad($siguienteId, 2, '0', STR_PAD_LEFT);
         });
     }
 

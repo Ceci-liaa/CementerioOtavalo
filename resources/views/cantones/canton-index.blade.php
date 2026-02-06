@@ -228,7 +228,13 @@
                             html: `¿Deseas eliminar el cantón <b>"${this.getAttribute('data-item')}"</b>?`,
                             icon: 'warning',
                             showCancelButton: true,
+                            
+                            // COLOR DEL BOTÓN CONFIRMAR (Rojo para peligro)
                             confirmButtonColor: '#d33', 
+                            
+                            // COLOR DEL BOTÓN CANCELAR (Aquí pones el Azul)
+                            cancelButtonColor: '#3085d6', 
+
                             confirmButtonText: 'Sí, eliminar',
                             cancelButtonText: 'Cancelar'
                         }).then((r) => {

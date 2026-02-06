@@ -1,4 +1,4 @@
-{{-- CABECERA DEL MODAL (Azul Informativo) --}}
+{{-- CABECERA DEL MODAL --}}
 <div class="modal-header bg-info text-white border-bottom-0 pb-0">
     <h5 class="modal-title fw-bold">Detalle de la Comunidad</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -7,16 +7,10 @@
 {{-- CUERPO DEL MODAL --}}
 <div class="modal-body pt-3">
     
-    {{-- Tarjeta destacada para Código e ID --}}
-    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 p-3 shadow-sm">
-        <div>
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código Único</small>
-            <span class="fw-bold text-dark fs-5">{{ $comunidad->codigo_unico ?? $comunidad->codigo }}</span>
-        </div>
-        <div class="text-end border-start ps-3">
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">ID Interno</small>
-            <span class="fw-bold text-dark fs-5">#{{ $comunidad->id }}</span>
-        </div>
+    {{-- Tarjeta destacada SOLO con el Código (Centrado) --}}
+    <div class="alert alert-light border text-center mb-3 p-3 shadow-sm">
+        <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código Único</small>
+        <span class="fw-bold text-dark fs-4">{{ $comunidad->codigo_unico ?? $comunidad->codigo }}</span>
     </div>
 
     <div class="row g-3">

@@ -19,9 +19,9 @@ class ParroquiaController extends Controller
         $parroquiasQuery = Parroquia::with('canton')->orderBy('codigo', 'asc');
 
         if ($q !== '') {
-            $parroquiasQuery->where(function($query) use ($q){
+            $parroquiasQuery->where(function ($query) use ($q) {
                 $query->where('nombre', 'ILIKE', "%{$q}%")
-                      ->orWhere('codigo', 'ILIKE', "%{$q}%");
+                    ->orWhere('codigo', 'ILIKE', "%{$q}%");
             });
         }
 
@@ -30,39 +30,54 @@ class ParroquiaController extends Controller
         }
 
         $parroquias = $parroquiasQuery->paginate(10)->withQueryString();
-        $cantones = Canton::orderBy('nombre')->get(['id','nombre']);
+        $cantones = Canton::orderBy('nombre')->get(['id', 'nombre']);
 
-        return view('parroquias.parroquia-index', compact('parroquias','cantones'));
+        return view('parroquias.parroquia-index', compact('parroquias', 'cantones'));
     }
 
     public function store(Request $request)
     {
+        // 1. Convertimos a MAYÚSCULAS antes de validar para que detecte duplicados correctamente
+        $request->merge(['nombre' => strtoupper($request->nombre)]);
+
+        // 2. Validación
         $request->validate([
             'canton_id' => 'required|exists:cantones,id',
-            'nombre'    => 'required|string|max:255|unique:parroquias,nombre,NULL,id,canton_id,' . $request->canton_id,
+            // Valida que el nombre sea único SOLO dentro del cantón seleccionado
+            'nombre' => 'required|string|max:255|unique:parroquias,nombre,NULL,id,canton_id,' . $request->canton_id,
+        ], [
+            'canton_id.required' => 'Debe seleccionar un cantón.',
+            'nombre.required' => 'El nombre de la parroquia es obligatorio.',
+            'nombre.unique' => 'Ya existe una parroquia con este nombre en el cantón seleccionado.',
         ]);
 
         try {
-            
             $parroquia = Parroquia::create([
                 'canton_id' => $request->canton_id,
-                'nombre'    => $request->nombre,
+                'nombre' => $request->nombre,
             ]);
 
             $mensaje = "Parroquia {$parroquia->codigo} - {$parroquia->nombre} creada correctamente.";
-            
+
             return redirect()->route('parroquias.index')->with('success', $mensaje);
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error al crear: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al crear: ' . $e->getMessage());
         }
     }
-
-    public function update(Request $request, Parroquia $parroquia)
+public function update(Request $request, Parroquia $parroquia)
     {
+        // 1. Convertimos a MAYÚSCULAS antes de validar
+        $request->merge(['nombre' => strtoupper($request->nombre)]);
+
+        // 2. Validación
         $request->validate([
             'canton_id' => 'required|exists:cantones,id',
+            // Valida único ignorando el ID actual ($parroquia->id), pero respetando el grupo del cantón
             'nombre'    => 'required|string|max:255|unique:parroquias,nombre,' . $parroquia->id . ',id,canton_id,' . $request->canton_id,
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.unique'   => 'Ya existe una parroquia con este nombre en el cantón seleccionado.',
         ]);
 
         try {
@@ -79,7 +94,6 @@ class ParroquiaController extends Controller
             return redirect()->back()->with('error', 'Error al actualizar: '.$e->getMessage());
         }
     }
-
     public function destroy(Parroquia $parroquia)
     {
         try {
@@ -97,14 +111,14 @@ class ParroquiaController extends Controller
     public function byCanton(Canton $canton)
     {
         return response()->json(
-            $canton->parroquias()->orderBy('nombre')->get(['id','nombre'])
+            $canton->parroquias()->orderBy('nombre')->get(['id', 'nombre'])
         );
     }
 
     public function create()
     {
         $cantones = Canton::orderBy('nombre')->get();
-        $isModal = request()->ajax(); 
+        $isModal = request()->ajax();
         return view('parroquias.parroquia-create', compact('cantones', 'isModal'));
     }
 
@@ -131,25 +145,24 @@ class ParroquiaController extends Controller
         }
 
         $parroquias = Parroquia::with('canton')
-                            ->whereIn('id', $ids)
-                            ->orderBy('codigo', 'asc')
-                            ->get();
+            ->whereIn('id', $ids)
+            ->orderBy('codigo', 'asc')
+            ->get();
 
         if ($request->report_type == 'pdf') {
             $pdf = Pdf::loadView('parroquias.reports-pdf', compact('parroquias'));
-            return $pdf->download('parroquias_reporte_'.date('YmdHis').'.pdf');
-        } 
-        elseif ($request->report_type == 'excel') {
-            $dataExport = $parroquias->map(function($p) {
+            return $pdf->download('parroquias_reporte_' . date('YmdHis') . '.pdf');
+        } elseif ($request->report_type == 'excel') {
+            $dataExport = $parroquias->map(function ($p) {
                 return [
-                    'Código'   => $p->codigo,
-                    'Nombre'   => $p->nombre,
-                    'Cantón'   => $p->canton->nombre ?? 'Sin Cantón',
+                    'Código' => $p->codigo,
+                    'Nombre' => $p->nombre,
+                    'Cantón' => $p->canton->nombre ?? 'Sin Cantón',
                 ];
             });
 
             $headings = ['Código', 'Parroquia', 'Cantón'];
-            return Excel::download(new GenericExport($dataExport, $headings), 'parroquias_reporte_'.date('YmdHis').'.xlsx');
+            return Excel::download(new GenericExport($dataExport, $headings), 'parroquias_reporte_' . date('YmdHis') . '.xlsx');
         }
 
         return redirect()->back()->with('error', 'Tipo de reporte no válido.');
