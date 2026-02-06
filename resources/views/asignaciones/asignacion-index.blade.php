@@ -8,23 +8,24 @@
         .input-group-text { border-color: #dee2e6; }
         .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
         .compact-filter { width: auto; min-width: 140px; max-width: 180px; }
-        .badge-disponible { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .badge-ocupado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .badge-lleno { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        
+        /* ESTILOS DE ESTADOS ACTUALIZADOS */
+        .badge-ocupado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; } /* Amarillo */
+        .badge-mantenimiento { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }        
         .btn-action { margin-right: 4px; }
         
         /* Alineación de filas internas */
         .fallecido-row { border-bottom: 1px solid #f0f0f0; padding: 4px 0; }
         .fallecido-row:last-child { border-bottom: none; }
         /* Estilo para los títulos de las columnas */
-    .table thead th {
-        font-size: 14px !important;    /* Tamaño más grande */
-        text-transform: uppercase;    /* Mantener en mayúsculas para orden */
-        letter-spacing: 0.05rem;      /* Separación ligera entre letras */
-        font-weight: 700 !important;  /* Ponerlo más negrita */
-        padding-top: 15px !important; /* Más espacio arriba */
-        padding-bottom: 15px !important; /* Más espacio abajo */
-    }
+        .table thead th {
+            font-size: 14px !important;    
+            text-transform: uppercase;    
+            letter-spacing: 0.05rem;      
+            font-weight: 700 !important;  
+            padding-top: 15px !important; 
+            padding-bottom: 15px !important; 
+        }
     </style>
 
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -75,19 +76,27 @@
                                 type="button" id="dropdownGenerate" data-bs-toggle="dropdown" aria-expanded="false"> Reportes
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownGenerate">
-                            <li><a href="{{ route('asignaciones.pdf.general') }}" target="_blank" class="dropdown-item"><i class="fas fa-file-pdf text-danger me-2"></i> Reporte General</a></li>
-                            <li><a href="{{ route('asignaciones.pdf.exhumados') }}" target="_blank" class="dropdown-item"><i class="fas fa-scroll text-dark me-2"></i> Ver Exhumados</a></li>
+                            <li>
+                                <a href="#" onclick="generarReporteConFiltros(event)" class="dropdown-item">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i> Reporte General
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('asignaciones.pdf.exhumados') }}" target="_blank" class="dropdown-item">
+                                    <i class="fas fa-scroll text-dark me-2"></i> Ver Exhumados
+                                </a>
+                            </li>
                         </ul>
                     </div>
                     @endcan
 
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
+                        
+                        {{-- [MODIFICADO] AQUÍ ESTÁ EL CAMBIO DEL FILTRO --}}
                         <select name="estado" class="form-select form-select-sm compact-filter ps-2" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Todos los Estados</option>
                             <option value="OCUPADO" @selected(request('estado') == 'OCUPADO')>Ocupados</option>
-                            <option value="LLENO" @selected(request('estado') == 'LLENO')>Llenos</option>
-                            <option value="DISPONIBLE" @selected(request('estado') == 'DISPONIBLE')>Disponibles</option>
-                        </select>
+                            <option value="MANTENIMIENTO" @selected(request('estado') == 'MANTENIMIENTO')>En Mantenimiento</option>                        </select>
 
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
@@ -163,13 +172,12 @@
                                             <div class="text-xs font-weight-normal text-secondary">{{ $nicho->bloque->descripcion ?? '' }}</div>
                                         </td>
                                         
-                                        {{-- 6. ESTADO --}}
+                                        {{-- 6. ESTADO (MODIFICADO) --}}
                                         <td>
                                             @php
                                                 $clase = match($nicho->estado) {
-                                                    'DISPONIBLE' => 'badge-disponible',
                                                     'OCUPADO' => 'badge-ocupado',
-                                                    'LLENO' => 'badge-lleno',
+                                                    'MANTENIMIENTO' => 'badge-mantenimiento',
                                                     default => 'bg-secondary text-white'
                                                 };
                                             @endphp
@@ -289,6 +297,17 @@
                     });
                 });
             });
+
+            function generarReporteConFiltros(event) {
+                event.preventDefault(); 
+                const inputSearch = document.querySelector('input[name="search"]');
+                const selectEstado = document.querySelector('select[name="estado"]');
+                const textoSearch = inputSearch ? inputSearch.value : '';
+                const estadoSelect = selectEstado ? selectEstado.value : '';
+                let urlBase = "{{ route('asignaciones.pdf.general') }}";
+                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}`;
+                window.open(urlFinal, '_blank');
+            }
         </script>
     </main>
 </x-app-layout>

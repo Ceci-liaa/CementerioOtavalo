@@ -36,68 +36,52 @@ class NichoController extends Controller
 
         return view('nichos.nicho-index', compact('nichos', 'bloques', 'bloqueId', 'q'));
     }
-
     public function create()
     {
         $bloques = Bloque::orderBy('nombre', 'asc')->get();
         $socios = Socio::orderBy('apellidos', 'asc')->get();
 
-        // CAMBIO AQUÍ: Agregamos ->sortBy('codigo', SORT_NATURAL) al final
         $nichosGeom = NichoGeom::whereNotIn('id', function ($q) {
-            $q->select('nicho_geom_id')
-                ->from('nichos')
-                ->whereNotNull('nicho_geom_id')
-                ->whereNull('deleted_at');
+            $q->select('nicho_geom_id')->from('nichos')->whereNotNull('nicho_geom_id')->whereNull('deleted_at');
         })
-            ->select('id', 'codigo')
-            ->get()
-            ->sortBy('codigo', SORT_NATURAL); // <--- ESTA ES LA LÍNEA MÁGICA
+            ->select('id', 'codigo')->get()->sortBy('codigo', SORT_NATURAL);
 
         return view('nichos.nicho-create', compact('bloques', 'socios', 'nichosGeom'));
     }
+
     public function store(Request $request)
     {
         $request->validate([
             'bloque_id' => 'required|exists:bloques,id',
             'socio_id' => 'nullable|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
+            // NUEVO CAMPO: CLASE
+            'clase_nicho' => 'required|in:BOVEDA,TIERRA',
             'capacidad' => 'required|integer|min:1',
-            'estado' => 'required|in:disponible,ocupado,mantenimiento',
+            // ESTADO FÍSICO (Nuevos valores)
+            'estado' => 'required|in:BUENO,MANTENIMIENTO,MALO,ABANDONADO',
             'descripcion' => 'nullable|string|max:1000',
             'qr_uuid' => 'nullable|string|unique:nichos,qr_uuid',
-
-            // Validar que el ID del mapa sea único y válido
-            'nicho_geom_id' => [
-                'nullable',
-                'exists:nichos_geom,id',
-                Rule::unique('nichos')->whereNull('deleted_at')
-            ],
+            'nicho_geom_id' => ['nullable', 'exists:nichos_geom,id', Rule::unique('nichos')->whereNull('deleted_at')],
         ]);
 
         try {
-            $data = [
-                'bloque_id' => $request->bloque_id,
-                'socio_id' => $request->socio_id,
-                'nicho_geom_id' => $request->nicho_geom_id, // Guardamos ID mapa
-                'tipo_nicho' => $request->tipo_nicho,
-                'capacidad' => $request->capacidad,
-                'estado' => $request->estado,
-                'descripcion' => $request->descripcion,
-                // Usamos 'true'/'false' como texto o 1/0 casteado explícitamente si es necesario
-                'disponible' => $request->estado === 'disponible' ? 'true' : 'false',
-                'qr_uuid' => $request->qr_uuid,
-                'created_by' => auth()->id(),
-            ];
+            $data = $request->all();
+            $data['created_by'] = auth()->id();
 
-            // --- LÓGICA DE SINCRONIZACIÓN DE CÓDIGO ---
+            // Lógica de Disponibilidad Inicial:
+            // Si se crea nuevo, asumimos que 'ocupacion' es 0 y 'disponible' es true.
+            // (El usuario no llena 'ocupacion' manualmente en el formulario).
+            $data['ocupacion'] = 0;
+            $data['disponible'] = true;
+
+            // Sincronización de código con mapa
             if ($request->filled('nicho_geom_id')) {
                 $geom = NichoGeom::find($request->nicho_geom_id);
                 if ($geom && $geom->codigo) {
-                    // Validar duplicado manual
                     if (Nicho::where('codigo', $geom->codigo)->whereNull('deleted_at')->exists()) {
                         return back()->withInput()->with('error', "El código '{$geom->codigo}' ya está registrado.");
                     }
-                    // Copiamos el código del mapa (ej: B8-NB97)
                     $data['codigo'] = $geom->codigo;
                 }
             }
@@ -121,61 +105,36 @@ class NichoController extends Controller
         $bloques = Bloque::orderBy('nombre', 'asc')->get();
         $socios = Socio::orderBy('apellidos', 'asc')->get();
 
-        // CAMBIO AQUÍ: Agregamos ->sortBy('codigo', SORT_NATURAL) al final
         $nichosGeom = NichoGeom::whereNotIn('id', function ($q) {
-            $q->select('nicho_geom_id')
-                ->from('nichos')
-                ->whereNotNull('nicho_geom_id')
-                ->whereNull('deleted_at');
+            $q->select('nicho_geom_id')->from('nichos')->whereNotNull('nicho_geom_id')->whereNull('deleted_at');
         })
             ->orWhere('id', $nicho->nicho_geom_id)
-            ->select('id', 'codigo')
-            ->get()
-            ->sortBy('codigo', SORT_NATURAL); // <--- ESTA ES LA LÍNEA MÁGICA
+            ->select('id', 'codigo')->get()->sortBy('codigo', SORT_NATURAL);
 
         return view('nichos.nicho-edit', compact('nicho', 'bloques', 'socios', 'nichosGeom'));
     }
+
     public function update(Request $request, Nicho $nicho)
     {
         $request->validate([
             'bloque_id' => 'required|exists:bloques,id',
             'socio_id' => 'nullable|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
+            'clase_nicho' => 'required|in:BOVEDA,TIERRA', // VALIDACIÓN NUEVA
             'capacidad' => 'required|integer|min:1',
-            'estado' => 'required|in:disponible,ocupado,mantenimiento',
+            'estado' => 'required|in:BUENO,MANTENIMIENTO,MALO,ABANDONADO', // VALORES NUEVOS
             'descripcion' => 'nullable|string|max:1000',
             'qr_uuid' => ['nullable', 'string', Rule::unique('nichos')->ignore($nicho->id)],
-            'nicho_geom_id' => [
-                'nullable',
-                'exists:nichos_geom,id',
-                Rule::unique('nichos')->whereNull('deleted_at')->ignore($nicho->id)
-            ],
+            'nicho_geom_id' => ['nullable', 'exists:nichos_geom,id', Rule::unique('nichos')->whereNull('deleted_at')->ignore($nicho->id)],
         ]);
 
         try {
-            $data = [
-                'bloque_id' => $request->bloque_id,
-                'socio_id' => $request->socio_id,
-                'nicho_geom_id' => $request->nicho_geom_id,
-                'tipo_nicho' => $request->tipo_nicho,
-                'capacidad' => $request->capacidad,
-                'estado' => $request->estado,
-                'descripcion' => $request->descripcion,
+            $data = $request->except(['ocupacion', 'disponible']); // Protegemos la lógica de ocupación
 
-                // --- AQUÍ ESTÁ LA CORRECCIÓN ---
-                // Si el estado NO es 'disponible' (es ocupado o mantenimiento), 
-                // forzamos a que 'disponible' sea 'false'.
-                'disponible' => $request->estado === 'disponible' ? 'true' : 'false',
-
-                'qr_uuid' => $request->qr_uuid,
-            ];
-
-            // Si el usuario cambia el código manualmente
             if ($request->filled('codigo')) {
                 $data['codigo'] = $request->codigo;
             }
 
-            // Si cambió el mapa, actualizamos el código automáticamente
             if ($request->filled('nicho_geom_id') && $request->nicho_geom_id != $nicho->nicho_geom_id) {
                 $geom = NichoGeom::find($request->nicho_geom_id);
                 if ($geom && $geom->codigo) {
@@ -213,46 +172,37 @@ class NichoController extends Controller
             return redirect()->back()->with('error', 'Debe seleccionar al menos un registro.');
         }
 
-        // AQUÍ ESTÁ LA CORRECCIÓN DE ORDENAMIENTO:
-        // En lugar de "orderBy" de SQL (que mezcla B1, B10, B2),
-        // usamos "get()" y luego "sortBy(..., SORT_NATURAL)".
-        $nichos = Nicho::with('bloque')
-            ->whereIn('id', $ids)
-            ->get() // 1. Traemos los datos de la BD
-            ->sortBy('codigo', SORT_NATURAL); // 2. Ordenamos inteligente (B-2 antes que B-10)
+        $nichos = Nicho::with('bloque')->whereIn('id', $ids)->get()->sortBy('codigo', SORT_NATURAL);
 
-        // Encabezados
+        // NUEVOS ENCABEZADOS
         $headings = [
             'ID',
             'Código',
             'Bloque',
-            'Estado',
-            'Disponibilidad',
-            'Capacidad'
+            'Clase',
+            'Tipo',
+            'Estado Físico',
+            'Ocupación'
         ];
 
-        // Mapeo de datos (Tu lógica original intacta)
         $data = $nichos->map(function ($n) {
             return [
                 'id' => $n->id,
                 'codigo' => $n->codigo,
                 'bloque' => $n->bloque->nombre ?? 'N/A',
-                'estado' => ucfirst($n->estado),
-                'disponibilidad' => $n->disponible ? 'Sí' : 'No',
-                'capacidad' => $n->capacidad,
+                'clase' => $n->clase_nicho, // NUEVO
+                'tipo' => $n->tipo_nicho,
+                'estado' => ucfirst(strtolower($n->estado)), // Físico
+                'ocupacion' => $n->ocupacion . ' / ' . $n->capacidad, // "1 / 3"
             ];
         });
 
         if ($reportType === 'excel') {
-            return Excel::download(new NichosExport($data, $headings), 'nichos_reporte.xlsx');
-
+            return Excel::download(new NichosExport($data, $headings), 'nichos.xlsx');
         } elseif ($reportType === 'pdf') {
             $pdf = Pdf::loadView('nichos.reports-pdf', compact('data', 'headings'));
-            $pdf->setPaper('A4', 'portrait');
-            return $pdf->download('nichos_reporte_' . date('YmdHis') . '.pdf');
+            return $pdf->download('nichos.pdf');
         }
-
-        return redirect()->back();
     }
     // Agrega esto en tu controlador
 

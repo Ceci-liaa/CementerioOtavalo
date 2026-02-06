@@ -27,7 +27,6 @@ return new class extends Migration {
             $t->string('email', 255)->nullable();
             $t->date('fecha_nac')->nullable();
             $t->date('fecha_inscripcion')->nullable();
-            $t->boolean('es_representante')->default(false);
             $t->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $t->timestampsTz();
             $t->softDeletesTz();

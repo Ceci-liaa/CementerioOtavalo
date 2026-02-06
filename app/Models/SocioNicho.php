@@ -9,7 +9,7 @@ class SocioNicho extends Pivot implements Auditable
 {
     use \OwenIt\Auditing\Auditable;
     protected $table = 'socio_nicho';
-    public $incrementing = true; // IMPORTANTE: Tu tabla tiene columna 'id'
+    public $incrementing = true;
 
     protected $casts = [
         'desde' => 'date',

@@ -253,41 +253,45 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     
-    // CRUD Asignaciones
+    // --- 1. REPORTES (Van primero para evitar conflictos con {id}) ---
+    Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])
+        ->name('asignaciones.pdf.general')->middleware('can:reportar asignacion');
+
+    Route::get('/asignaciones/reporte-exhumados', [AsignacionController::class, 'pdfReporteExhumados'])
+        ->name('asignaciones.pdf.exhumados')->middleware('can:reportar asignacion');
+
+    // --- 2. RUTAS ESTÁTICAS DEL CRUD ---
     Route::get('/asignaciones', [AsignacionController::class, 'index'])
         ->name('asignaciones.index')->middleware('can:ver asignacion');
+
     Route::get('/asignaciones/create', [AsignacionController::class, 'create'])
         ->name('asignaciones.create')->middleware('can:crear asignacion');
+
     Route::post('/asignaciones', [AsignacionController::class, 'store'])
         ->name('asignaciones.store')->middleware('can:crear asignacion');
-    Route::get('/asignaciones/{id}', [AsignacionController::class, 'show'])
-        ->name('asignaciones.show')->middleware('can:ver asignacion');
-    Route::get('/asignaciones/{id}/edit', [AsignacionController::class, 'edit'])
-        ->name('asignaciones.edit')->middleware('can:editar asignacion');
-    Route::put('/asignaciones/{id}', [AsignacionController::class, 'update'])
-        ->name('asignaciones.update')->middleware('can:editar asignacion');
-    
-    // Eliminar Asignación (Liberar nicho por error)
-    Route::delete('/asignaciones/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'destroy'])
-        ->name('asignacion.destroy')->middleware('can:eliminar asignacion');
 
-    // [CRÍTICO] EXHUMACIÓN
-    Route::get('/asignaciones/{id}/exhumar', [AsignacionController::class, 'exhumarForm'])
-        ->name('asignaciones.exhumarForm')->middleware('can:exhumar cuerpo');
     Route::post('/asignaciones/exhumar', [AsignacionController::class, 'exhumar'])
         ->name('asignaciones.exhumar')->middleware('can:exhumar cuerpo');
 
-    // Reportes y Certificados
-    Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])
-        ->name('asignaciones.pdf.general')->middleware('can:reportar asignacion');
-    Route::get('/asignaciones/reporte-exhumados', [AsignacionController::class, 'pdfReporteExhumados'])
-        ->name('asignaciones.pdf.exhumados')->middleware('can:reportar asignacion');
-    
-    // Certificado Individual
+    // --- 3. RUTAS CON PARÁMETROS VARIABLES (Van al final) ---
+    Route::get('/asignaciones/{id}', [AsignacionController::class, 'show'])
+        ->name('asignaciones.show')->middleware('can:ver asignacion');
+
+    Route::get('/asignaciones/{id}/edit', [AsignacionController::class, 'edit'])
+        ->name('asignaciones.edit')->middleware('can:editar asignacion');
+
+    Route::put('/asignaciones/{id}', [AsignacionController::class, 'update'])
+        ->name('asignaciones.update')->middleware('can:editar asignacion');
+
+    Route::get('/asignaciones/{id}/exhumar', [AsignacionController::class, 'exhumarForm'])
+        ->name('asignaciones.exhumarForm')->middleware('can:exhumar cuerpo');
+
+    Route::delete('/asignaciones/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'destroy'])
+        ->name('asignacion.destroy')->middleware('can:eliminar asignacion');
+
     Route::get('/asignaciones/certificado/{nicho_id}/{fallecido_id}', [AsignacionController::class, 'pdfCertificadoExhumacion'])
         ->name('asignaciones.pdf.certificado')->middleware('can:generar certificado');
 });
-
 
 // ========================================================================
 // 9. GESTIÓN FINANCIERA (Pagos y Facturas)

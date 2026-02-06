@@ -7,66 +7,92 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Nicho;
 use App\Models\Socio;
 use App\Models\Fallecido;
-use Barryvdh\DomPDF\Facade\Pdf; // Asegúrate de importar el PDF
+use Barryvdh\DomPDF\Facade\Pdf;
+// Asegúrate de importar el PDF
 
 class AsignacionController extends Controller
 {
     // --- 1. INDEX: LISTADO DE NICHOS ---
     public function index(Request $request)
     {
-        // CORRECCIÓN: Filtramos para mostrar SOLO nichos que tengan Socio O Fallecido.
-        // No mostramos los vacíos/disponibles sin asignar.
+        // 1. Base de la consulta
         $query = Nicho::with(['bloque', 'socios', 'fallecidos'])
-            ->where(function($q) {
-                $q->has('socios')->orHas('fallecidos');
-            })
-            ->orderBy('updated_at', 'desc'); // Los más recientes primero
+            ->orderBy('updated_at', 'desc');
 
-        // Filtros opcionales
-        if ($request->has('estado') && $request->estado != '') {
-            $query->where('estado', $request->estado);
+        // =========================================================
+        // LÓGICA DE FILTROS (Aquí estaba el conflicto)
+        // =========================================================
+
+        // A. ¿El usuario está usando el buscador?
+        $buscando = $request->filled('search');
+        // B. ¿El usuario seleccionó un estado?
+        $filtrandoEstado = $request->filled('estado');
+
+        // CASO 1: Si el usuario está FILTRANDO por Estado
+        if ($filtrandoEstado) {
+            $estado = strtoupper(trim($request->estado)); // Forzamos mayúsculas y quitamos espacios
+
+            if ($estado === 'MANTENIMIENTO') {
+                // Truco: Usamos whereRaw para ignorar mayúsculas/minúsculas en la base de datos
+                $query->whereRaw('UPPER(estado) = ?', ['MANTENIMIENTO']);
+            } else {
+                // Si busca OCUPADO, buscamos por estado Y nos aseguramos que tenga gente (opcional)
+                $query->where('estado', $request->estado);
+            }
         }
-        
-        // Filtro para ver solo donde hubo exhumaciones
-        if ($request->has('ver_exhumados') && $request->ver_exhumados == '1') {
-            $query->whereHas('fallecidos', function($q) {
-                $q->whereNotNull('fallecido_nicho.fecha_exhumacion');
+        // CASO 2: Si NO filtra por estado, pero tampoco busca nada (VISTA INICIAL)
+        else if (!$buscando) {
+            // Regla por defecto: Mostrar (Con Gente) O (En Mantenimiento)
+            $query->where(function ($q) {
+                $q->has('socios')
+                    ->orWhereHas('fallecidos', function ($qf) {
+                        $qf->where('fallecido_nicho.fecha_exhumacion', null);
+                    })
+                    ->orWhereRaw('UPPER(estado) = ?', ['MANTENIMIENTO']);
             });
         }
+        // CASO 3: Si solo está buscando texto (Search), buscamos en todo lado sin restringir.
 
-        if ($request->has('search') && $request->search != '') {
-            $term = $request->search;
-            $query->where(function($q) use ($term) {
+        // =========================================================
+        // BUSCADOR DE TEXTO
+        // =========================================================
+        if ($buscando) {
+            $term = trim($request->search);
+            $query->where(function ($q) use ($term) {
+                // Buscamos código de nicho (insensible a mayúsculas)
                 $q->where('codigo', 'ILIKE', "%{$term}%")
-                  ->orWhereHas('socios', function($qs) use ($term) {
-                      $qs->where('cedula', 'ILIKE', "%{$term}%")
-                         ->orWhere('apellidos', 'ILIKE', "%{$term}%")
-                         ->orWhere('nombres', 'ILIKE', "%{$term}%");
-                  })
-                  ->orWhereHas('fallecidos', function($qf) use ($term) {
-                      $qf->where('cedula', 'ILIKE', "%{$term}%")
-                         ->orWhere('apellidos', 'ILIKE', "%{$term}%")
-                         ->orWhere('nombres', 'ILIKE', "%{$term}%");
-                  });
+                    // O socio
+                    ->orWhereHas('socios', function ($qs) use ($term) {
+                        $qs->where('cedula', 'ILIKE', "%{$term}%")
+                            ->orWhere('apellidos', 'ILIKE', "%{$term}%")
+                            ->orWhere('nombres', 'ILIKE', "%{$term}%");
+                    })
+                    // O fallecido activo
+                    ->orWhereHas('fallecidos', function ($qf) use ($term) {
+                        $qf->where('fallecido_nicho.fecha_exhumacion', null)
+                            ->where(function ($sub) use ($term) {
+                                $sub->where('cedula', 'ILIKE', "%{$term}%")
+                                    ->orWhere('apellidos', 'ILIKE', "%{$term}%")
+                                    ->orWhere('nombres', 'ILIKE', "%{$term}%");
+                            });
+                    });
             });
         }
 
         $nichos = $query->paginate(10);
-
-        return view('asignaciones.asignacion-index', compact('nichos'));
+        return view('asignaciones.asignacion-index', compact('nichos')); // Asegúrate que tu vista se llame así
     }
-
     // --- 2. CREATE: FORMULARIO DE ASIGNACIÓN ---
-public function create()
+    public function create()
     {
         try {
             // 1. NICHOS
             $nichosDisponibles = Nicho::with('bloque')
-                ->withCount('fallecidos') 
+                ->withCount('fallecidos')
                 // CORRECCIÓN AQUÍ:
                 // Usamos whereRaw para forzar la comparación booleana correcta en PostgreSQL
                 // en lugar de ->where('disponible', true) que envía un 1.
-                ->whereRaw('disponible = true') 
+                ->whereRaw('disponible = true')
                 ->orderBy('id', 'desc')
                 ->get();
 
@@ -82,7 +108,7 @@ public function create()
 
         } catch (\Exception $e) {
             // Si falla, te mostrará el error en pantalla
-            dd("ERROR EN CREATE ASIGNACIÓN: " . $e->getMessage()); 
+            dd("ERROR EN CREATE ASIGNACIÓN: " . $e->getMessage());
         }
     }
 
@@ -103,11 +129,11 @@ public function create()
         // Enviamos la lista de fallecidos DISPONIBLES + los que ya están en este nicho.
         // Esto permite cambiar al fallecido en el select si te equivocaste.
         $fallecidos = Fallecido::doesntHave('nichos')
-                        ->orWhereHas('nichos', function($q) use ($id) {
-                            $q->where('nichos.id', $id);
-                        })
-                        ->orderBy('apellidos')
-                        ->get();
+            ->orWhereHas('nichos', function ($q) use ($id) {
+                $q->where('nichos.id', $id);
+            })
+            ->orderBy('apellidos')
+            ->get();
 
         return view('asignaciones.asignacion-edit', compact('nicho', 'socios', 'fallecidos'));
     }
@@ -116,7 +142,7 @@ public function create()
     // LÓGICA DE NEGOCIO (STORE, UPDATE, EXHUMAR, DESTROY)
     // =========================================================================
 
-public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'nicho_id' => 'required|exists:nichos,id',
@@ -153,11 +179,11 @@ public function store(Request $request)
 
                 // 4. Asignar Fallecido con el SOCIO_ID vinculado al registro
                 $nicho->fallecidos()->attach($request->fallecido_id, [
-                    'socio_id'         => $request->socio_id, // <--- CAMBIO AQUÍ
-                    'codigo'           => $codigoGenerado,
-                    'posicion'         => $ocupantesActivos + 1,
+                    'socio_id' => $request->socio_id, // <--- CAMBIO AQUÍ
+                    'codigo' => $codigoGenerado,
+                    'posicion' => $ocupantesActivos + 1,
                     'fecha_inhumacion' => now(),
-                    'observacion'      => 'Ingreso registrado'
+                    'observacion' => 'Ingreso registrado'
                 ]);
 
                 // 5. Actualizar Estado del Nicho
@@ -179,7 +205,7 @@ public function store(Request $request)
     public function exhumarForm($id)
     {
         $nicho = Nicho::with(['bloque', 'fallecidos'])->findOrFail($id);
-        
+
         // Filtramos SOLO los activos para mostrar en el select
         $fallecidosActivos = $nicho->fallecidos->where('pivot.fecha_exhumacion', null);
 
@@ -218,16 +244,15 @@ public function store(Request $request)
         return back()->with('success', 'Exhumación registrada correctamente.');
     }
 
-    // --- ACTUALIZAR / CORREGIR ERROR ---
-public function update(Request $request, $nicho_id)
+    public function update(Request $request, $nicho_id)
     {
         $request->validate([
-            'socio_id'              => 'required|exists:socios,id',
-            'socio_anterior_id'     => 'required|exists:socios,id',
-            'fallecido_id'          => 'required|exists:fallecidos,id',
+            'socio_id' => 'required|exists:socios,id',
+            'socio_anterior_id' => 'required|exists:socios,id',
+            'fallecido_id' => 'required|exists:fallecidos,id',
             'fallecido_anterior_id' => 'required|exists:fallecidos,id',
-            'fecha_inhumacion'      => 'required|date',
-            'rol'                   => 'required|string'
+            'fecha_inhumacion' => 'required|date',
+            'rol' => 'required|string'
         ]);
 
         try {
@@ -236,7 +261,19 @@ public function update(Request $request, $nicho_id)
 
                 // A. Actualizar Socio en la tabla general de nichos
                 if ($request->socio_id != $request->socio_anterior_id) {
-                    $nicho->socios()->detach($request->socio_anterior_id);
+                    
+                    // --- CORRECCIÓN ---
+                    // En lugar de detach() directo, buscamos el modelo Pivot y lo borramos.
+                    // Esto carga el ID en memoria para que la auditoría funcione.
+                    $pivotSocio = \App\Models\SocioNicho::where('nicho_id', $nicho_id)
+                                    ->where('socio_id', $request->socio_anterior_id)
+                                    ->first();
+                    
+                    if ($pivotSocio) {
+                        $pivotSocio->delete();
+                    }
+
+                    // Ahora asignamos el nuevo socio
                     $nicho->socios()->syncWithoutDetaching([
                         $request->socio_id => ['rol' => $request->rol, 'desde' => now()]
                     ]);
@@ -244,9 +281,9 @@ public function update(Request $request, $nicho_id)
 
                 // B. Actualizar registro en fallecido_nicho incluyendo el nuevo socio_id
                 $nicho->fallecidos()->updateExistingPivot($request->fallecido_id, [
-                    'socio_id'         => $request->socio_id, // <--- Mantiene sincronía
+                    'socio_id' => $request->socio_id, // <--- Mantiene sincronía
                     'fecha_inhumacion' => $request->fecha_inhumacion,
-                    'observacion'      => $request->observacion,
+                    'observacion' => $request->observacion,
                 ]);
             });
 
@@ -258,7 +295,7 @@ public function update(Request $request, $nicho_id)
     }
 
     // --- ELIMINAR (BORRAR ERROR) ---
-public function destroy($nicho_id, $fallecido_id)
+    public function destroy($nicho_id, $fallecido_id)
     {
         try {
             DB::transaction(function () use ($nicho_id, $fallecido_id) {
@@ -291,35 +328,84 @@ public function destroy($nicho_id, $fallecido_id)
     // =========================================================================
 
     // 1. Reporte General (Todo lo ocupado)
-    public function pdfReporteGeneral()
+    public function pdfReporteGeneral(Request $request)
     {
-        $asignaciones = Nicho::with(['bloque', 'socios', 'fallecidos'])
-            ->where(function($q) { $q->has('socios')->orHas('fallecidos'); })
-            ->orderBy('bloque_id')->orderBy('codigo')
-            ->get();
+        // 1. Iniciamos la consulta
+        $query = Nicho::query();
 
-        $pdf = Pdf::loadView('asignaciones.pdf-reporte-general', compact('asignaciones'));
-        return $pdf->stream('Reporte_General.pdf');
+        // 2. FILTRO OBLIGATORIO: Solo nichos con fallecidos ACTIVOS (no exhumados)
+        // Usamos el nombre explícito de la tabla 'fallecido_nicho' para evitar errores
+        $query->whereHas('fallecidos', function ($q) {
+            $q->where('fallecido_nicho.fecha_exhumacion', null);
+        });
+
+        // 3. Filtro de Estado (Si se seleccionó uno)
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        // 4. BÚSQUEDA INTELIGENTE (Aquí está el cambio clave)
+        if ($request->filled('search')) {
+            $search = trim($request->search); // Quitamos espacios accidentales
+
+            $query->where(function ($q) use ($search) {
+                // Usamos ILIKE para PostgreSQL (insensible a mayúsculas)
+                $q->where('codigo', 'ILIKE', "%{$search}%")
+                    ->orWhereHas('socios', function ($sq) use ($search) {
+                        $sq->where('nombres', 'ILIKE', "%{$search}%")
+                            ->orWhere('apellidos', 'ILIKE', "%{$search}%")
+                            // Opcional: buscar por cédula también
+                            ->orWhere('cedula', 'ILIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('fallecidos', function ($fq) use ($search) {
+                        $fq->where('nombres', 'ILIKE', "%{$search}%")
+                            ->orWhere('apellidos', 'ILIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // 5. Obtenemos los datos (con filtro en la relación para no traer exhumados)
+        $nichos = $query->with([
+            'fallecidos' => function ($q) {
+                $q->where('fallecido_nicho.fecha_exhumacion', null);
+            },
+            'socios',
+            'bloque'
+        ])->get();
+
+        // 6. Generamos el PDF
+        $pdf = \PDF::loadView('asignaciones.pdf-reporte-general', compact('nichos'));
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('reporte_asignaciones.pdf');
     }
-
     // 2. Reporte de Exhumados
     public function pdfReporteExhumados()
     {
-        $registros = DB::table('fallecido_nicho')
-            ->join('fallecidos', 'fallecido_nicho.fallecido_id', '=', 'fallecidos.id')
-            ->join('nichos', 'fallecido_nicho.nicho_id', '=', 'nichos.id')
-            ->join('bloques', 'nichos.bloque_id', '=', 'bloques.id')
-            ->whereNotNull('fecha_exhumacion')
-            ->select(
-                'fallecidos.apellidos', 'fallecidos.nombres', 'fallecidos.cedula',
-                'nichos.codigo as nicho_codigo', 'bloques.descripcion as bloque',
-                'fallecido_nicho.fecha_inhumacion', 'fallecido_nicho.fecha_exhumacion', 'fallecido_nicho.observacion'
-            )
-            ->orderBy('fecha_exhumacion', 'desc')
+        // 1. CONSULTA ESTRICTA
+        // "whereHas" asegura que SOLO traigamos nichos que tengan historial de exhumación.
+        // Si un nicho está ocupado pero nunca se ha exhumado a nadie ahí, NO saldrá.
+        $nichos = Nicho::whereHas('fallecidos', function ($q) {
+            $q->whereNotNull('fallecido_nicho.fecha_exhumacion');
+        })
+            ->with([
+                'fallecidos' => function ($q) {
+                    // 2. FILTRO DE CARGA
+                    // Aquí le decimos: "Del nicho, tráeme SOLO los datos de los que fueron exhumados".
+                    // Ignora a los fallecidos actuales (activos).
+                    $q->whereNotNull('fallecido_nicho.fecha_exhumacion')
+                        ->orderBy('fallecido_nicho.fecha_exhumacion', 'desc');
+                },
+                'bloque'
+            ])
             ->get();
 
-        $pdf = Pdf::loadView('asignaciones.pdf-lista-exhumados', compact('registros'));
-        return $pdf->stream('Reporte_Exhumados.pdf');
+        // 3. ENVIAR A LA VISTA
+        // Usamos compact('nichos') para que la variable exista en el PDF.
+        $pdf = \PDF::loadView('asignaciones.pdf-lista-exhumados', compact('nichos'));
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('reporte_exhumados.pdf');
     }
 
     // 3. Certificado Individual

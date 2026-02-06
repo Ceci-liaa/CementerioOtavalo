@@ -10,47 +10,64 @@ return new class extends Migration {
         Schema::create('nichos', function (Blueprint $t) {
             $t->id();
             
+            // 1. RELACIONES (Incluyendo la de socio que querías unificar)
             $t->foreignId('socio_id')
               ->nullable()
-              ->constrained('socios') // Asumo que tu tabla se llama 'socios'
-              ->nullOnDelete();       // Si se borra el socio, el nicho queda libre (null)
+              ->constrained('socios')
+              ->nullOnDelete(); 
 
-            // 2. UBICACIÓN (Bloque físico)
             $t->foreignId('bloque_id')
               ->constrained('bloques')
               ->cascadeOnUpdate()
               ->restrictOnDelete();
 
-            // 3. RELACIÓN GEOMÉTRICA (QGIS/PostGIS)
-            // Importante: nullable() porque dijiste que no todos están dibujados aún.
-            // Asumo que la tabla donde guardas la info de QGIS se llama 'nichos_geom'.
             $t->foreignId('nicho_geom_id')
               ->nullable()
               ->constrained('nichos_geom') 
               ->nullOnDelete();
 
-            // 4. DATOS ESPECÍFICOS DEL NICHO
-            $t->string('codigo', 10)->unique(); // N001
-            
-            // Aquí definimos si es PROPIO o COMPARTIDO
-            // Usamos enum para asegurar que solo entren esos dos valores.
-            $t->enum('tipo_nicho', ['PROPIO', 'COMPARTIDO'])->default('PROPIO');
-            
-            $t->text('descripcion')->nullable(); // Detalles adicionales
-
-            // IDENTIFICACIÓN DIGITAL
+            // 2. IDENTIFICACIÓN
+            $t->string('codigo', 10)->unique(); // Ej: N001
             $t->uuid('qr_uuid')->nullable()->unique();
 
-            // CAPACIDAD Y ESTADO
-            $t->unsignedInteger('capacidad')->default(1);
-            $t->string('estado', 20)->default('DISPONIBLE'); 
-            $t->boolean('disponible')->default(true);
+
+            // 3. CLASIFICACIÓN (Tus nombres originales)
             
-            // AUDITORÍA
+            // tipo_nicho: PROPIO o COMPARTIDO
+            $t->enum('tipo_nicho', ['PROPIO', 'COMPARTIDO'])->default('PROPIO');
+            
+            // clase_nicho: (NUEVO) BOVEDA o TIERRA
+            $t->enum('clase_nicho', ['BOVEDA', 'TIERRA'])->default('BOVEDA');
+
+
+            // 4. CAPACIDAD Y OCUPACIÓN
+            
+            // capacidad: (Tu campo original) Default 3 difuntos.
+            $t->unsignedTinyInteger('capacidad')->default(3);
+            
+            // ocupacion: (NUEVO) Contador para saber cuántos de los 3 están usados (0, 1, 2 o 3).
+            $t->unsignedTinyInteger('ocupacion')->default(0); 
+
+            // disponible: (Tu campo original) 
+            // true = Disponible (Vacío o con espacio).
+            // false = No disponible (Ocupado/Lleno).
+            $t->boolean('disponible')->default(true);
+
+
+            // 5. ESTADO FÍSICO
+            // estado: (Tu campo original) Lo usamos solo para mantenimiento físico.
+            $t->enum('estado', ['BUENO', 'MANTENIMIENTO', 'MALO', 'ABANDONADO'])
+              ->default('BUENO');
+            
+            // 6. EXTRAS
+            $t->text('descripcion')->nullable(); 
+            
+            // Auditoría
             $t->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $t->timestampsTz();
             $t->softDeletesTz();
 
+            // Índices sugeridos
             $t->index(['estado', 'disponible']);
         });
     }

@@ -17,7 +17,8 @@ class Nicho extends Model implements Auditable
     protected $guarded = [];
 
     protected $casts = [
-        // 'disponible' => 'boolean',
+        'disponible' => 'boolean',
+        'ocupacion' => 'integer',
     ];
 
     /**
@@ -35,7 +36,7 @@ class Nicho extends Model implements Auditable
     {
         return $this->belongsToMany(Socio::class, 'socio_nicho')
                     ->using(SocioNicho::class)
-                    ->withPivot('rol', 'desde', 'hasta')
+                    ->withPivot('id', 'rol', 'desde', 'hasta')
                     ->withTimestamps();
     }
 
