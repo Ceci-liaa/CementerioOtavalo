@@ -83,47 +83,53 @@ class SocioController extends Controller
         return view('socios.socio-create', compact('comunidades', 'generos', 'estados'));
     }
 public function store(Request $request)
-    {
-        $request->validate([
-            'cedula'            => 'required|string|max:20|unique:socios,cedula',
-            'nombres'           => 'required|string|max:255',
-            'apellidos'         => 'required|string|max:255',
-            'fecha_nac'         => 'required|date',
-            'telefono'          => 'nullable|string|max:30',
-            'direccion'         => 'nullable|string|max:255',
-            'email'             => 'nullable|email|max:255',
-            'comunidad_id'      => 'required|exists:comunidades,id',
-            'estado_civil_id'   => 'required|exists:estados_civiles,id',
-            'genero_id'         => 'nullable|exists:generos,id',
-            'fecha_inscripcion' => 'required|date',
-            'tipo_beneficio'    => 'required|in:sin_subsidio,con_subsidio,exonerado',
-            'fecha_exoneracion' => 'nullable|date|required_if:tipo_beneficio,exonerado',
-            'condicion'         => 'required|in:ninguna,discapacidad,enfermedad_terminal',
-            'estatus'           => 'required|in:vivo,fallecido',
-        ]);
+{
+    // 1. AQUI AGREGAMOS LOS MENSAJES PERSONALIZADOS
+    $mensajes = [
+        'cedula.unique' => 'Este número de cédula ya existe. El socio ya está registrado.',
+        'cedula.required' => 'La cédula es obligatoria.',
+        'tipo_beneficio.required' => 'Debes seleccionar un tipo de beneficio.',
+    ];
 
-        try {
-            $edad = Carbon::parse($request->fecha_nac)->age;
-            if ($request->tipo_beneficio === 'exonerado' && $edad < 75) {
-                return back()->withInput()->with('error', "No se puede crear como Exonerado. Edad: $edad (Mínimo 75).");
-            }
+    // 2. PASAMOS $mensajes COMO SEGUNDO PARÁMETRO
+    $request->validate([
+        'cedula'          => 'required|string|max:20|unique:socios,cedula',
+        'nombres'         => 'required|string|max:255',
+        'apellidos'       => 'required|string|max:255',
+        'fecha_nac'       => 'required|date',
+        'telefono'        => 'nullable|string|max:30',
+        'direccion'       => 'nullable|string|max:255',
+        'email'           => 'nullable|email|max:255',
+        'comunidad_id'    => 'required|exists:comunidades,id',
+        'estado_civil_id' => 'required|exists:estados_civiles,id',
+        'genero_id'       => 'nullable|exists:generos,id',
+        'fecha_inscripcion' => 'required|date',
+        'tipo_beneficio'  => 'required|in:sin_subsidio,con_subsidio,exonerado',
+        'fecha_exoneracion' => 'nullable|date|required_if:tipo_beneficio,exonerado',
+        'condicion'       => 'required|in:ninguna,discapacidad,enfermedad_terminal',
+        'estatus'         => 'required|in:vivo,fallecido',
+    ], $mensajes); // <--- OJO AQUÍ SE PASA LA VARIABLE
 
-            // LIMPIEZA TOTAL: Quitamos el campo del request. 
-            // El modelo pondrá 'f' automáticamente.
-            $data = $request->except(['_token', '_method', 'es_representante']);
-            
-            $data['created_by'] = auth()->id();
-
-            $nuevoSocio = Socio::create($data);
-
-            return redirect()->route('socios.index')
-                ->with('success', "Socio creado correctamente: [{$nuevoSocio->codigo}] {$nuevoSocio->nombre_completo}");
-
-        } catch (\Exception $e) {
-            \Log::error($e->getMessage());
-            return back()->withInput()->with('error', 'Error al crear socio: ' . $e->getMessage());
+    try {
+        // ... (El resto de tu código sigue igual)
+        $edad = Carbon::parse($request->fecha_nac)->age;
+        if ($request->tipo_beneficio === 'exonerado' && $edad < 75) {
+            return back()->withInput()->with('error', "No se puede crear como Exonerado. Edad: $edad (Mínimo 75).");
         }
+
+        $data = $request->except(['_token', '_method']);
+        $data['created_by'] = auth()->id();
+
+        $nuevoSocio = Socio::create($data);
+
+        return redirect()->route('socios.index')
+            ->with('success', "Socio creado correctamente: [{$nuevoSocio->codigo}] {$nuevoSocio->nombre_completo}");
+
+    } catch (\Exception $e) {
+        \Log::error($e->getMessage());
+        return back()->withInput()->with('error', 'Error al crear socio: ' . $e->getMessage());
     }
+}
     public function edit(Socio $socio)
     {
         $comunidades = Comunidad::orderBy('nombre')->get(['id', 'nombre']);
@@ -148,8 +154,7 @@ public function update(Request $request, Socio $socio)
                 return back()->withInput()->with('error', "Acción denegada: Edad $edad (Mínimo 75).");
             }
 
-            // También aquí lo quitamos para no sobreescribir con basura
-            $data = $request->except(['_token', '_method', 'es_representante']);
+            $data = $request->except(['_token', '_method']);
 
             $socio->update($data);
 

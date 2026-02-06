@@ -67,11 +67,17 @@ class Nicho extends Model implements Auditable
                 }
                 
                 $next = $number + 1;
-                $model->codigo = 'N' . str_pad($next, 4, '0', STR_PAD_LEFT);
+                $model->codigo = 'N-' . str_pad($next, 2, '0', STR_PAD_LEFT);
             }
             
             // Asignar creador
             $model->created_by = auth()->id() ?? 1;
         });
+    }
+    public function setDisponibleAttribute($value)
+    {
+        // Forzamos que se guarde como la cadena 'true' o 'false' literal
+        // Esto evita que el driver lo confunda con 1 o 0
+        $this->attributes['disponible'] = $value ? 'true' : 'false';
     }
 }

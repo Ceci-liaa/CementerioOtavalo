@@ -1,213 +1,192 @@
 {{-- CABECERA DEL MODAL --}}
-<div class="modal-header bg-info text-white border-bottom-0 pb-0">
-    <h5 class="modal-title fw-bold">Detalle del Socio</h5>
+<div class="modal-header bg-info text-white border-bottom-0 pb-0 py-2">
+    <h5 class="modal-title fw-bold fs-6">Detalle del Socio</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-{{-- CUERPO DEL MODAL --}}
-<div class="modal-body pt-3">
-    
-    {{-- 1. TARJETA DESTACADA (Código y Cédula) --}}
-    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-3 p-3 shadow-sm">
+<div class="modal-body pt-2 pb-0">
+
+    {{-- TARJETA DESTACADA COMPACTA (Menos padding py-2) --}}
+    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-2 py-2 px-3 shadow-sm">
         <div>
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Código Socio</small>
+            <small class="d-block text-muted text-uppercase" style="font-size: 0.65rem;">Código Socio</small>
             <span class="fw-bold text-primary fs-5">{{ $socio->codigo }}</span>
         </div>
         <div class="text-end border-start ps-3">
-            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Cédula</small>
+            <small class="d-block text-muted text-uppercase" style="font-size: 0.65rem;">Cédula</small>
             <span class="fw-bold text-dark fs-5">{{ $socio->cedula }}</span>
         </div>
     </div>
 
-    <div class="row g-3">
-        
-        {{-- SECCIÓN: INFORMACIÓN PERSONAL --}}
-        <div class="col-12">
-            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Información Personal</h6>
-        </div>
+    {{-- NAVEGACIÓN TABS --}}
+    <ul class="nav nav-tabs nav-fill mb-2" id="showTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold small py-1" data-bs-toggle="tab" data-bs-target="#info-tab">
+                <i class="fas fa-user me-1"></i> Datos
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold small py-1" data-bs-toggle="tab" data-bs-target="#membresia-tab">
+                <i class="fas fa-file-contract me-1"></i> Estado
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold small py-1" data-bs-toggle="tab" data-bs-target="#nichos-tab">
+                <i class="fas fa-monument me-1"></i> Nichos
+                {{-- Cambié 'bg-dark text-white' por 'bg-light text-dark' y agregué borde --}}
+                <span class="badge bg-light text-dark border ms-1">{{ $socio->nichos->count() }}</span>
+            </button>
+        </li>
+    </ul>
 
-        {{-- Nombre Completo --}}
-        <div class="col-12">
-            <label class="d-block text-muted small mb-0">Apellidos y Nombres</label>
-            <div class="fw-bold text-dark fs-6">{{ $socio->apellidos }} {{ $socio->nombres }}</div>
-        </div>
+    <div class="tab-content">
 
-        {{-- Edad y Nacimiento --}}
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Edad</label>
-            <div class="fw-bold text-dark">{{ $socio->edad }} años</div>
-        </div>
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Fecha de Nacimiento</label>
-            <div class="fw-bold text-dark">{{ optional($socio->fecha_nac)->format('d/m/Y') ?? '—' }}</div>
-        </div>
+        {{-- TAB 1: INFORMACIÓN PERSONAL (Compactado) --}}
+        <div class="tab-pane fade show active" id="info-tab">
+            <div class="row g-2"> {{-- g-2 reduce el espacio entre elementos --}}
 
-        {{-- Género y Estado Civil --}}
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Género</label>
-            <div class="text-dark">{{ $socio->genero?->nombre ?? '—' }}</div>
-        </div>
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Estado Civil</label>
-            <div class="text-dark">{{ $socio->estadoCivil?->nombre ?? '—' }}</div>
-        </div>
+                {{-- Fila 1: Nombre completo --}}
+                <div class="col-12">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Socio</label>
+                    <div class="fw-bold text-dark border-bottom pb-1">{{ $socio->apellidos }} {{ $socio->nombres }}
+                    </div>
+                </div>
 
-        {{-- SECCIÓN: ESTADO Y BENEFICIOS --}}
-        <div class="col-12 mt-3">
-            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Estado y Beneficios</h6>
-        </div>
+                {{-- Fila 2: 3 Columnas para ahorrar espacio vertical --}}
+                <div class="col-4">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Edad</label>
+                    <div class="fw-bold text-dark small">{{ $socio->edad }} años</div>
+                </div>
+                <div class="col-4">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Nacimiento</label>
+                    <div class="text-dark small">{{ optional($socio->fecha_nac)->format('d/m/Y') }}</div>
+                </div>
+                <div class="col-4">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Civil</label>
+                    <div class="text-dark small">{{ $socio->estadoCivil?->nombre ?? '-' }}</div>
+                </div>
 
-        <div class="col-6">
-            <label class="d-block text-muted small mb-1">Condición</label>
-            <span class="fw-bold text-dark">{{ ucfirst(str_replace('_', ' ', $socio->condicion)) }}</span>
-        </div>
+                {{-- Fila 3: Ubicación fusionada --}}
+                <div class="col-12 mt-2">
+                    <div class="bg-light p-2 rounded">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                            <div>
+                                <span class="fw-bold text-dark small">{{ $socio->comunidad?->nombre }}</span>
+                                <span
+                                    class="text-muted text-xs ms-1">({{ $socio->comunidad?->parroquia?->nombre }})</span>
+                            </div>
+                        </div>
+                        <div class="text-muted text-xs text-truncate ps-4">
+                            {{ $socio->direccion ?? 'Sin dirección registrada' }}
+                        </div>
+                    </div>
+                </div>
 
-        <div class="col-6">
-            <label class="d-block text-muted small mb-1">Estatus</label>
-            @if($socio->estatus == 'vivo')
-                <span class="badge rounded-pill" 
-                      style="background-color: #198754 !important; color: white !important; font-size: 0.85rem; padding: 0.5em 1em;">
-                    VIVO</span>
-            @else
-                <span class="badge bg-dark">FALLECIDO</span>
-            @endif
-        </div>
-
-        {{-- Representante --}}
-        <div class="col-6 mt-2">
-            <label class="d-block text-muted small mb-1">¿Es Representante?</label>
-            @if($socio->es_representante)
-                <span class="badge bg-success">SÍ</span>
-            @else
-                <span class="badge bg-secondary text-dark">NO</span>
-            @endif
-        </div>
-
-        {{-- Beneficio Actual --}}
-        <div class="col-6 mt-2">
-            <label class="d-block text-muted small mb-1">Beneficio Actual</label>
-            @if($socio->tipo_beneficio == 'exonerado')
-                <span class="badge rounded-pill" 
-                      style="background-color: #198754 !important; color: white !important; font-size: 0.85rem; padding: 0.5em 1em;">
-                    EXONERADO
-                </span>
-            @elseif($socio->tipo_beneficio == 'con_subsidio')
-                <span class="badge rounded-pill" 
-                      style="background-color: #2062b9ff !important; color: white !important; font-size: 0.85rem; padding: 0.5em 1em;">
-                      CON SUBSIDIO</span>
-            @else
-                <span class="badge bg-secondary text-dark">SIN SUBSIDIO</span>
-            @endif
-        </div>
-
-        {{-- Fechas Importantes --}}
-        <div class="col-6 mt-2">
-            <label class="d-block text-muted small mb-0">Fecha Inscripción</label>
-            <div class="text-dark">{{ optional($socio->fecha_inscripcion)->format('d/m/Y') ?? '—' }}</div>
-        </div>
-        <div class="col-6 mt-2">
-            <label class="d-block text-muted small mb-0">Fecha Exoneración</label>
-            <div class="text-dark">{{ optional($socio->fecha_exoneracion)->format('d/m/Y') ?? '—' }}</div>
-        </div>
-
-
-        {{-- SECCIÓN: UBICACIÓN Y CONTACTO --}}
-        <div class="col-12 mt-3">
-            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">Ubicación y Contacto</h6>
-        </div>
-
-        {{-- Jerarquía Geográfica --}}
-        <div class="col-12">
-            <label class="d-block text-muted small mb-0">Ubicación</label>
-            <div class="text-dark">
-                <span class="fw-bold">{{ $socio->comunidad?->nombre ?? '—' }}</span> 
-                <small class="text-muted">({{ $socio->comunidad?->parroquia?->nombre }} / {{ $socio->comunidad?->parroquia?->canton?->nombre }})</small>
+                {{-- Fila 4: Contacto --}}
+                <div class="col-6">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Teléfono</label>
+                    <div class="text-dark small fw-bold">{{ $socio->telefono ?? '-' }}</div>
+                </div>
+                <div class="col-6">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Email</label>
+                    <div class="text-dark small text-truncate">{{ $socio->email ?? '-' }}</div>
+                </div>
             </div>
         </div>
 
-        <div class="col-12">
-            <label class="d-block text-muted small mb-0">Dirección Domiciliaria</label>
-            <div class="text-dark">{{ $socio->direccion ?? '—' }}</div>
+        {{-- TAB 2: ESTADO Y BENEFICIOS (Colores corregidos) --}}
+        <div class="tab-pane fade" id="membresia-tab">
+            <div class="row g-3 mt-1 align-items-center">
+
+                {{-- ESTATUS: Color sólido y oscuro --}}
+                <div class="col-6 text-center">
+                    <label class="d-block text-muted text-uppercase mb-1" style="font-size: 0.65rem;">Estatus</label>
+                    @if($socio->estatus == 'vivo')
+                        <div class="badge w-100 py-2" style="background-color: #198754; color: white; font-size: 0.85rem;">
+                            VIVO
+                        </div>
+                    @else
+                        <div class="badge bg-dark w-100 py-2" style="color: white; font-size: 0.85rem;">
+                            FALLECIDO
+                        </div>
+                    @endif
+                </div>
+
+                {{-- BENEFICIO --}}
+                <div class="col-6 text-center">
+                    <label class="d-block text-muted text-uppercase mb-1" style="font-size: 0.65rem;">Beneficio</label>
+                    @if($socio->tipo_beneficio == 'exonerado')
+                        {{-- Agregué 'text-dark' para contraste --}}
+                        <span class="badge bg-success text-dark w-100 py-2">EXONERADO</span>
+                    @elseif($socio->tipo_beneficio == 'con_subsidio')
+                        {{-- Agregué 'text-dark' para contraste --}}
+                        <span class="badge bg-primary text-dark w-100 py-2">CON SUBSIDIO</span>
+                    @else
+                        {{-- Agregué 'text-dark' para contraste --}}
+                        <span class="badge bg-secondary text-dark w-100 py-2">SIN SUBSIDIO</span>
+                    @endif
+                </div>
+
+                <div class="col-12">
+                    <hr class="my-1 opacity-25">
+                </div>
+
+                <div class="col-6">
+                    <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Condición</label>
+                    <div class="fw-bold text-dark small text-capitalize">{{ str_replace('_', ' ', $socio->condicion) }}
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <label class="d-block text-muted text-uppercase mb-0"
+                        style="font-size: 0.65rem;">Inscripción</label>
+                    <div class="text-dark small">{{ optional($socio->fecha_inscripcion)->format('d/m/Y') }}</div>
+                </div>
+
+                @if($socio->fecha_exoneracion)
+                    <div class="col-12">
+                        <div class="alert alert-success py-1 px-2 mb-0 text-xs text-center">
+                            Exonerado desde: <strong>{{ $socio->fecha_exoneracion->format('d/m/Y') }}</strong>
+                        </div>
+                    </div>
+                @endif
+            </div>
         </div>
 
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Teléfono</label>
-            <div class="text-dark">{{ $socio->telefono ?? '—' }}</div>
-        </div>
-        <div class="col-6">
-            <label class="d-block text-muted small mb-0">Email</label>
-            <div class="text-dark">{{ $socio->email ?? '—' }}</div>
-        </div>
-
-        {{-- ========================================== --}}
-        {{-- NUEVA SECCIÓN: NICHOS ASIGNADOS --}}
-        {{-- ========================================== --}}
-        <div class="col-12 mt-4">
-            <h6 class="text-primary fw-bold text-xs text-uppercase border-bottom pb-1 mb-2">
-                <i class="fas fa-monument me-1"></i> Nichos a su cargo
-            </h6>
-        </div>
-
-        <div class="col-12">
+        {{-- TAB 3: NICHOS (Tabla sin cambios, solo contenedor) --}}
+        <div class="tab-pane fade" id="nichos-tab">
             @if($socio->nichos->isEmpty())
-                <div class="alert alert-light text-center border text-muted small p-2">
-                    No tiene nichos registrados a su nombre.
+                <div class="text-center py-4 text-muted">
+                    <p class="small mb-0">No tiene nichos asignados.</p>
                 </div>
             @else
-                <div class="table-responsive border rounded">
+                <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
                     <table class="table table-sm table-striped mb-0 text-xs align-middle">
-                        <thead class="bg-light text-secondary">
+                        <thead class="bg-light sticky-top">
                             <tr>
                                 <th class="ps-3">Código</th>
-                                <th class="text-center">Tipo</th>
+                                <th>Tipo</th>
                                 <th>Ubicación</th>
-                                <th>Descripción</th>
                                 <th class="text-center">Estado</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($socio->nichos as $nicho)
                                 <tr>
-                                    {{-- 1. CÓDIGO --}}
-                                    <td class="ps-3 fw-bold text-dark">{{ $nicho->codigo }}</td>
-
-                                    {{-- 2. TIPO (Directo de la BD: PROPIO o COMPARTIDO) --}}
-                                    <td class="text-center">
-                                        @if($nicho->tipo_nicho === 'PROPIO')
-                                            <span class="badge bg-warning text-dark border border-warning" title="Uso exclusivo">
-                                                PROPIO
-                                            </span>
-                                        @elseif($nicho->tipo_nicho === 'COMPARTIDO')
-                                            <span class="badge bg-info text-dark border border-info" title="Uso familiar/compartido">
-                                                COMPARTIDO
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary">{{ $nicho->tipo_nicho }}</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- 3. UBICACIÓN --}}
+                                    <td class="ps-3 fw-bold">{{ $nicho->codigo }}</td>
                                     <td>
-                                        @if($nicho->bloque)
-                                            Bloque {{ $nicho->bloque->codigo }}
-                                        @else
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- 4. DESCRIPCIÓN --}}
-                                    <td>
-                                        <span class="d-inline-block text-truncate" style="max-width: 180px;" title="{{ $nicho->descripcion }}">
-                                            {{ $nicho->descripcion ?? 'Sin descripción' }}
+                                        <span
+                                            class="badge {{ $nicho->tipo_nicho === 'PROPIO' ? 'bg-warning text-dark' : 'bg-info text-dark' }}">
+                                            {{ substr($nicho->tipo_nicho, 0, 4) }}
                                         </span>
                                     </td>
-
-                                    {{-- 5. ESTADO --}}
+                                    <td>{{ $nicho->bloque ? $nicho->bloque->codigo : '-' }}</td>
                                     <td class="text-center">
                                         @if($nicho->disponible)
-                                            <i class="fas fa-check-circle text-success" title="Disponible"></i>
+                                            <i class="fas fa-circle text-success" title="Disponible"></i>
                                         @else
-                                            <i class="fas fa-times-circle text-danger" title="Ocupado"></i>
+                                            <i class="fas fa-circle text-danger" title="Ocupado"></i>
                                         @endif
                                     </td>
                                 </tr>
@@ -217,18 +196,15 @@
                 </div>
             @endif
         </div>
-        {{-- ========================================== --}}
+    </div>
 
-
-        {{-- AUDITORÍA (Footer interno) --}}
-        <div class="col-12 mt-3 pt-2 border-top d-flex justify-content-between text-xs text-muted">
-            <span>Registrado por: <strong>{{ $socio->creador?->name ?? 'Sistema' }}</strong></span>
-            <span>Fecha: {{ $socio->created_at ? $socio->created_at->format('d/m/Y H:i') : '—' }}</span>
-        </div>
+    {{-- FOOTER AUDITORÍA COMPACTO --}}
+    <div class="mt-2 pt-2 border-top d-flex justify-content-between text-xs text-muted pb-2">
+        <span>Reg: {{ $socio->creador?->name ?? 'Sistema' }}</span>
+        <span>{{ $socio->created_at ? $socio->created_at->format('d/m/Y H:i') : '' }}</span>
     </div>
 </div>
 
-{{-- PIE DEL MODAL --}}
 <div class="modal-footer border-top-0 pt-0">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+    <button type="button" class="btn btn-secondary w-100 btn-sm" data-bs-dismiss="modal">Cerrar</button>
 </div>

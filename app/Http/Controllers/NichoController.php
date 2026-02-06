@@ -201,7 +201,7 @@ class NichoController extends Controller
             return Excel::download(new NichosExport($data, $headings), 'nichos.xlsx');
         } elseif ($reportType === 'pdf') {
             $pdf = Pdf::loadView('nichos.reports-pdf', compact('data', 'headings'));
-            return $pdf->download('nichos.pdf');
+            return $pdf->download('nichos-'. date('YmdHis') . '.pdf');
         }
     }
     // Agrega esto en tu controlador
