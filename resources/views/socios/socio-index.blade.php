@@ -15,7 +15,91 @@
         /* INPUTS Y FILTROS */
         .input-group-text { border-color: #dee2e6; }
         .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
-        .compact-filter { width: auto; min-width: 140px; max-width: 200px; } 
+        .compact-filter { width: auto; min-width: 140px; max-width: 200px; }
+
+        /* FILTROS EN COLUMNAS */
+        .column-filter { 
+            position: relative; 
+            cursor: pointer; 
+            user-select: none;
+        }
+        .column-filter:hover .filter-icon { opacity: 1; }
+        
+        .filter-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1050;
+            display: none;
+            min-width: 160px;
+            max-width: 200px;
+            padding: 6px 0;
+            background: white;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+            margin-top: 0;
+        }
+        
+        .filter-dropdown::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid white;
+            filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.05));
+        }
+        
+        .filter-dropdown.show { 
+            display: block;
+            animation: fadeIn 0.15s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        
+        .filter-dropdown label {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #344054;
+            white-space: nowrap;
+        }
+        
+        .filter-dropdown label:hover { 
+            background: #f9fafb; 
+        }
+        
+        .filter-dropdown input[type="checkbox"] { 
+            margin-right: 8px; 
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+        }
+        
+        .filter-icon { 
+            font-size: 0.65rem; 
+            margin-left: 5px; 
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        
+        .filter-icon.active { 
+            opacity: 1; 
+            color: #0d6efd; 
+        } 
 
         /* TABLA */
         .table thead th {
@@ -127,6 +211,8 @@
             {{-- 5. BARRA DE HERRAMIENTAS (Reportes + Filtros) --}}
             <form action="{{ route('socios.reports') }}" method="POST" id="reportForm">
                 @csrf
+                <input type="hidden" name="filter_estatus" id="filter_estatus" value="{{ is_array(request('estatus')) ? implode(',', request('estatus')) : request('estatus', '') }}">
+                <input type="hidden" name="filter_tipo_beneficio" id="filter_tipo_beneficio" value="{{ is_array(request('tipo_beneficio')) ? implode(',', request('tipo_beneficio')) : request('tipo_beneficio', '') }}">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                     
                     {{-- Reportes --}}
@@ -179,7 +265,26 @@
                                     <th class="opacity-10">Comunidad</th>
                                     <th class="opacity-10">Edad</th>
                                     <th class="opacity-10 text-center" style="width: 140px;">Nichos</th>
-                                    <th class="opacity-10" style="width: 130px;">Estado</th>
+                                    
+                                    {{-- Columna Beneficio con Filtro --}}
+                                    <th class="opacity-10 column-filter" style="width: 130px;" onclick="toggleFilterDropdown('beneficioFilterDropdown')">
+                                        Beneficio <i class="fas fa-filter filter-icon {{ request('tipo_beneficio') ? 'active' : '' }}"></i>
+                                        <div class="filter-dropdown" id="beneficioFilterDropdown" onclick="event.stopPropagation();">
+                                            <label><input type="checkbox" class="filter-check" data-filter="tipo_beneficio" value="sin_subsidio" {{ in_array('sin_subsidio', request('tipo_beneficio', [])) ? 'checked' : '' }}> Sin Subsidio</label>
+                                            <label><input type="checkbox" class="filter-check" data-filter="tipo_beneficio" value="con_subsidio" {{ in_array('con_subsidio', request('tipo_beneficio', [])) ? 'checked' : '' }}> Con Subsidio</label>
+                                            <label><input type="checkbox" class="filter-check" data-filter="tipo_beneficio" value="exonerado" {{ in_array('exonerado', request('tipo_beneficio', [])) ? 'checked' : '' }}> Exonerado</label>
+                                        </div>
+                                    </th>
+                                    
+                                    {{-- Columna Estatus con Filtro --}}
+                                    <th class="opacity-10 column-filter" style="width: 100px;" onclick="toggleFilterDropdown('estatusFilterDropdown')">
+                                        Estatus <i class="fas fa-filter filter-icon {{ request('estatus') ? 'active' : '' }}"></i>
+                                        <div class="filter-dropdown" id="estatusFilterDropdown" onclick="event.stopPropagation();">
+                                            <label><input type="checkbox" class="filter-check" data-filter="estatus" value="vivo" {{ in_array('vivo', request('estatus', [])) ? 'checked' : '' }}> Vivo</label>
+                                            <label><input type="checkbox" class="filter-check" data-filter="estatus" value="fallecido" {{ in_array('fallecido', request('estatus', [])) ? 'checked' : '' }}> Fallecido</label>
+                                        </div>
+                                    </th>
+                                    
                                     <th class="opacity-10" style="width:140px;">Acciones</th>
                                 </tr>
                             </thead>
@@ -232,7 +337,7 @@
                                             @endif
                                         </td>
 
-                                        {{-- COLUMNA ESTADO --}}
+                                        {{-- COLUMNA BENEFICIO --}}
                                         <td>
                                             @if($s->tipo_beneficio === 'exonerado')
                                                 <span class="badge" style="background-color: #198754; color: white;">EXONERADO</span>
@@ -240,6 +345,15 @@
                                                 <span class="badge" style="background-color: #0d6efd; color: white;">CON SUBSIDIO</span>
                                             @else
                                                 <span class="badge border" style="background-color: #e9ecef; color: #495057;">SIN SUBSIDIO</span>
+                                            @endif
+                                        </td>
+
+                                        {{-- COLUMNA ESTATUS --}}
+                                        <td>
+                                            @if($s->estatus === 'vivo')
+                                                <span class="badge" style="background-color: #d1e7dd; color: #0f5132;">VIVO</span>
+                                            @else
+                                                <span class="badge" style="background-color: #f8d7da; color: #842029;">FALLECIDO</span>
                                             @endif
                                         </td>
 
@@ -329,10 +443,67 @@
                 const searchInput = document.getElementById('searchInput');
                 const comunidadFilter = document.getElementById('comunidadFilter');
 
+                // Función para abrir/cerrar dropdowns de filtro en columnas
+                window.toggleFilterDropdown = function(dropdownId) {
+                    const dropdown = document.getElementById(dropdownId);
+                    const allDropdowns = document.querySelectorAll('.filter-dropdown');
+                    
+                    // Cerrar otros dropdowns
+                    allDropdowns.forEach(d => {
+                        if (d.id !== dropdownId) d.classList.remove('show');
+                    });
+                    
+                    dropdown.classList.toggle('show');
+                };
+
+                // Cerrar dropdowns al hacer clic fuera
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.column-filter')) {
+                        document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+                    }
+                });
+
+                // Aplicar filtros de checkboxes
+                document.querySelectorAll('.filter-check').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        applyColumnFilters();
+                    });
+                });
+
+                function applyColumnFilters() {
+                    const params = [];
+                    
+                    // Buscador
+                    if (searchInput.value) params.push('search=' + encodeURIComponent(searchInput.value));
+                    
+                    // Comunidad
+                    if (comunidadFilter.value) params.push('comunidad_id=' + encodeURIComponent(comunidadFilter.value));
+                    
+                    // Tipo Beneficio (multi-select)
+                    const beneficioChecks = document.querySelectorAll('.filter-check[data-filter="tipo_beneficio"]:checked');
+                    beneficioChecks.forEach(cb => params.push('tipo_beneficio[]=' + encodeURIComponent(cb.value)));
+                    
+                    // Estatus (multi-select)
+                    const estatusChecks = document.querySelectorAll('.filter-check[data-filter="estatus"]:checked');
+                    estatusChecks.forEach(cb => params.push('estatus[]=' + encodeURIComponent(cb.value)));
+                    
+                    window.location.href = "{{ route('socios.index') }}?" + params.join('&');
+                }
+
                 function applyFilters() {
-                    const searchValue = encodeURIComponent(searchInput.value);
-                    const comunidadValue = encodeURIComponent(comunidadFilter.value);
-                    window.location.href = "{{ route('socios.index') }}?search=" + searchValue + "&comunidad_id=" + comunidadValue;
+                    applyColumnFilters();
+                }
+
+                // Actualizar campos ocultos del formulario de reporte
+                const reportForm = document.getElementById('reportForm');
+                if (reportForm) {
+                    reportForm.addEventListener('submit', function() {
+                        const estatusValues = Array.from(document.querySelectorAll('.filter-check[data-filter="estatus"]:checked')).map(cb => cb.value);
+                        const beneficioValues = Array.from(document.querySelectorAll('.filter-check[data-filter="tipo_beneficio"]:checked')).map(cb => cb.value);
+                        
+                        document.getElementById('filter_estatus').value = estatusValues.join(',');
+                        document.getElementById('filter_tipo_beneficio').value = beneficioValues.join(',');
+                    });
                 }
 
                 if (searchInput) searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); applyFilters(); } });

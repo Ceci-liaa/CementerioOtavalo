@@ -62,6 +62,18 @@ class SocioController extends Controller
                 return $query->where('comunidad_id', $id);
             })
 
+            // Filtro de Estatus (vivo/fallecido) - Soporta múltiples valores
+            ->when($request->estatus, function ($query, $estatus) {
+                $valores = is_array($estatus) ? $estatus : [$estatus];
+                return $query->whereIn('estatus', $valores);
+            })
+
+            // Filtro de Tipo Beneficio (sin_subsidio/con_subsidio/exonerado) - Soporta múltiples valores
+            ->when($request->tipo_beneficio, function ($query, $tipo) {
+                $valores = is_array($tipo) ? $tipo : [$tipo];
+                return $query->whereIn('tipo_beneficio', $valores);
+            })
+
             // Ordenamiento por defecto
             ->orderBy('apellidos', 'asc')
             ->orderBy('nombres', 'asc')
@@ -201,6 +213,23 @@ public function update(Request $request, Socio $socio)
 
         $socios = Socio::with(['comunidad.parroquia.canton', 'genero', 'estadoCivil'])
             ->whereIn('id', $ids)
+            
+            // Aplicar filtros de estatus y tipo_beneficio si están presentes
+            ->when($request->filter_estatus, function ($query, $estatus) {
+                $valores = is_array($estatus) ? $estatus : explode(',', $estatus);
+                $valores = array_filter($valores); // Remover vacíos
+                if (!empty($valores)) {
+                    return $query->whereIn('estatus', $valores);
+                }
+            })
+            ->when($request->filter_tipo_beneficio, function ($query, $tipo) {
+                $valores = is_array($tipo) ? $tipo : explode(',', $tipo);
+                $valores = array_filter($valores); // Remover vacíos
+                if (!empty($valores)) {
+                    return $query->whereIn('tipo_beneficio', $valores);
+                }
+            })
+            
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->get();
