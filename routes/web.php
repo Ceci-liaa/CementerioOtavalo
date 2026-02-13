@@ -50,11 +50,17 @@ Route::middleware('guest')->group(function () {
     Route::get('/signin', function () {
         return view('account-pages.signin');
     })->name('signin');
-    Route::get('/signup', function () {
-        return view('account-pages.signup');
-    })->name('signup');
-    Route::get('/sign-up', [RegisterController::class, 'create'])->name('sign-up');
-    Route::post('/sign-up', [RegisterController::class, 'store']);
+    
+    // ========================================================================
+    // REGISTRO PÚBLICO DESHABILITADO POR SEGURIDAD
+    // Solo administradores pueden crear usuarios desde el panel admin
+    // ========================================================================
+    // Route::get('/signup', function () {
+    //     return view('account-pages.signup');
+    // })->name('signup');
+    // Route::get('/sign-up', [RegisterController::class, 'create'])->name('sign-up');
+    // Route::post('/sign-up', [RegisterController::class, 'store']);
+    
     Route::get('/sign-in', [LoginController::class, 'create'])->name('sign-in');
     Route::post('/sign-in', [LoginController::class, 'store']);
     Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
@@ -128,6 +134,12 @@ Route::middleware(['auth'])->group(function () {
     // Ver Lista
     Route::get('/user/users-management', [UserController::class, 'index'])
         ->name('users-management')->middleware('can:ver usuario');
+
+    // Crear Usuario (Solo Admin - Reutiliza RegisterController)
+    Route::get('/user/create', [UserController::class, 'create'])
+        ->name('users.create')->middleware('can:crear usuario');
+    Route::post('/user/store', [UserController::class, 'store'])
+        ->name('users.store')->middleware('can:crear usuario');
 
     // Editar Usuario
     Route::get('/user/{user}/edit', [UserController::class, 'edit'])

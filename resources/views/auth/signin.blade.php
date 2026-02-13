@@ -81,13 +81,14 @@
                                         </div>
                                     </form>
                                 </div>
-                                <div class="card-footer text-center pt-0 px-lg-2 px-1">
+                                {{-- REGISTRO PÚBLICO DESHABILITADO --}}
+                                {{-- <div class="card-footer text-center pt-0 px-lg-2 px-1">
                                     <p class="mb-4 text-xs mx-auto">
                                         ¿No tienes una cuenta?
                                         <a href="{{ route('sign-up') }}"
                                             class="text-dark font-weight-bold">Registrarse</a>
                                     </p>
-                                </div>
+                                </div> --}}
                             </div>
                         </div>
 

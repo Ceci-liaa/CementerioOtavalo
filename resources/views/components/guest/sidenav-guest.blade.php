@@ -14,7 +14,8 @@
         </button>
         <div class="collapse navbar-collapse" id="navigation">
             <ul class="navbar-nav mx-auto ms-xl-auto">
-                <li class="nav-item">
+                {{-- REGISTRO PÚBLICO DESHABILITADO --}}
+                {{-- <li class="nav-item">
                     <a class="nav-link d-flex align-items-center me-2 {{ is_current_route('sign-up') ? 'active' : '' }}"
                         href="{{ route('sign-up') }}">
                         <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -25,7 +26,7 @@
                         </svg>
                         Registrarse
                     </a>
-                </li>
+                </li> --}}
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center me-2 {{ is_current_route('sign-in') ? 'active' : '' }}"
                         href="{{ route('sign-in') }}">

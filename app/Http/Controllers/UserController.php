@@ -37,6 +37,69 @@ class UserController extends Controller
         return view('user.users-management', compact('users', 'roles'));
     }
 
+    public function create()
+    {
+        $roles = Role::pluck('name', 'id');
+        return view('user.user-create', compact('roles'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'max:255',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*?&]/',
+            ],
+            'phone' => 'nullable|string|max:20',
+            'location' => 'nullable|string|max:255',
+            'role_id' => 'required|exists:roles,id',
+            'status' => 'nullable|boolean',
+        ], [
+            'name.required' => 'El nombre es obligatorio',
+            'email.required' => 'El correo es obligatorio',
+            'email.email' => 'Debe ingresar un correo válido',
+            'email.unique' => 'Este correo ya está registrado',
+            'password.required' => 'La contraseña es obligatoria',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.regex' => 'La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial.',
+            'role_id.required' => 'Debe seleccionar un rol',
+            'role_id.exists' => 'El rol seleccionado no es válido',
+        ]);
+
+        try {
+            $role = Role::find($request->role_id);
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => \Hash::make($request->password),
+                'phone' => $request->phone,
+                'location' => $request->location,
+                'role_id' => $role->id,
+                'status' => $request->has('status') ? true : false,
+            ]);
+
+            // Asignar rol usando Spatie Permission
+            $user->syncRoles([$role->name]);
+
+            $mensaje = "El usuario {$user->name} ({$user->codigo_usuario}) fue creado correctamente.";
+
+            return redirect()->route('users-management')->with('success', $mensaje);
+            
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error al crear el usuario: ' . $e->getMessage());
+        }
+    }
+
+
     public function update(Request $request, User $user)
     {
         $request->validate([
