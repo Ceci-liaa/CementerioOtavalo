@@ -221,7 +221,9 @@
 
         <x-app.footer />
 
-        {{-- SCRIPTS --}}
+        {{-- SCRIPTS Y LIBRERÍAS --}}
+        <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -270,7 +272,19 @@
                         modal.show();
                         fetch(this.getAttribute('data-url'))
                             .then(r => r.text())
-                            .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                            .then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                // 🔥 Ejecutar scripts que vienen dentro del HTML cargado
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    if (oldScript.src) {
+                                        newScript.src = oldScript.src;
+                                    } else {
+                                        newScript.textContent = oldScript.textContent;
+                                    }
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            });
                     });
                 });
 
@@ -307,6 +321,85 @@
                         });
                     });
                 }
+
+                // 🔔 6. VALIDACIÓN POR PESTAÑAS EN MODALES
+                // Usa delegación de eventos para funcionar con contenido cargado por AJAX
+                modalEl.addEventListener('submit', function(e) {
+                    const form = e.target;
+                    if (!form.matches('form')) return;
+
+                    // Buscar campos required vacíos por pestaña
+                    const campos = form.querySelectorAll('input[required], select[required]');
+                    let vaciosPersonal = [];
+                    let vaciosDetalles = [];
+
+                    campos.forEach(function(campo) {
+                        if (!campo.value || campo.value.trim() === '') {
+                            if (campo.closest('#personal') || campo.closest('#edit-personal')) {
+                                vaciosPersonal.push(campo);
+                            }
+                            if (campo.closest('#detalles') || campo.closest('#edit-detalles')) {
+                                vaciosDetalles.push(campo);
+                            }
+                        }
+                    });
+
+                    // Si no hay campos vacíos, dejar enviar
+                    if (vaciosPersonal.length === 0 && vaciosDetalles.length === 0) return;
+
+                    e.preventDefault();
+
+                    // Quitar alerta anterior
+                    const prev = form.querySelector('.alerta-validacion');
+                    if (prev) prev.remove();
+
+                    // Detectar pestaña activa
+                    const tabPersonalActivo = modalEl.querySelector('#personal.show.active, #edit-personal.show.active');
+                    const tabDetallesActivo = modalEl.querySelector('#detalles.show.active, #edit-detalles.show.active');
+
+                    let msg = '';
+                    let irAPestana = null;
+
+                    if (vaciosPersonal.length > 0 && vaciosDetalles.length > 0) {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Faltan campos obligatorios en <strong>Personal</strong> y en <strong>Detalles y Notas</strong>. Por favor complételos.';
+                    } else if (vaciosDetalles.length > 0 && tabPersonalActivo) {
+                        // Estoy en Personal, faltan datos en Detalles
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Detalles y Notas</strong> y complete los campos obligatorios.';
+                        irAPestana = '[data-bs-target="#detalles"], [data-bs-target="#edit-detalles"]';
+                    } else if (vaciosPersonal.length > 0 && tabDetallesActivo) {
+                        // Estoy en Detalles, faltan datos en Personal
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Personal</strong> y complete los campos obligatorios.';
+                        irAPestana = '[data-bs-target="#personal"], [data-bs-target="#edit-personal"]';
+                    } else if (vaciosPersonal.length > 0) {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Complete los campos obligatorios en esta pestaña.';
+                    } else {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Complete los campos obligatorios en esta pestaña.';
+                    }
+
+                    // Crear alerta warning
+                    const alerta = document.createElement('div');
+                    alerta.className = 'alert alert-warning py-2 mb-0 mt-2 alerta-validacion d-flex align-items-center';
+                    alerta.style.cssText = 'font-size: 0.85rem; border-left: 4px solid #ffc107;';
+                    alerta.innerHTML = msg;
+
+                    const body = form.querySelector('.modal-body');
+                    if (body) body.appendChild(alerta);
+
+                    // Navegar a la otra pestaña si corresponde
+                    if (irAPestana) {
+                        setTimeout(function() {
+                            const btn = modalEl.querySelector(irAPestana);
+                            if (btn) btn.click();
+                        }, 1500); // Espera 1.5s para que lean el mensaje antes de cambiar
+                    }
+
+                    // Auto-ocultar en 5 segundos
+                    setTimeout(function() {
+                        alerta.style.transition = 'opacity 0.5s ease';
+                        alerta.style.opacity = '0';
+                        setTimeout(function() { alerta.remove(); }, 500);
+                    }, 5000);
+                });
             });
         </script>
     </main>

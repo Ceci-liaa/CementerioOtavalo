@@ -1,12 +1,8 @@
-{{-- ESTILOS PARA TOMSELECT --}}
+{{-- ESTILOS PARA TOMSELECT (cargado en el index) --}}
 <style>
     .ts-dropdown, .ts-control { z-index: 99999 !important; }
     .ts-control { padding: 0.375rem 0.75rem; }
 </style>
-
-{{-- LIBRERÍAS TOMSELECT --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <div class="modal-header bg-dark text-white">
     <h5 class="modal-title fw-bold text-white">
@@ -105,12 +101,12 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-primary">Fecha Nacimiento</label>
-                        <input type="date" name="fecha_nac" value="{{ old('fecha_nac') }}" class="form-control">
+                        <label class="form-label fw-bold small text-primary">Fecha Nacimiento <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha_nac" value="{{ old('fecha_nac') }}" class="form-control" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold small text-danger">Fecha Fallecimiento</label>
-                        <input type="date" name="fecha_fallecimiento" value="{{ old('fecha_fallecimiento') }}" class="form-control">
+                        <label class="form-label fw-bold small text-danger">Fecha Fallecimiento <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha_fallecimiento" value="{{ old('fecha_fallecimiento') }}" class="form-control" required>
                     </div>
 
                     {{-- OBSERVACIONES INTEGRADAS AQUÍ --}}
@@ -126,14 +122,96 @@
 
     <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-success fw-bold">Guardar Registro</button>
+        <button type="submit" class="btn btn-success fw-bold" id="btnGuardarFallecido">Guardar Registro</button>
     </div>
 </form>
 
 <script>
+    // TomSelect para Comunidad
     new TomSelect("#select_comunidad_create", {
         create: false,
         sortField: { field: "text", direction: "asc" },
         plugins: ['dropdown_input'],
     });
+
+    // 🔥 AUTO-BUSCAR SOCIO POR CÉDULA
+    // IMPORTANTE: Usar setTimeout para asegurar que el DOM esté completamente cargado
+    setTimeout(function() {
+        const cedulaInput = document.querySelector('input[name="cedula"]');
+        const nombresInput = document.querySelector('input[name="nombres"]');
+        const apellidosInput = document.querySelector('input[name="apellidos"]');
+        const fechaNacInput = document.querySelector('input[name="fecha_nac"]');
+        const generoSelect = document.querySelector('select[name="genero_id"]');
+        const estadoCivilSelect = document.querySelector('select[name="estado_civil_id"]');
+        const comunidadSelect = document.getElementById('select_comunidad_create');
+        
+        // Validar que los elementos existan
+        if (!cedulaInput) {
+            console.error('No se encontró el input de cédula');
+            return;
+        }
+        
+        // Crear alerta de socio encontrado
+        const alertaContainer = document.querySelector('.tab-content');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success d-none py-2 mb-3 text-xs';
+        alertDiv.innerHTML = '<i class="fas fa-check-circle me-1"></i> <strong>Es Socio:</strong> <span id="socio-nombre"></span> <span class="badge bg-success ms-2" id="socio-codigo"></span>';
+        alertaContainer.insertBefore(alertDiv, alertaContainer.firstChild);
+
+        let debounceTimer;
+        cedulaInput.addEventListener('input', function() {
+            const cedula = this.value.trim();
+            
+            // Ocultar alerta si no hay cédula
+            if (!cedula || cedula.length < 10) {
+                alertDiv.classList.add('d-none');
+                return;
+            }
+
+            // Debounce para evitar muchas peticiones
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                buscarSocio(cedula);
+            }, 500);
+        });
+
+        function buscarSocio(cedula) {
+            fetch('{{ route("fallecidos.buscar-socio") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ cedula: cedula })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.encontrado) {
+                    const socio = data.socio;
+                    
+                    // 📢 Mostrar alerta de que es socio
+                    document.getElementById('socio-nombre').textContent = socio.apellidos + ' ' + socio.nombres;
+                    document.getElementById('socio-codigo').textContent = socio.codigo;
+                    alertDiv.classList.remove('d-none');
+                    
+                    // ✅ AUTO-RELLENAR CAMPOS
+                    nombresInput.value = socio.nombres;
+                    apellidosInput.value = socio.apellidos;
+                    if (socio.fecha_nac) fechaNacInput.value = socio.fecha_nac;
+                    if (socio.genero_id) generoSelect.value = socio.genero_id;
+                    if (socio.estado_civil_id) estadoCivilSelect.value = socio.estado_civil_id;
+                    if (socio.comunidad_id && comunidadSelect.tomselect) {
+                        comunidadSelect.tomselect.setValue(socio.comunidad_id);
+                    }
+                    
+                } else {
+                    // No es socio, ocultar alerta
+                    alertDiv.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar socio:', error);
+            });
+        }
+    }, 300); // Esperar 300ms para que el DOM esté listo
 </script>

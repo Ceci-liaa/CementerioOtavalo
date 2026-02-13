@@ -226,6 +226,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/fallecidos/{fallecido}', [FallecidoController::class, 'destroy'])->name('fallecidos.destroy')->middleware('can:eliminar fallecido');
 
     Route::post('fallecidos/reports', [FallecidoController::class, 'reports'])->name('fallecidos.reports')->middleware('can:reportar fallecido');
+    
+    // API: Buscar Socio por Cédula
+    Route::post('/fallecidos/buscar-socio', [FallecidoController::class, 'buscarSocioPorCedula'])->name('fallecidos.buscar-socio');
 });
 
 
