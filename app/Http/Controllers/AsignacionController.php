@@ -164,6 +164,7 @@ class AsignacionController extends Controller
             'socio_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'rol' => 'required|string',
+            'fecha_inhumacion' => 'required|date', // Validar fecha
         ]);
 
         try {
@@ -197,7 +198,7 @@ class AsignacionController extends Controller
                     'socio_id' => $request->socio_id, // <--- CAMBIO AQUÍ
                     'codigo' => $codigoGenerado,
                     'posicion' => $ocupantesActivos + 1,
-                    'fecha_inhumacion' => now(),
+                    'fecha_inhumacion' => $request->fecha_inhumacion, // Usar fecha del formulario
                     'observacion' => 'Ingreso registrado'
                 ]);
 

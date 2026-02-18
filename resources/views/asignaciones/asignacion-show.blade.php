@@ -29,7 +29,6 @@
                             <th>Socio Responsable</th> {{-- NUEVO CAMPO AGREGADO --}}
                             <th>Inhumación</th>
                             <th>Exhumación</th>
-                            <th>Doc</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,11 +48,6 @@
                                     @if($f->pivot->fecha_exhumacion)
                                         <span class="text-danger fw-bold">{{ $f->pivot->fecha_exhumacion->format('d/m/Y') }}</span>
                                     @else - @endif
-                                </td>
-                                <td>
-                                    @if($f->pivot->fecha_exhumacion)
-                                        <a href="{{ route('asignaciones.pdf.certificado', [$nicho->id, $f->id]) }}" target="_blank" class="btn btn-link text-dark p-0 m-0"><i class="fas fa-file-pdf text-danger"></i></a>
-                                    @endif
                                 </td>
                             </tr>
                         @empty

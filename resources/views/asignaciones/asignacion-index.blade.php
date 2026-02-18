@@ -134,6 +134,7 @@
                                     <th class="opacity-10">#</th> 
                                     <th class="opacity-10">Código</th>
                                     <th class="opacity-10 text-start ps-3">Fallecido</th>
+                                    <th class="opacity-10 text-start ps-3">Fecha Inh.</th> {{-- NUEVA COLUMNA --}}
                                     <th class="opacity-10 text-start ps-3">Responsable</th>
                                     <th class="opacity-10">Nicho</th>
                                     <th class="opacity-10">Estado</th>
@@ -171,6 +172,17 @@
                                                 </div>
                                             @empty
                                                 <span class="text-muted small fst-italic">-- Vacío --</span>
+                                            @endforelse
+                                        </td>
+
+                                        {{-- 3.1. FECHA INHUMACIÓN (NUEVA) --}}
+                                        <td class="text-start ps-3">
+                                            @forelse($ocupantes as $f)
+                                                <div class="fallecido-row text-sm text-secondary">
+                                                    {{ optional($f->pivot->fecha_inhumacion)->format('d/m/Y') ?? '--' }}
+                                                </div>
+                                            @empty
+                                                <span class="text-muted small">-</span>
                                             @endforelse
                                         </td>
 
