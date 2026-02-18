@@ -1,53 +1,9 @@
-{{-- LIBRERÍAS (Asegúrate que carguen) --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-
 <style>
-    /* 1. FORZAR ESTÉTICA IDENTICA A TUS INPUTS */
-    .ts-wrapper .ts-control {
-        border: 1px solid #dee2e6 !important; /* Mismo borde gris suave que tus inputs */
-        background-color: #fff !important;
-        border-radius: 0.375rem !important;
-        padding: 0.5rem 0.75rem !important;
-        height: auto !important;
-        min-height: 40px !important; /* Altura cómoda */
-        font-size: 1rem !important;
-        box-shadow: none !important; /* Quitar sombras internas feas */
-        display: flex;
-        align-items: center;
-    }
-
-    /* 2. ESTILO CUANDO HACES CLIC (FOCUS AZUL) */
-    .ts-wrapper.focus .ts-control {
-        border-color: #5ea6f7 !important; /* Tu color azul */
-        box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25) !important; /* Tu resplandor azul */
-        outline: 0 !important;
-    }
-
-    /* 3. ARREGLAR EL MENÚ DESPLEGABLE */
-    .ts-dropdown {
-        z-index: 99999 !important; /* Que flote encima del modal */
-        border-color: #5ea6f7 !important;
-        border-radius: 0.375rem !important;
-        margin-top: 4px !important;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    /* 4. ITEMS DENTRO DE LA LISTA */
-    .ts-dropdown .option {
-        padding: 10px 15px !important;
-        font-size: 0.9rem !important;
-    }
-    .ts-dropdown .active {
-        background-color: #e7f1ff !important; /* Azul muy clarito al pasar el mouse */
-        color: #1c2a48 !important; /* Texto oscuro */
-        font-weight: 600 !important;
-    }
-    
-    /* Ocultar la flechita fea por defecto */
-    .ts-wrapper.single .ts-control::after {
-        display: none !important;
-    }
+    /* Estilos de búsqueda (idénticos a asignación) */
+    .search-match { background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%) !important; font-weight: 600 !important; }
+    .search-first-match { background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important; color: white !important; font-weight: 700 !important; }
+    .search-input-found { border: 2px solid #28a745 !important; box-shadow: 0 0 8px rgba(40, 167, 69, 0.4) !important; }
+    .search-input-empty { border: 2px solid #dc3545 !important; box-shadow: 0 0 8px rgba(220, 53, 69, 0.4) !important; }
 </style>
 
 <div class="modal-header bg-dark text-white">
@@ -89,47 +45,60 @@
 
         <div class="tab-content">
             
-            {{-- TAB 1 --}}
+            {{-- TAB 1: UBICACIÓN --}}
             <div class="tab-pane fade show active" id="ubicacion">
                 <div class="row g-3">
-                    {{-- GIS --}}
+
+                    {{-- GIS (Buscable) --}}
                     <div class="col-12">
                         <label class="form-label fw-bold text-primary small">Mapa GIS (Opcional)</label>
-                        <select name="nicho_geom_id" id="select_gis" placeholder="Buscar código en mapa...">
+                        <input type="text" id="buscarGis" class="form-control mb-2" placeholder="🔍 Buscar código en mapa...">
+                        <select name="nicho_geom_id" id="selectGis" class="form-select" size="2" style="height: auto;">
                             <option value="">-- Ninguno (Manual) --</option>
                             @isset($nichosGeom)
                                 @foreach($nichosGeom as $ng)
-                                    <option value="{{ $ng->id }}" @selected(old('nicho_geom_id') == $ng->id)>{{ $ng->codigo }}</option>
+                                    <option value="{{ $ng->id }}" 
+                                        data-search="{{ strtolower($ng->codigo) }}"
+                                        @selected(old('nicho_geom_id') == $ng->id)>{{ $ng->codigo }}</option>
                                 @endforeach
                             @endisset
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="gisSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
 
-                    {{-- Bloque --}}
+                    {{-- Bloque (Buscable) --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Bloque <span class="text-danger">*</span></label>
-                        <select name="bloque_id" id="select_bloque" required placeholder="Seleccione...">
-                            <option value="">Seleccione...</option>
+                        <input type="text" id="buscarBloque" class="form-control mb-2" placeholder="🔍 Buscar bloque...">
+                        <select name="bloque_id" id="selectBloque" class="form-select" required size="2" style="height: auto;">
+                            <option value="">-- Seleccionar --</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->id }}" @selected(old('bloque_id') == $b->id)>{{ $b->nombre }}</option>
+                                <option value="{{ $b->id }}" 
+                                    data-search="{{ strtolower($b->nombre . ' ' . ($b->codigo ?? '')) }}"
+                                    @selected(old('bloque_id') == $b->id)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="bloqueSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                     
-                    {{-- Socio --}}
+                    {{-- Socio (Buscable) --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Socio Titular <span class="text-danger">*</span></label>
-                        <select name="socio_id" id="select_socio" required placeholder="Buscar socio...">
-                            <option value="">Seleccione...</option>
+                        <input type="text" id="buscarSocio" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
+                        <select name="socio_id" id="selectSocio" class="form-select" required size="2" style="height: auto;">
+                            <option value="">-- Seleccionar --</option>
                             @foreach($socios as $s)
-                                <option value="{{ $s->id }}" @selected(old('socio_id') == $s->id)>{{ $s->apellidos }} {{ $s->nombres }}</option>
+                                <option value="{{ $s->id }}" 
+                                    data-search="{{ strtolower($s->cedula . ' ' . $s->apellidos . ' ' . $s->nombres) }}"
+                                    @selected(old('socio_id') == $s->id)>{{ $s->apellidos }} {{ $s->nombres }} ({{ $s->cedula }})</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="socioSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                 </div>
             </div>
 
-            {{-- TAB 2 --}}
+            {{-- TAB 2: DATOS TÉCNICOS --}}
             <div class="tab-pane fade" id="caracteristicas">
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -179,14 +148,149 @@
 </form>
 
 <script>
-    // Configuración para que el buscador funcione bien
-    var settings = {
-        create: false,
-        sortField: { field: "text", direction: "asc" },
-        plugins: ['dropdown_input'], // Esto permite escribir
-    };
+    // ========== BÚSQUEDA PARA SELECTS (Mismo patrón que asignaciones) ==========
+    (function() {
+        const configs = [
+            { inputId: 'buscarGis', selectId: 'selectGis', labelId: 'gisSeleccionado' },
+            { inputId: 'buscarBloque', selectId: 'selectBloque', labelId: 'bloqueSeleccionado' },
+            { inputId: 'buscarSocio', selectId: 'selectSocio', labelId: 'socioSeleccionado' }
+        ];
 
-    new TomSelect("#select_gis", settings);
-    new TomSelect("#select_bloque", settings);
-    new TomSelect("#select_socio", settings);
+        configs.forEach(config => {
+            const input = document.getElementById(config.inputId);
+            const select = document.getElementById(config.selectId);
+            const label = document.getElementById(config.labelId);
+            
+            if (!input || !select) return;
+            
+            // Guardar opciones originales
+            const allOptions = [];
+            Array.from(select.options).forEach(opt => {
+                allOptions.push({
+                    value: opt.value,
+                    text: opt.text,
+                    selected: opt.selected,
+                    searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+                });
+            });
+            
+            function updateOptions(searchTerm) {
+                const term = searchTerm.toLowerCase().trim();
+                select.innerHTML = '';
+                let matchCount = 0;
+                let firstMatchIndex = -1;
+                
+                allOptions.forEach((optData) => {
+                    const matches = optData.value === '' || 
+                                   optData.searchData.includes(term) || 
+                                   optData.text.toLowerCase().includes(term);
+                    
+                    if (term === '' || matches) {
+                        const option = document.createElement('option');
+                        option.value = optData.value;
+                        option.textContent = optData.text;
+                        
+                        if (term !== '' && optData.value !== '' && matches) {
+                            matchCount++;
+                            if (firstMatchIndex === -1) {
+                                firstMatchIndex = select.options.length;
+                                option.className = 'search-first-match';
+                            } else {
+                                option.className = 'search-match';
+                            }
+                        }
+                        select.appendChild(option);
+                    }
+                });
+                
+                input.classList.remove('search-input-found', 'search-input-empty');
+                if (term !== '') {
+                    if (matchCount > 0) {
+                        input.classList.add('search-input-found');
+                        if (firstMatchIndex !== -1) {
+                            select.selectedIndex = firstMatchIndex;
+                            updateLabel();
+                        }
+                    } else {
+                        input.classList.add('search-input-empty');
+                    }
+                }
+            }
+            
+            function updateLabel() {
+                if (!label) return;
+                const selectedOpt = select.options[select.selectedIndex];
+                if (selectedOpt && selectedOpt.value !== '') {
+                    label.textContent = selectedOpt.text;
+                    label.classList.remove('text-primary');
+                    label.classList.add('text-success');
+                } else {
+                    label.textContent = 'Ninguno';
+                    label.classList.remove('text-success');
+                    label.classList.add('text-primary');
+                }
+            }
+            
+            // Evento: escribir
+            input.addEventListener('input', function() {
+                updateOptions(this.value);
+            });
+            
+            // Evento: teclas
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const selectedOpt = select.options[select.selectedIndex];
+                    if (selectedOpt && selectedOpt.value !== '') {
+                        const selectedValue = selectedOpt.value;
+                        const selectedText = selectedOpt.text;
+                        
+                        this.value = '';
+                        this.classList.remove('search-input-found', 'search-input-empty');
+                        updateOptions('');
+                        
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value === selectedValue) {
+                                select.selectedIndex = i;
+                                break;
+                            }
+                        }
+                        updateLabel();
+                        
+                        const originalPlaceholder = this.placeholder;
+                        this.placeholder = '✅ ' + selectedText.substring(0, 35);
+                        this.style.background = '#d4edda';
+                        setTimeout(() => {
+                            this.placeholder = originalPlaceholder;
+                            this.style.background = '';
+                        }, 1500);
+                    }
+                    return false;
+                }
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (select.selectedIndex < select.options.length - 1) {
+                        select.selectedIndex++;
+                        updateLabel();
+                    }
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (select.selectedIndex > 0) {
+                        select.selectedIndex--;
+                        updateLabel();
+                    }
+                }
+            });
+            
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
+
+            // Inicializar label si hay old() seleccionado
+            updateLabel();
+        });
+    })();
 </script>

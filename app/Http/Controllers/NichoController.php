@@ -29,9 +29,10 @@ class NichoController extends Controller
             $query->where(function ($sub) use ($q) {
                 $sub->where('codigo', 'ILIKE', "%{$q}%")
                     ->orWhereHas('socio', function ($qs) use ($q) {
-                        $qs->where('apellidos', 'ILIKE', "%{$q}%")
-                           ->orWhere('nombres', 'ILIKE', "%{$q}%");
-                    });
+                    $qs->where('cedula', 'ILIKE', "%{$q}%")
+                       ->orWhere('apellidos', 'ILIKE', "%{$q}%")
+                       ->orWhere('nombres', 'ILIKE', "%{$q}%");
+                });
             });
         }
         if ($bloqueId) {

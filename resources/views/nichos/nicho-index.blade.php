@@ -108,7 +108,7 @@
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
                                     class="fas fa-search"></i></span>
-                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar código..."
+                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Responsable..."
                                 id="searchInput" value="{{ request('q') }}">
                         </div>
                     </div>
@@ -326,7 +326,15 @@
                         modal.show();
                         fetch(this.getAttribute('data-url'))
                             .then(r => r.text())
-                            .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                            .then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                // Ejecutar scripts cargados dinámicamente
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = oldScript.textContent;
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            });
                     });
                 });
 
