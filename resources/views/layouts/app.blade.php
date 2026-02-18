@@ -167,7 +167,9 @@
         };
 
 
-        var ctx = document.getElementById("chart-bars").getContext("2d");
+        var chartBarsEl = document.getElementById("chart-bars");
+        if (chartBarsEl) {
+        var ctx = chartBarsEl.getContext("2d");
 
         new Chart(ctx, {
             type: "bar",
@@ -256,9 +258,12 @@
                 },
             },
         });
+        } // fin chart-bars
 
 
-        var ctx2 = document.getElementById("chart-line").getContext("2d");
+        var chartLineEl = document.getElementById("chart-line");
+        if (chartLineEl) {
+        var ctx2 = chartLineEl.getContext("2d");
 
         var gradientStroke1 = ctx2.createLinearGradient(0, 230, 0, 50);
 
@@ -406,6 +411,7 @@
                 },
             },
         });
+        } // fin chart-line
     </script>
     <script>
         var win = navigator.platform.indexOf('Win') > -1;
