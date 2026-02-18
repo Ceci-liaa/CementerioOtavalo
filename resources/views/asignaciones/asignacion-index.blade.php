@@ -110,12 +110,6 @@
                             @endforeach
                         </select>
 
-                        {{-- [MODIFICADO] AQUÍ ESTÁ EL CAMBIO DEL FILTRO --}}
-                        <select name="estado" class="form-select form-select-sm compact-filter ps-2" onchange="document.getElementById('filterForm').submit()">
-                            <option value="">Todos los Estados</option>
-                            <option value="OCUPADO" @selected(request('estado') == 'OCUPADO')>Ocupados</option>
-                            <option value="MANTENIMIENTO" @selected(request('estado') == 'MANTENIMIENTO')>En Mantenimiento</option>                        </select>
-
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
                             <input type="text" name="search" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Socio..." value="{{ request('search') }}">

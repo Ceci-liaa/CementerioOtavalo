@@ -82,15 +82,12 @@ class AsignacionController extends Controller
                             ->orWhere('apellidos', 'ILIKE', "%{$term}%")
                             ->orWhere('nombres', 'ILIKE', "%{$term}%");
                     })
-                    // O fallecido activo
-                    ->orWhereHas('fallecidos', function ($qf) use ($term) {
-                        $qf->where('fallecido_nicho.fecha_exhumacion', null)
-                            ->where(function ($sub) use ($term) {
-                                $sub->where('cedula', 'ILIKE', "%{$term}%")
-                                    ->orWhere('apellidos', 'ILIKE', "%{$term}%")
-                                    ->orWhere('nombres', 'ILIKE', "%{$term}%");
-                            });
-                    });
+                    // O fallecido (exhumado o no)
+                ->orWhereHas('fallecidos', function ($qf) use ($term) {
+                    $qf->where('cedula', 'ILIKE', "%{$term}%")
+                        ->orWhere('apellidos', 'ILIKE', "%{$term}%")
+                        ->orWhere('nombres', 'ILIKE', "%{$term}%");
+                });
             });
         }
 
