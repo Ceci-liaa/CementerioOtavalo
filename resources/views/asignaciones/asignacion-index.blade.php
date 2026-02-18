@@ -92,6 +92,24 @@
 
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         
+                        {{-- Filtro Año --}}
+                        <select name="anio" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Año</option>
+                            @for($i = date('Y'); $i >= 1900; $i--)
+                                <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
+                            @endfor
+                        </select>
+
+                        {{-- Filtro Mes --}}
+                        <select name="mes" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Mes</option>
+                            @foreach(range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected(request('mes') == $m)>
+                                    {{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->locale('es')->monthName) }}
+                                </option>
+                            @endforeach
+                        </select>
+
                         {{-- [MODIFICADO] AQUÍ ESTÁ EL CAMBIO DEL FILTRO --}}
                         <select name="estado" class="form-select form-select-sm compact-filter ps-2" onchange="document.getElementById('filterForm').submit()">
                             <option value="">Todos los Estados</option>
@@ -318,10 +336,16 @@
                 event.preventDefault(); 
                 const inputSearch = document.querySelector('input[name="search"]');
                 const selectEstado = document.querySelector('select[name="estado"]');
+                const selectMes = document.querySelector('select[name="mes"]');
+                const selectAnio = document.querySelector('select[name="anio"]');
+                
                 const textoSearch = inputSearch ? inputSearch.value : '';
                 const estadoSelect = selectEstado ? selectEstado.value : '';
+                const mesSelect = selectMes ? selectMes.value : '';
+                const anioSelect = selectAnio ? selectAnio.value : '';
+                
                 let urlBase = "{{ route('asignaciones.pdf.general') }}";
-                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}`;
+                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}&mes=${mesSelect}&anio=${anioSelect}`;
                 window.open(urlFinal, '_blank');
             }
 

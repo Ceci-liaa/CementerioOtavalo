@@ -230,6 +230,24 @@
 
                     {{-- Filtros --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
+                        {{-- Filtro Año --}}
+                        <select id="anioFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;">
+                            <option value="">Año</option>
+                            @for($i = date('Y'); $i >= 1900; $i--)
+                                <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
+                            @endfor
+                        </select>
+
+                        {{-- Filtro Mes --}}
+                        <select id="mesFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;">
+                            <option value="">Mes</option>
+                            @foreach(range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected(request('mes') == $m)>
+                                    {{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->locale('es')->monthName) }}
+                                </option>
+                            @endforeach
+                        </select>
+
                         {{-- Select Comunidad --}}
                         <select id="comunidadFilter" class="form-select form-select-sm compact-filter ps-2">
                             <option value="">Toda Comunidad</option>
@@ -479,6 +497,14 @@
                     // Comunidad
                     if (comunidadFilter.value) params.push('comunidad_id=' + encodeURIComponent(comunidadFilter.value));
                     
+                    // Año
+                    const anioFilter = document.getElementById('anioFilter');
+                    if (anioFilter && anioFilter.value) params.push('anio=' + encodeURIComponent(anioFilter.value));
+
+                    // Mes
+                    const mesFilter = document.getElementById('mesFilter');
+                    if (mesFilter && mesFilter.value) params.push('mes=' + encodeURIComponent(mesFilter.value));
+                    
                     // Tipo Beneficio (multi-select)
                     const beneficioChecks = document.querySelectorAll('.filter-check[data-filter="tipo_beneficio"]:checked');
                     beneficioChecks.forEach(cb => params.push('tipo_beneficio[]=' + encodeURIComponent(cb.value)));
@@ -503,11 +529,29 @@
                         
                         document.getElementById('filter_estatus').value = estatusValues.join(',');
                         document.getElementById('filter_tipo_beneficio').value = beneficioValues.join(',');
+
+                        // Agregar Mes y Año al reporte
+                        const mesVal = document.getElementById('mesFilter')?.value || '';
+                        const anioVal = document.getElementById('anioFilter')?.value || '';
+
+                        let inputMes = document.createElement('input');
+                        inputMes.type = 'hidden'; 
+                        inputMes.name = 'mes'; 
+                        inputMes.value = mesVal;
+                        reportForm.appendChild(inputMes);
+
+                        let inputAnio = document.createElement('input');
+                        inputAnio.type = 'hidden'; 
+                        inputAnio.name = 'anio'; 
+                        inputAnio.value = anioVal;
+                        reportForm.appendChild(inputAnio);
                     });
                 }
 
                 if (searchInput) searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); applyFilters(); } });
                 if (comunidadFilter) comunidadFilter.addEventListener('change', applyFilters);
+                document.getElementById('mesFilter')?.addEventListener('change', applyFilters);
+                document.getElementById('anioFilter')?.addEventListener('change', applyFilters);
 
                 // Modal
                 const modalEl = document.getElementById('dynamicModal');

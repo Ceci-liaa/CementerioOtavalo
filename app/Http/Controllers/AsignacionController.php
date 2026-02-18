@@ -54,6 +54,21 @@ class AsignacionController extends Controller
         // CASO 3: Si solo está buscando texto (Search), buscamos en todo lado sin restringir.
 
         // =========================================================
+        // NUEVOS FILTROS DE FECHA (Mes y Año de Inhumación)
+        // =========================================================
+        if ($request->filled('mes')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereMonth('fallecido_nicho.fecha_inhumacion', $request->mes);
+            });
+        }
+
+        if ($request->filled('anio')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereYear('fallecido_nicho.fecha_inhumacion', $request->anio);
+            });
+        }
+
+        // =========================================================
         // BUSCADOR DE TEXTO
         // =========================================================
         if ($buscando) {
@@ -347,6 +362,18 @@ class AsignacionController extends Controller
             $query->where('estado', $request->estado);
         }
 
+        // 3.1 Filtros de Fecha (Mes/Año)
+        if ($request->filled('mes')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereMonth('fallecido_nicho.fecha_inhumacion', $request->mes);
+            });
+        }
+        if ($request->filled('anio')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereYear('fallecido_nicho.fecha_inhumacion', $request->anio);
+            });
+        }
+
         // 4. BÚSQUEDA INTELIGENTE (Aquí está el cambio clave)
         if ($request->filled('search')) {
             $search = trim($request->search); // Quitamos espacios accidentales
@@ -376,8 +403,21 @@ class AsignacionController extends Controller
             'bloque'
         ])->get();
 
-        // 6. Generamos el PDF
-        $pdf = \PDF::loadView('asignaciones.pdf-reporte-general', compact('nichos'));
+        // 6. Generar el PDF
+        $infoFiltros = [];
+        if ($request->filled('mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('anio')) {
+            $infoFiltros[] = "Año: " . $request->anio;
+        }
+        if ($request->filled('estado')) {
+            $infoFiltros[] = "Estado: " . $request->estado;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
+        $pdf = \PDF::loadView('asignaciones.pdf-reporte-general', compact('nichos', 'subtitulo'));
         $pdf->setPaper('a4', 'landscape');
 
         return $pdf->stream('reporte_asignaciones.pdf');

@@ -36,6 +36,16 @@ class FallecidoController extends Controller
             $query->buscar($search);
         }
 
+        // Filtro por Mes (fecha_fallecimiento)
+        if ($request->filled('mes')) {
+            $query->whereMonth('fecha_fallecimiento', $request->mes);
+        }
+
+        // Filtro por Año (fecha_fallecimiento)
+        if ($request->filled('anio')) {
+            $query->whereYear('fecha_fallecimiento', $request->anio);
+        }
+
         $fallecidos = $query->paginate(10)->withQueryString();
 
         // Carga de datos para los Modales en el Index
@@ -191,13 +201,25 @@ class FallecidoController extends Controller
             ];
         });
 
+        // Generar Subtítulo
+        $infoFiltros = [];
+        // Nota: Los inputs vienen como 'current_mes' y 'current_anio' desde el formulario oculto
+        if ($request->filled('current_mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->current_mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('current_anio')) {
+            $infoFiltros[] = "Año: " . $request->current_anio;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
         if ($reportType === 'excel') {
             // Asegúrate de crear App\Exports\FallecidosExport con la misma estructura que SociosExport
             return Excel::download(new FallecidosExport($data, $headings), 'fallecidos_reporte_' . date('YmdHis') . '.xlsx');
             
         } elseif ($reportType === 'pdf') {
             // Asegúrate de crear la vista resources/views/fallecidos/reports-pdf.blade.php
-            $pdf = Pdf::loadView('fallecidos.reports-pdf', compact('data', 'headings'));
+            $pdf = Pdf::loadView('fallecidos.reports-pdf', compact('data', 'headings', 'subtitulo'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->download('fallecidos_reporte_' . date('YmdHis') . '.pdf');
         }

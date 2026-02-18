@@ -74,6 +74,16 @@ class SocioController extends Controller
                 return $query->whereIn('tipo_beneficio', $valores);
             })
 
+            // Filtro por Mes (fecha_inscripcion)
+            ->when($request->mes, function ($query, $mes) {
+                return $query->whereMonth('fecha_inscripcion', $mes);
+            })
+
+            // Filtro por Año (fecha_inscripcion)
+            ->when($request->anio, function ($query, $anio) {
+                return $query->whereYear('fecha_inscripcion', $anio);
+            })
+
             // Ordenamiento por defecto
             ->orderBy('apellidos', 'asc')
             ->orderBy('nombres', 'asc')
@@ -283,11 +293,23 @@ public function update(Request $request, Socio $socio)
             ];
         });
 
+        // 3. Generar Subtítulo del Reporte
+        $infoFiltros = [];
+        if ($request->filled('mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('anio')) {
+            $infoFiltros[] = "Año: " . $request->anio;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
         if ($reportType === 'excel') {
+            // Para Excel no cambiamos nada por ahora (o podrías pasar el título al constructor del Export)
             return Excel::download(new SociosExport($data, $headings), 'socios_reporte_' . date('YmdHis') . '.xlsx');
 
         } elseif ($reportType === 'pdf') {
-            $pdf = Pdf::loadView('socios.reports-pdf', compact('data', 'headings'));
+            $pdf = Pdf::loadView('socios.reports-pdf', compact('data', 'headings', 'subtitulo'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->download('socios_reporte_' . date('YmdHis') . '.pdf');
         }

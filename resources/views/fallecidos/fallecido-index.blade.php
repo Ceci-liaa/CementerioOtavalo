@@ -80,6 +80,8 @@
                 {{-- Inputs ocultos para asegurar que si no se selecciona nada, se reporte según el filtro actual --}}
                 <input type="hidden" name="current_search" value="{{ request('search') }}">
                 <input type="hidden" name="current_comunidad" value="{{ request('comunidad_id') }}">
+                <input type="hidden" name="current_mes" value="{{ request('mes') }}">
+                <input type="hidden" name="current_anio" value="{{ request('anio') }}">
 
                 {{-- 4. BARRA DE HERRAMIENTAS --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
@@ -103,6 +105,24 @@
                     {{-- Nota: Estos inputs NO tienen atributo name para no enviarse en el POST del reporte y ensuciar la request, 
                          se manejan por JS para la redirección GET, o se usan los inputs ocultos arriba --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
+                        {{-- Filtro Año --}}
+                        <select id="anioFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;">
+                            <option value="">Año</option>
+                            @for($i = date('Y'); $i >= 1900; $i--)
+                                <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
+                            @endfor
+                        </select>
+
+                        {{-- Filtro Mes --}}
+                        <select id="mesFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;">
+                            <option value="">Mes</option>
+                            @foreach(range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected(request('mes') == $m)>
+                                    {{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->locale('es')->monthName) }}
+                                </option>
+                            @endforeach
+                        </select>
+
                         <select id="comunidadFilter" class="form-select form-select-sm compact-filter ps-2">
                             <option value="">Toda Comunidad</option>
                             @foreach($comunidades as $c)
@@ -238,25 +258,32 @@
                 // 2. Filtros (GET Redirect)
                 const searchInput = document.getElementById('searchInput');
                 const comunidadFilter = document.getElementById('comunidadFilter');
+                const mesFilter = document.getElementById('mesFilter');
+                const anioFilter = document.getElementById('anioFilter');
 
                 function applyFilters() {
-                    const searchValue = encodeURIComponent(searchInput.value);
-                    const comunidadValue = encodeURIComponent(comunidadFilter.value);
-                    window.location.href = "{{ route('fallecidos.index') }}?search=" + searchValue + "&comunidad_id=" + comunidadValue;
+                    const params = new URLSearchParams();
+                    
+                    if(searchInput.value) params.append('search', searchInput.value);
+                    if(comunidadFilter.value) params.append('comunidad_id', comunidadFilter.value);
+                    if(mesFilter.value) params.append('mes', mesFilter.value);
+                    if(anioFilter.value) params.append('anio', anioFilter.value);
+
+                    window.location.href = "{{ route('fallecidos.index') }}?" + params.toString();
                 }
 
                 if (searchInput) {
                     searchInput.addEventListener('keypress', function (e) {
                         if (e.key === 'Enter') {
-                            e.preventDefault(); // Prevenir submit del formulario POST
+                            e.preventDefault(); 
                             applyFilters();
                         }
                     });
                 }
 
-                if (comunidadFilter) {
-                    comunidadFilter.addEventListener('change', applyFilters);
-                }
+                if (comunidadFilter) comunidadFilter.addEventListener('change', applyFilters);
+                if (mesFilter) mesFilter.addEventListener('change', applyFilters);
+                if (anioFilter) anioFilter.addEventListener('change', applyFilters);
 
                 // 3. Modal AJAX
                 const modalEl = document.getElementById('dynamicModal');
