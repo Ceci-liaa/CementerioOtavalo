@@ -62,7 +62,7 @@
 <div class="modal-footer justify-content-between">
     {{-- Verificamos si hay un código para buscar --}}
     @if(!empty($nicho->codigo))
-        <a href="https://catastro-cementerio.onrender.com?buscar={{ urlencode($nicho->codigo) }}" 
+        <a href="https://unorico-samashunchik-x29e.onrender.com?buscar={{ urlencode($nicho->codigo) }}" 
            target="_blank" 
            class="btn btn-info text-white shadow-sm">
             <i class="fas fa-map-location-dot me-2"></i> Ubicar en Mapa
