@@ -46,7 +46,7 @@ class Canton extends Model implements Auditable
             }
         });
     }
-
+ 
     // Relación
     public function parroquias()
     {
