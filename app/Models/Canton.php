@@ -37,7 +37,7 @@ class Canton extends Model implements Auditable
                     // 2. Extraemos la parte numérica del último código.
                     // substr($str, 2) elimina los primeros 2 caracteres ("CA")
                     // Ej: "CA005" -> "005" -> 5
-                    $numero = intval(substr($ultimoCanton->codigo, 2)) + 1;
+                    $numero = intval(substr($ultimoCanton->codigo, 3)) + 1;
                 }
 
                 // 3. Formateamos: prefijo "CA" + número relleno con ceros a la izquierda (3 dígitos)

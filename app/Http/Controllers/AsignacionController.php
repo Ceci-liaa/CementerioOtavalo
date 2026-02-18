@@ -54,6 +54,21 @@ class AsignacionController extends Controller
         // CASO 3: Si solo está buscando texto (Search), buscamos en todo lado sin restringir.
 
         // =========================================================
+        // NUEVOS FILTROS DE FECHA (Mes y Año de Inhumación)
+        // =========================================================
+        if ($request->filled('mes')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereMonth('fallecido_nicho.fecha_inhumacion', $request->mes);
+            });
+        }
+
+        if ($request->filled('anio')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereYear('fallecido_nicho.fecha_inhumacion', $request->anio);
+            });
+        }
+
+        // =========================================================
         // BUSCADOR DE TEXTO
         // =========================================================
         if ($buscando) {
@@ -67,15 +82,12 @@ class AsignacionController extends Controller
                             ->orWhere('apellidos', 'ILIKE', "%{$term}%")
                             ->orWhere('nombres', 'ILIKE', "%{$term}%");
                     })
-                    // O fallecido activo
-                    ->orWhereHas('fallecidos', function ($qf) use ($term) {
-                        $qf->where('fallecido_nicho.fecha_exhumacion', null)
-                            ->where(function ($sub) use ($term) {
-                                $sub->where('cedula', 'ILIKE', "%{$term}%")
-                                    ->orWhere('apellidos', 'ILIKE', "%{$term}%")
-                                    ->orWhere('nombres', 'ILIKE', "%{$term}%");
-                            });
-                    });
+                    // O fallecido (exhumado o no)
+                ->orWhereHas('fallecidos', function ($qf) use ($term) {
+                    $qf->where('cedula', 'ILIKE', "%{$term}%")
+                        ->orWhere('apellidos', 'ILIKE', "%{$term}%")
+                        ->orWhere('nombres', 'ILIKE', "%{$term}%");
+                });
             });
         }
 
@@ -87,11 +99,11 @@ class AsignacionController extends Controller
     {
         try {
             // 1. NICHOS
+            // Contamos SOLO fallecidos activos (no exhumados) para mostrar ocupación real
             $nichosDisponibles = Nicho::with('bloque')
-                ->withCount('fallecidos')
-                // CORRECCIÓN AQUÍ:
-                // Usamos whereRaw para forzar la comparación booleana correcta en PostgreSQL
-                // en lugar de ->where('disponible', true) que envía un 1.
+                ->withCount(['fallecidos' => function($q) {
+                    $q->whereNull('fallecido_nicho.fecha_exhumacion');
+                }])
                 ->whereRaw('disponible = true')
                 ->orderBy('id', 'desc')
                 ->get();
@@ -149,6 +161,7 @@ class AsignacionController extends Controller
             'socio_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'rol' => 'required|string',
+            'fecha_inhumacion' => 'required|date', // Validar fecha
         ]);
 
         try {
@@ -177,12 +190,17 @@ class AsignacionController extends Controller
                 $siguienteId = $ultimoId + 1;
                 $codigoGenerado = 'ASG-' . str_pad($siguienteId, 2, '0', STR_PAD_LEFT);
 
-                // 4. Asignar Fallecido con el SOCIO_ID vinculado al registro
+                // 4. Calcular posición usando MAX para evitar conflictos con exhumados
+                $maxPosicion = DB::table('fallecido_nicho')
+                    ->where('nicho_id', $nicho->id)
+                    ->max('posicion') ?? 0;
+
+                // 5. Asignar Fallecido con el SOCIO_ID vinculado al registro
                 $nicho->fallecidos()->attach($request->fallecido_id, [
-                    'socio_id' => $request->socio_id, // <--- CAMBIO AQUÍ
+                    'socio_id' => $request->socio_id,
                     'codigo' => $codigoGenerado,
-                    'posicion' => $ocupantesActivos + 1,
-                    'fecha_inhumacion' => now(),
+                    'posicion' => $maxPosicion + 1,
+                    'fecha_inhumacion' => $request->fecha_inhumacion,
                     'observacion' => 'Ingreso registrado'
                 ]);
 
@@ -347,6 +365,18 @@ class AsignacionController extends Controller
             $query->where('estado', $request->estado);
         }
 
+        // 3.1 Filtros de Fecha (Mes/Año)
+        if ($request->filled('mes')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereMonth('fallecido_nicho.fecha_inhumacion', $request->mes);
+            });
+        }
+        if ($request->filled('anio')) {
+            $query->whereHas('fallecidos', function($q) use ($request) {
+                $q->whereYear('fallecido_nicho.fecha_inhumacion', $request->anio);
+            });
+        }
+
         // 4. BÚSQUEDA INTELIGENTE (Aquí está el cambio clave)
         if ($request->filled('search')) {
             $search = trim($request->search); // Quitamos espacios accidentales
@@ -376,8 +406,21 @@ class AsignacionController extends Controller
             'bloque'
         ])->get();
 
-        // 6. Generamos el PDF
-        $pdf = \PDF::loadView('asignaciones.pdf-reporte-general', compact('nichos'));
+        // 6. Generar el PDF
+        $infoFiltros = [];
+        if ($request->filled('mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('anio')) {
+            $infoFiltros[] = "Año: " . $request->anio;
+        }
+        if ($request->filled('estado')) {
+            $infoFiltros[] = "Estado: " . $request->estado;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
+        $pdf = \PDF::loadView('asignaciones.pdf-reporte-general', compact('nichos', 'subtitulo'));
         $pdf->setPaper('a4', 'landscape');
 
         return $pdf->stream('reporte_asignaciones.pdf');

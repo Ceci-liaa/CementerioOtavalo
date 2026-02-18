@@ -164,7 +164,11 @@
         </div>
 
         <div class="reporte-titulo">
-            REPORTE GENERAL DE SOCIOS
+            REPORTE DE SOCIOS
+            <br>
+            <span style="font-size: 14px; font-weight: normal; margin-top: 5px; display: block;">
+                {{ $subtitulo ?? 'Reporte General' }}
+            </span>
         </div>
 
         @if ($data->isEmpty())

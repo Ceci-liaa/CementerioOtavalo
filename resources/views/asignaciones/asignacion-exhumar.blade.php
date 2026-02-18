@@ -3,7 +3,7 @@
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form method="POST" action="{{ route('asignaciones.exhumar') }}">
+<form method="POST" action="{{ route('asignaciones.exhumar') }}" id="formExhumar">
     @csrf
     <input type="hidden" name="nicho_id" value="{{ $nicho->id }}">
 
@@ -41,6 +41,34 @@
 
     <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-dark" onclick="return confirm('¿Procesar exhumación?');">Confirmar Exhumación</button>
+        <button type="button" class="btn btn-dark" id="btnConfirmarExhumar">Confirmar Exhumación</button>
     </div>
 </form>
+
+<script>
+    document.getElementById('btnConfirmarExhumar').addEventListener('click', function() {
+        const form = document.getElementById('formExhumar');
+
+        // Validar campos obligatorios primero
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // SweetAlert igual que el de eliminar
+        Swal.fire({
+            title: '¿Está seguro de exhumar?',
+            html: 'Esta acción finalizará la ocupación y liberará el espacio en el nicho.<br><small class="text-danger">Esta acción no se puede deshacer.</small>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, exhumar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+</script>

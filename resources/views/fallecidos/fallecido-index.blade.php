@@ -80,6 +80,8 @@
                 {{-- Inputs ocultos para asegurar que si no se selecciona nada, se reporte según el filtro actual --}}
                 <input type="hidden" name="current_search" value="{{ request('search') }}">
                 <input type="hidden" name="current_comunidad" value="{{ request('comunidad_id') }}">
+                <input type="hidden" name="current_mes" value="{{ request('mes') }}">
+                <input type="hidden" name="current_anio" value="{{ request('anio') }}">
 
                 {{-- 4. BARRA DE HERRAMIENTAS --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
@@ -103,6 +105,24 @@
                     {{-- Nota: Estos inputs NO tienen atributo name para no enviarse en el POST del reporte y ensuciar la request, 
                          se manejan por JS para la redirección GET, o se usan los inputs ocultos arriba --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
+                        {{-- Filtro Año --}}
+                        <select id="anioFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;">
+                            <option value="">Año</option>
+                            @for($i = date('Y'); $i >= 1900; $i--)
+                                <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
+                            @endfor
+                        </select>
+
+                        {{-- Filtro Mes --}}
+                        <select id="mesFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;">
+                            <option value="">Mes</option>
+                            @foreach(range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected(request('mes') == $m)>
+                                    {{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->locale('es')->monthName) }}
+                                </option>
+                            @endforeach
+                        </select>
+
                         <select id="comunidadFilter" class="form-select form-select-sm compact-filter ps-2">
                             <option value="">Toda Comunidad</option>
                             @foreach($comunidades as $c)
@@ -221,7 +241,9 @@
 
         <x-app.footer />
 
-        {{-- SCRIPTS --}}
+        {{-- SCRIPTS Y LIBRERÍAS --}}
+        <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -236,25 +258,32 @@
                 // 2. Filtros (GET Redirect)
                 const searchInput = document.getElementById('searchInput');
                 const comunidadFilter = document.getElementById('comunidadFilter');
+                const mesFilter = document.getElementById('mesFilter');
+                const anioFilter = document.getElementById('anioFilter');
 
                 function applyFilters() {
-                    const searchValue = encodeURIComponent(searchInput.value);
-                    const comunidadValue = encodeURIComponent(comunidadFilter.value);
-                    window.location.href = "{{ route('fallecidos.index') }}?search=" + searchValue + "&comunidad_id=" + comunidadValue;
+                    const params = new URLSearchParams();
+                    
+                    if(searchInput.value) params.append('search', searchInput.value);
+                    if(comunidadFilter.value) params.append('comunidad_id', comunidadFilter.value);
+                    if(mesFilter.value) params.append('mes', mesFilter.value);
+                    if(anioFilter.value) params.append('anio', anioFilter.value);
+
+                    window.location.href = "{{ route('fallecidos.index') }}?" + params.toString();
                 }
 
                 if (searchInput) {
                     searchInput.addEventListener('keypress', function (e) {
                         if (e.key === 'Enter') {
-                            e.preventDefault(); // Prevenir submit del formulario POST
+                            e.preventDefault(); 
                             applyFilters();
                         }
                     });
                 }
 
-                if (comunidadFilter) {
-                    comunidadFilter.addEventListener('change', applyFilters);
-                }
+                if (comunidadFilter) comunidadFilter.addEventListener('change', applyFilters);
+                if (mesFilter) mesFilter.addEventListener('change', applyFilters);
+                if (anioFilter) anioFilter.addEventListener('change', applyFilters);
 
                 // 3. Modal AJAX
                 const modalEl = document.getElementById('dynamicModal');
@@ -270,7 +299,19 @@
                         modal.show();
                         fetch(this.getAttribute('data-url'))
                             .then(r => r.text())
-                            .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                            .then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                // 🔥 Ejecutar scripts que vienen dentro del HTML cargado
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    if (oldScript.src) {
+                                        newScript.src = oldScript.src;
+                                    } else {
+                                        newScript.textContent = oldScript.textContent;
+                                    }
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            });
                     });
                 });
 
@@ -307,6 +348,85 @@
                         });
                     });
                 }
+
+                // 🔔 6. VALIDACIÓN POR PESTAÑAS EN MODALES
+                // Usa delegación de eventos para funcionar con contenido cargado por AJAX
+                modalEl.addEventListener('submit', function(e) {
+                    const form = e.target;
+                    if (!form.matches('form')) return;
+
+                    // Buscar campos required vacíos por pestaña
+                    const campos = form.querySelectorAll('input[required], select[required]');
+                    let vaciosPersonal = [];
+                    let vaciosDetalles = [];
+
+                    campos.forEach(function(campo) {
+                        if (!campo.value || campo.value.trim() === '') {
+                            if (campo.closest('#personal') || campo.closest('#edit-personal')) {
+                                vaciosPersonal.push(campo);
+                            }
+                            if (campo.closest('#detalles') || campo.closest('#edit-detalles')) {
+                                vaciosDetalles.push(campo);
+                            }
+                        }
+                    });
+
+                    // Si no hay campos vacíos, dejar enviar
+                    if (vaciosPersonal.length === 0 && vaciosDetalles.length === 0) return;
+
+                    e.preventDefault();
+
+                    // Quitar alerta anterior
+                    const prev = form.querySelector('.alerta-validacion');
+                    if (prev) prev.remove();
+
+                    // Detectar pestaña activa
+                    const tabPersonalActivo = modalEl.querySelector('#personal.show.active, #edit-personal.show.active');
+                    const tabDetallesActivo = modalEl.querySelector('#detalles.show.active, #edit-detalles.show.active');
+
+                    let msg = '';
+                    let irAPestana = null;
+
+                    if (vaciosPersonal.length > 0 && vaciosDetalles.length > 0) {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Faltan campos obligatorios en <strong>Personal</strong> y en <strong>Detalles y Notas</strong>. Por favor complételos.';
+                    } else if (vaciosDetalles.length > 0 && tabPersonalActivo) {
+                        // Estoy en Personal, faltan datos en Detalles
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Detalles y Notas</strong> y complete los campos obligatorios.';
+                        irAPestana = '[data-bs-target="#detalles"], [data-bs-target="#edit-detalles"]';
+                    } else if (vaciosPersonal.length > 0 && tabDetallesActivo) {
+                        // Estoy en Detalles, faltan datos en Personal
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Personal</strong> y complete los campos obligatorios.';
+                        irAPestana = '[data-bs-target="#personal"], [data-bs-target="#edit-personal"]';
+                    } else if (vaciosPersonal.length > 0) {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Complete los campos obligatorios en esta pestaña.';
+                    } else {
+                        msg = '<i class="fas fa-exclamation-triangle me-2"></i> Complete los campos obligatorios en esta pestaña.';
+                    }
+
+                    // Crear alerta warning
+                    const alerta = document.createElement('div');
+                    alerta.className = 'alert alert-warning py-2 mb-0 mt-2 alerta-validacion d-flex align-items-center';
+                    alerta.style.cssText = 'font-size: 0.85rem; border-left: 4px solid #ffc107;';
+                    alerta.innerHTML = msg;
+
+                    const body = form.querySelector('.modal-body');
+                    if (body) body.appendChild(alerta);
+
+                    // Navegar a la otra pestaña si corresponde
+                    if (irAPestana) {
+                        setTimeout(function() {
+                            const btn = modalEl.querySelector(irAPestana);
+                            if (btn) btn.click();
+                        }, 1500); // Espera 1.5s para que lean el mensaje antes de cambiar
+                    }
+
+                    // Auto-ocultar en 5 segundos
+                    setTimeout(function() {
+                        alerta.style.transition = 'opacity 0.5s ease';
+                        alerta.style.opacity = '0';
+                        setTimeout(function() { alerta.remove(); }, 500);
+                    }, 5000);
+                });
             });
         </script>
     </main>

@@ -234,7 +234,14 @@
                     btn.addEventListener('click', function () {
                         modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
                         modal.show();
-                        fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                        fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { 
+                            modalEl.querySelector('.modal-content').innerHTML = h;
+                            modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                const newScript = document.createElement('script');
+                                newScript.textContent = oldScript.textContent;
+                                oldScript.parentNode.replaceChild(newScript, oldScript);
+                            });
+                        });
                     });
                 });
 

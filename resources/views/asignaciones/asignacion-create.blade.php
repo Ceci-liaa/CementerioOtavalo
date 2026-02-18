@@ -100,6 +100,11 @@
                         </select>
                         <small class="text-muted">Seleccionado: <span id="fallecidoSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
+                    
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Fecha de Inhumación <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha_inhumacion" class="form-control" required value="{{ date('Y-m-d') }}">
+                    </div>
                 </div>
             </div>
         </div>

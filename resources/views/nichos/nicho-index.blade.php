@@ -95,11 +95,20 @@
                             @endforeach
                         </select>
 
+                        {{-- Filtro de Estado --}}
+                        <select id="estadoFilter" class="form-select form-select-sm compact-filter ps-2">
+                            <option value="">Todos los estados</option>
+                            <option value="BUENO" @selected(request('estado') == 'BUENO')>Bueno</option>
+                            <option value="MANTENIMIENTO" @selected(request('estado') == 'MANTENIMIENTO')>Mantenimiento</option>
+                            <option value="MALO" @selected(request('estado') == 'MALO')>Malo</option>
+                            <option value="ABANDONADO" @selected(request('estado') == 'ABANDONADO')>Abandonado</option>
+                        </select>
+
                         {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
                                     class="fas fa-search"></i></span>
-                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar código..."
+                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Responsable..."
                                 id="searchInput" value="{{ request('q') }}">
                         </div>
                     </div>
@@ -122,6 +131,7 @@
                                         <th class="opacity-10">Tipo</th>
                                         <th class="opacity-10">Ocupación</th>
                                         <th class="opacity-10">Estado</th>
+                                        <th class="opacity-10">Responsable</th>
                                         <th class="opacity-10">Disp.</th>
                                         <th class="opacity-10" style="width:170px;">Acciones</th>
                                     </tr>
@@ -179,6 +189,15 @@
                                                 @endswitch
                                             </td>
 
+                                            {{-- Responsable (Socio) --}}
+                                            <td class="text-sm">
+                                                @if($n->socio)
+                                                    <span class="fw-bold text-dark">{{ $n->socio->apellidos }} {{ $n->socio->nombres }}</span>
+                                                @else
+                                                    <span class="text-muted fst-italic small">Sin asignar</span>
+                                                @endif
+                                            </td>
+
                                             <td>
                                                 @if($n->disponible)
                                                     <i class="fas fa-check-circle text-success" title="Disponible"></i>
@@ -220,7 +239,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="10" class="text-center py-5 text-muted">
+                                            <td colspan="11" class="text-center py-5 text-muted">
                                                 No se encontraron nichos registrados.
                                             </td>
                                         </tr>
@@ -267,11 +286,13 @@
                 // 2. Filtros (GET Redirect)
                 const searchInput = document.getElementById('searchInput');
                 const bloqueFilter = document.getElementById('bloqueFilter');
+                const estadoFilter = document.getElementById('estadoFilter');
 
                 function applyFilters() {
                     const qValue = encodeURIComponent(searchInput.value);
                     const bloqueValue = encodeURIComponent(bloqueFilter.value);
-                    window.location.href = "{{ route('nichos.index') }}?q=" + qValue + "&bloque_id=" + bloqueValue;
+                    const estadoValue = encodeURIComponent(estadoFilter.value);
+                    window.location.href = "{{ route('nichos.index') }}?q=" + qValue + "&bloque_id=" + bloqueValue + "&estado=" + estadoValue;
                 }
 
                 if (searchInput) {
@@ -285,6 +306,10 @@
 
                 if (bloqueFilter) {
                     bloqueFilter.addEventListener('change', applyFilters);
+                }
+
+                if (estadoFilter) {
+                    estadoFilter.addEventListener('change', applyFilters);
                 }
 
                 // 3. Modal AJAX
@@ -301,7 +326,15 @@
                         modal.show();
                         fetch(this.getAttribute('data-url'))
                             .then(r => r.text())
-                            .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                            .then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                // Ejecutar scripts cargados dinámicamente
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = oldScript.textContent;
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            });
                     });
                 });
 

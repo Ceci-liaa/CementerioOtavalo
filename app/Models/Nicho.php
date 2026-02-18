@@ -62,7 +62,7 @@ class Nicho extends Model implements Auditable
                 
                 // Extraemos el número si existe, sino empezamos en 1
                 $number = 0;
-                if ($last && preg_match('/N(\d+)/', $last->codigo, $matches)) {
+                if ($last && preg_match('/N-?(\d+)/', $last->codigo, $matches)) {
                     $number = intval($matches[1]);
                 }
                 

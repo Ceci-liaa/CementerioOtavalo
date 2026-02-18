@@ -92,11 +92,23 @@
 
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         
-                        {{-- [MODIFICADO] AQUÍ ESTÁ EL CAMBIO DEL FILTRO --}}
-                        <select name="estado" class="form-select form-select-sm compact-filter ps-2" onchange="document.getElementById('filterForm').submit()">
-                            <option value="">Todos los Estados</option>
-                            <option value="OCUPADO" @selected(request('estado') == 'OCUPADO')>Ocupados</option>
-                            <option value="MANTENIMIENTO" @selected(request('estado') == 'MANTENIMIENTO')>En Mantenimiento</option>                        </select>
+                        {{-- Filtro Año --}}
+                        <select name="anio" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Año</option>
+                            @for($i = date('Y'); $i >= 1900; $i--)
+                                <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
+                            @endfor
+                        </select>
+
+                        {{-- Filtro Mes --}}
+                        <select name="mes" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Mes</option>
+                            @foreach(range(1, 12) as $m)
+                                <option value="{{ $m }}" @selected(request('mes') == $m)>
+                                    {{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->locale('es')->monthName) }}
+                                </option>
+                            @endforeach
+                        </select>
 
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
                             <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
@@ -116,6 +128,7 @@
                                     <th class="opacity-10">#</th> 
                                     <th class="opacity-10">Código</th>
                                     <th class="opacity-10 text-start ps-3">Fallecido</th>
+                                    <th class="opacity-10 text-start ps-3">Fecha Inh.</th> {{-- NUEVA COLUMNA --}}
                                     <th class="opacity-10 text-start ps-3">Responsable</th>
                                     <th class="opacity-10">Nicho</th>
                                     <th class="opacity-10">Estado</th>
@@ -134,7 +147,7 @@
                                         
                                         {{-- 2. CÓDIGO ASIGNACIÓN --}}
                                         <td>
-                                            @forelse($ocupantes as $f)
+                                            @forelse($nicho->fallecidos as $f)
                                                 <div class="fallecido-row">
                                                     <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">
                                                         {{ $f->pivot->codigo ?? 'S/C' }}
@@ -147,12 +160,26 @@
 
                                         {{-- 3. FALLECIDO --}}
                                         <td class="text-start ps-3">
-                                            @forelse($ocupantes as $f)
-                                                <div class="fallecido-row text-sm">
+                                            @forelse($nicho->fallecidos as $f)
+                                                <div class="fallecido-row text-sm" style="{{ $f->pivot->fecha_exhumacion ? 'color: #555;' : '' }}">
                                                     {{ $f->apellidos }} {{ $f->nombres }}
+                                                    @if($f->pivot->fecha_exhumacion)
+                                                        <span class="badge" style="font-size: 0.6rem; background-color: #555; color: #fff;">Exhumado</span>
+                                                    @endif
                                                 </div>
                                             @empty
                                                 <span class="text-muted small fst-italic">-- Vacío --</span>
+                                            @endforelse
+                                        </td>
+
+                                        {{-- 3.1. FECHA INHUMACIÓN --}}
+                                        <td class="text-start ps-3">
+                                            @forelse($nicho->fallecidos as $f)
+                                                <div class="fallecido-row text-sm {{ $f->pivot->fecha_exhumacion ? 'text-muted' : 'text-secondary' }}">
+                                                    {{ optional($f->pivot->fecha_inhumacion)->format('d/m/Y') ?? '--' }}
+                                                </div>
+                                            @empty
+                                                <span class="text-muted small">-</span>
                                             @endforelse
                                         </td>
 
@@ -232,7 +259,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron asignaciones registradas.</td></tr>
+                                    <tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron asignaciones registradas.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -287,6 +314,12 @@
                                 modalEl.querySelector('.modal-content').innerHTML = h;
                                 // INICIALIZAR BÚSQUEDA DESPUÉS DE CARGAR EL CONTENIDO
                                 setTimeout(() => initSearchableSelects(), 100);
+                                // Ejecutar scripts cargados dinámicamente
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = oldScript.textContent;
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
                             });
                     });
                 });
@@ -318,10 +351,16 @@
                 event.preventDefault(); 
                 const inputSearch = document.querySelector('input[name="search"]');
                 const selectEstado = document.querySelector('select[name="estado"]');
+                const selectMes = document.querySelector('select[name="mes"]');
+                const selectAnio = document.querySelector('select[name="anio"]');
+                
                 const textoSearch = inputSearch ? inputSearch.value : '';
                 const estadoSelect = selectEstado ? selectEstado.value : '';
+                const mesSelect = selectMes ? selectMes.value : '';
+                const anioSelect = selectAnio ? selectAnio.value : '';
+                
                 let urlBase = "{{ route('asignaciones.pdf.general') }}";
-                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}`;
+                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}&mes=${mesSelect}&anio=${anioSelect}`;
                 window.open(urlFinal, '_blank');
             }
 

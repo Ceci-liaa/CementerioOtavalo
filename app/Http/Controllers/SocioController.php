@@ -62,6 +62,28 @@ class SocioController extends Controller
                 return $query->where('comunidad_id', $id);
             })
 
+            // Filtro de Estatus (vivo/fallecido) - Soporta múltiples valores
+            ->when($request->estatus, function ($query, $estatus) {
+                $valores = is_array($estatus) ? $estatus : [$estatus];
+                return $query->whereIn('estatus', $valores);
+            })
+
+            // Filtro de Tipo Beneficio (sin_subsidio/con_subsidio/exonerado) - Soporta múltiples valores
+            ->when($request->tipo_beneficio, function ($query, $tipo) {
+                $valores = is_array($tipo) ? $tipo : [$tipo];
+                return $query->whereIn('tipo_beneficio', $valores);
+            })
+
+            // Filtro por Mes (fecha_inscripcion)
+            ->when($request->mes, function ($query, $mes) {
+                return $query->whereMonth('fecha_inscripcion', $mes);
+            })
+
+            // Filtro por Año (fecha_inscripcion)
+            ->when($request->anio, function ($query, $anio) {
+                return $query->whereYear('fecha_inscripcion', $anio);
+            })
+
             // Ordenamiento por defecto
             ->orderBy('apellidos', 'asc')
             ->orderBy('nombres', 'asc')
@@ -201,6 +223,23 @@ public function update(Request $request, Socio $socio)
 
         $socios = Socio::with(['comunidad.parroquia.canton', 'genero', 'estadoCivil'])
             ->whereIn('id', $ids)
+            
+            // Aplicar filtros de estatus y tipo_beneficio si están presentes
+            ->when($request->filter_estatus, function ($query, $estatus) {
+                $valores = is_array($estatus) ? $estatus : explode(',', $estatus);
+                $valores = array_filter($valores); // Remover vacíos
+                if (!empty($valores)) {
+                    return $query->whereIn('estatus', $valores);
+                }
+            })
+            ->when($request->filter_tipo_beneficio, function ($query, $tipo) {
+                $valores = is_array($tipo) ? $tipo : explode(',', $tipo);
+                $valores = array_filter($valores); // Remover vacíos
+                if (!empty($valores)) {
+                    return $query->whereIn('tipo_beneficio', $valores);
+                }
+            })
+            
             ->orderBy('apellidos')
             ->orderBy('nombres')
             ->get();
@@ -254,11 +293,23 @@ public function update(Request $request, Socio $socio)
             ];
         });
 
+        // 3. Generar Subtítulo del Reporte
+        $infoFiltros = [];
+        if ($request->filled('mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('anio')) {
+            $infoFiltros[] = "Año: " . $request->anio;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
         if ($reportType === 'excel') {
+            // Para Excel no cambiamos nada por ahora (o podrías pasar el título al constructor del Export)
             return Excel::download(new SociosExport($data, $headings), 'socios_reporte_' . date('YmdHis') . '.xlsx');
 
         } elseif ($reportType === 'pdf') {
-            $pdf = Pdf::loadView('socios.reports-pdf', compact('data', 'headings'));
+            $pdf = Pdf::loadView('socios.reports-pdf', compact('data', 'headings', 'subtitulo'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->download('socios_reporte_' . date('YmdHis') . '.pdf');
         }

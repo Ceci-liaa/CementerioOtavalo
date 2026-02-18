@@ -21,14 +21,25 @@ class NichoController extends Controller
     {
         $q = trim($request->get('q', ''));
         $bloqueId = $request->get('bloque_id');
+        $estado = $request->get('estado');
 
-        $query = Nicho::with('bloque')->orderBy('codigo', 'asc');
+        $query = Nicho::with(['bloque', 'socio'])->orderBy('codigo', 'asc');
 
         if ($q !== '') {
-            $query->where('codigo', 'ILIKE', "%{$q}%");
+            $query->where(function ($sub) use ($q) {
+                $sub->where('codigo', 'ILIKE', "%{$q}%")
+                    ->orWhereHas('socio', function ($qs) use ($q) {
+                    $qs->where('cedula', 'ILIKE', "%{$q}%")
+                       ->orWhere('apellidos', 'ILIKE', "%{$q}%")
+                       ->orWhere('nombres', 'ILIKE', "%{$q}%");
+                });
+            });
         }
         if ($bloqueId) {
             $query->where('bloque_id', $bloqueId);
+        }
+        if ($estado) {
+            $query->where('estado', $estado);
         }
 
         $nichos = $query->paginate(10)->withQueryString();

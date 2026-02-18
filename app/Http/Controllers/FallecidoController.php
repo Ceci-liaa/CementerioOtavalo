@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Fallecido;
+use App\Models\Socio; // ← NUEVA IMPORTACIÓN
 use Illuminate\Http\Request;
 use App\Models\Comunidad;
 use App\Models\Genero;
@@ -35,6 +36,16 @@ class FallecidoController extends Controller
             $query->buscar($search);
         }
 
+        // Filtro por Mes (fecha_fallecimiento)
+        if ($request->filled('mes')) {
+            $query->whereMonth('fecha_fallecimiento', $request->mes);
+        }
+
+        // Filtro por Año (fecha_fallecimiento)
+        if ($request->filled('anio')) {
+            $query->whereYear('fecha_fallecimiento', $request->anio);
+        }
+
         $fallecidos = $query->paginate(10)->withQueryString();
 
         // Carga de datos para los Modales en el Index
@@ -64,14 +75,23 @@ class FallecidoController extends Controller
             'cedula'            => 'nullable|string|max:20|unique:fallecidos,cedula',
             'nombres'           => 'required|string|max:255',
             'apellidos'         => 'required|string|max:255',
-            'fecha_nac'         => 'nullable|date',
-            'fecha_fallecimiento' => 'nullable|date',
+            'fecha_nac'         => 'required|date',
+            'fecha_fallecimiento' => 'required|date',
             'observaciones'     => 'nullable|string',
         ]);
 
         try {
-            // El modelo genera FAL0001 automáticamente
-            Fallecido::create($request->all() + ['created_by' => auth()->id()]);
+            // Crear fallecido
+            $fallecido = Fallecido::create($request->all() + ['created_by' => auth()->id()]);
+            
+            // 🔥 NUEVA LÓGICA: Actualizar estatus del socio si existe
+            if ($fallecido->cedula) {
+                $socio = Socio::where('cedula', $fallecido->cedula)->first();
+                if ($socio && $socio->estatus !== 'fallecido') {
+                    $socio->update(['estatus' => 'fallecido']);
+                }
+            }
+            
             return redirect()->route('fallecidos.index')->with('success', 'Fallecido registrado correctamente.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Error al registrar: ' . $e->getMessage());
@@ -93,12 +113,21 @@ class FallecidoController extends Controller
             'cedula'            => 'nullable|string|max:20|unique:fallecidos,cedula,' . $fallecido->id,
             'nombres'           => 'required|string|max:255',
             'apellidos'         => 'required|string|max:255',
-            'fecha_nac'         => 'nullable|date',
-            'fecha_fallecimiento' => 'nullable|date',
+            'fecha_nac'         => 'required|date',
+            'fecha_fallecimiento' => 'required|date',
         ]);
 
         try {
             $fallecido->update($request->all());
+            
+            // 🔥 NUEVA LÓGICA: Actualizar estatus del socio si cambió la cédula
+            if ($fallecido->cedula) {
+                $socio = Socio::where('cedula', $fallecido->cedula)->first();
+                if ($socio && $socio->estatus !== 'fallecido') {
+                    $socio->update(['estatus' => 'fallecido']);
+                }
+            }
+            
             return redirect()->route('fallecidos.index')->with('success', 'Fallecido actualizado.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Error al actualizar: ' . $e->getMessage());
@@ -172,17 +201,59 @@ class FallecidoController extends Controller
             ];
         });
 
+        // Generar Subtítulo
+        $infoFiltros = [];
+        // Nota: Los inputs vienen como 'current_mes' y 'current_anio' desde el formulario oculto
+        if ($request->filled('current_mes')) {
+            $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->current_mes, 1)->locale('es')->monthName);
+            $infoFiltros[] = "Mes: $nombreMes";
+        }
+        if ($request->filled('current_anio')) {
+            $infoFiltros[] = "Año: " . $request->current_anio;
+        }
+        $subtitulo = !empty($infoFiltros) ? implode(' - ', $infoFiltros) : 'Reporte General';
+
         if ($reportType === 'excel') {
             // Asegúrate de crear App\Exports\FallecidosExport con la misma estructura que SociosExport
             return Excel::download(new FallecidosExport($data, $headings), 'fallecidos_reporte_' . date('YmdHis') . '.xlsx');
             
         } elseif ($reportType === 'pdf') {
             // Asegúrate de crear la vista resources/views/fallecidos/reports-pdf.blade.php
-            $pdf = Pdf::loadView('fallecidos.reports-pdf', compact('data', 'headings'));
+            $pdf = Pdf::loadView('fallecidos.reports-pdf', compact('data', 'headings', 'subtitulo'));
             $pdf->setPaper('A4', 'landscape');
             return $pdf->download('fallecidos_reporte_' . date('YmdHis') . '.pdf');
         }
 
         return redirect()->back()->with('error', 'Tipo de reporte no válido.');
+    }
+
+    // ── BUSCAR SOCIO POR CÉDULA (API) ──────────────────────────────
+    public function buscarSocioPorCedula(Request $request)
+    {
+        $cedula = $request->input('cedula');
+        
+        if (!$cedula) {
+            return response()->json(['encontrado' => false]);
+        }
+        
+        $socio = Socio::where('cedula', $cedula)->first();
+        
+        if (!$socio) {
+            return response()->json(['encontrado' => false]);
+        }
+        
+        return response()->json([
+            'encontrado' => true,
+            'socio' => [
+                'codigo' => $socio->codigo,
+                'nombres' => $socio->nombres,
+                'apellidos' => $socio->apellidos,
+                'fecha_nac' => $socio->fecha_nac ? $socio->fecha_nac->format('Y-m-d') : '',
+                'genero_id' => $socio->genero_id,
+                'estado_civil_id' => $socio->estado_civil_id,
+                'comunidad_id' => $socio->comunidad_id,
+                'estatus' => $socio->estatus,
+            ]
+        ]);
     }
 }

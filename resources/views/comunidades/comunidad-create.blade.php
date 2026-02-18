@@ -1,20 +1,9 @@
-{{-- CSS PARA CORREGIR QUE EL SELECT NO SE VEA DETRÁS DEL MODAL --}}
 <style>
-    /* Hace que el dropdown de TomSelect flote por encima del Modal de Bootstrap */
-    .ts-dropdown, .ts-control {
-        z-index: 99999 !important; /* Muy alto para ganar al modal */
-    }
-    /* Ajuste visual para que parezca un input de Bootstrap */
-    .ts-control {
-        border: 1px solid #ced4da;
-        border-radius: 0.375rem;
-        padding: 0.375rem 0.75rem;
-    }
+    .search-match { background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%) !important; font-weight: 600 !important; }
+    .search-first-match { background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important; color: white !important; font-weight: 700 !important; }
+    .search-input-found { border: 2px solid #28a745 !important; box-shadow: 0 0 8px rgba(40, 167, 69, 0.4) !important; }
+    .search-input-empty { border: 2px solid #dc3545 !important; box-shadow: 0 0 8px rgba(220, 53, 69, 0.4) !important; }
 </style>
-
-{{-- LIBRERÍAS (Si no están en el layout) --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 {{-- CABECERA DEL MODAL --}}
 <div class="modal-header bg-dark text-white">
@@ -41,24 +30,28 @@
         @endif
 
         <div class="row g-3">
-            {{-- Cantón --}}
+            {{-- Cantón (Buscable) --}}
             <div class="col-md-6">
                 <label class="form-label fw-bold">Cantón <span class="text-danger">*</span></label>
-                <select id="canton_select" class="form-select" required autocomplete="off">
-                    <option value="">Buscar cantón...</option>
+                <input type="text" id="buscarCanton" class="form-control mb-2" placeholder="🔍 Buscar cantón...">
+                <select id="canton_select" class="form-select" required size="3" style="height: auto;">
+                    <option value="">-- Seleccionar Cantón --</option>
                     @foreach(\App\Models\Canton::orderBy('nombre')->get(['id','nombre']) as $c)
-                        <option value="{{ $c->id }}">{{ $c->nombre }}</option>
+                        <option value="{{ $c->id }}" 
+                            data-search="{{ strtolower($c->nombre) }}">{{ $c->nombre }}</option>
                     @endforeach
                 </select>
+                <small class="text-muted">Seleccionado: <span id="cantonSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
             </div>
 
-            {{-- Parroquia --}}
+            {{-- Parroquia (Buscable, se carga dinámicamente) --}}
             <div class="col-md-6">
                 <label class="form-label fw-bold">Parroquia <span class="text-danger">*</span></label>
-                {{-- IMPORTANTE: Quitamos el 'disabled' de aquí y lo manejamos por JS --}}
-                <select name="parroquia_id" id="parroquia_select" class="form-select" required autocomplete="off">
+                <input type="text" id="buscarParroquia" class="form-control mb-2" placeholder="🔍 Buscar parroquia..." disabled>
+                <select name="parroquia_id" id="parroquia_select" class="form-select" required size="3" style="height: auto;" disabled>
                     <option value="">Seleccione un cantón primero...</option>
                 </select>
+                <small class="text-muted">Seleccionado: <span id="parroquiaSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
             </div>
 
             {{-- Nombre --}}
@@ -75,70 +68,178 @@
     </div>
 </form>
 
-{{-- SCRIPT CORREGIDO --}}
 <script>
-    // Configuración base
-    var configTomSelect = {
-        create: false,
-        sortField: { field: "text", direction: "asc" },
-        placeholder: "Escriba para buscar...",
-        plugins: ['dropdown_input'],
-        // Esto ayuda a que no se cierre inesperadamente
-        closeAfterSelect: true, 
-    };
+(function() {
+    // ========== BÚSQUEDA PARA CANTÓN ==========
+    const buscarCanton = document.getElementById('buscarCanton');
+    const selectCanton = document.getElementById('canton_select');
+    const labelCanton = document.getElementById('cantonSeleccionado');
 
-    // 1. Inicializar Cantón
-    var selectCanton = new TomSelect("#canton_select", configTomSelect);
+    const buscarParroquia = document.getElementById('buscarParroquia');
+    const selectParroquia = document.getElementById('parroquia_select');
+    const labelParroquia = document.getElementById('parroquiaSeleccionado');
 
-    // 2. Inicializar Parroquia
-    var selectParroquia = new TomSelect("#parroquia_select", configTomSelect);
-    
-    // BLOQUEAMOS la parroquia inmediatamente por JS
-    selectParroquia.disable(); 
+    // Guardar opciones originales del cantón
+    const cantonOptions = [];
+    Array.from(selectCanton.options).forEach(opt => {
+        cantonOptions.push({
+            value: opt.value,
+            text: opt.text,
+            searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+        });
+    });
 
-    // 3. Lógica de cambio
-    selectCanton.on('change', function(value) {
-        
-        // Limpiar parroquias anteriores
-        selectParroquia.clear();
-        selectParroquia.clearOptions();
-        
-        if (!value) {
-            selectParroquia.disable();
-            selectParroquia.addOption({value: '', text: 'Seleccione un cantón primero...'});
-            selectParroquia.refreshOptions(); // Refrescar visualmente
+    // Variable para opciones dinámicas de parroquia
+    let parroquiaOptions = [];
+
+    // ---- Funciones genéricas de búsqueda ----
+    function filterSelect(input, select, label, options, searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
+        select.innerHTML = '';
+        let matchCount = 0;
+        let firstMatchIndex = -1;
+
+        options.forEach(optData => {
+            const matches = optData.value === '' || 
+                           optData.searchData.includes(term) || 
+                           optData.text.toLowerCase().includes(term);
+            
+            if (term === '' || matches) {
+                const option = document.createElement('option');
+                option.value = optData.value;
+                option.textContent = optData.text;
+                
+                if (term !== '' && optData.value !== '' && matches) {
+                    matchCount++;
+                    if (firstMatchIndex === -1) {
+                        firstMatchIndex = select.options.length;
+                        option.className = 'search-first-match';
+                    } else {
+                        option.className = 'search-match';
+                    }
+                }
+                select.appendChild(option);
+            }
+        });
+
+        input.classList.remove('search-input-found', 'search-input-empty');
+        if (term !== '') {
+            if (matchCount > 0) {
+                input.classList.add('search-input-found');
+                if (firstMatchIndex !== -1) {
+                    select.selectedIndex = firstMatchIndex;
+                    updateLabel(select, label);
+                }
+            } else {
+                input.classList.add('search-input-empty');
+            }
+        }
+    }
+
+    function updateLabel(select, label) {
+        if (!label) return;
+        const selectedOpt = select.options[select.selectedIndex];
+        if (selectedOpt && selectedOpt.value !== '') {
+            label.textContent = selectedOpt.text;
+            label.classList.remove('text-primary');
+            label.classList.add('text-success');
+        } else {
+            label.textContent = 'Ninguno';
+            label.classList.remove('text-success');
+            label.classList.add('text-primary');
+        }
+    }
+
+    function setupSearch(input, select, label, getOptions) {
+        input.addEventListener('input', function() {
+            filterSelect(input, select, label, getOptions(), this.value);
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                const selectedOpt = select.options[select.selectedIndex];
+                if (selectedOpt && selectedOpt.value !== '') {
+                    const val = selectedOpt.value;
+                    const txt = selectedOpt.text;
+                    this.value = '';
+                    this.classList.remove('search-input-found', 'search-input-empty');
+                    filterSelect(input, select, label, getOptions(), '');
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].value === val) { select.selectedIndex = i; break; }
+                    }
+                    updateLabel(select, label);
+                    this.placeholder = '✅ ' + txt.substring(0, 35);
+                    this.style.background = '#d4edda';
+                    setTimeout(() => { this.placeholder = this.dataset.ph || '🔍 Buscar...'; this.style.background = ''; }, 1500);
+                }
+                return false;
+            }
+            if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(select, label); } }
+            if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(select, label); } }
+        });
+
+        select.addEventListener('change', () => updateLabel(select, label));
+        select.addEventListener('click', () => updateLabel(select, label));
+    }
+
+    // Guardar placeholders originales
+    buscarCanton.dataset.ph = buscarCanton.placeholder;
+    buscarParroquia.dataset.ph = buscarParroquia.placeholder;
+
+    // Inicializar búsqueda de Cantón
+    setupSearch(buscarCanton, selectCanton, labelCanton, () => cantonOptions);
+
+    // Inicializar búsqueda de Parroquia
+    setupSearch(buscarParroquia, selectParroquia, labelParroquia, () => parroquiaOptions);
+
+    // ========== CARGA DINÁMICA: Cantón → Parroquia ==========
+    selectCanton.addEventListener('change', async function() {
+        const cantonId = this.value;
+
+        // Resetear parroquia
+        buscarParroquia.value = '';
+        buscarParroquia.classList.remove('search-input-found', 'search-input-empty');
+        parroquiaOptions = [];
+        selectParroquia.innerHTML = '<option value="">Cargando...</option>';
+        labelParroquia.textContent = 'Ninguno';
+        labelParroquia.classList.remove('text-success');
+        labelParroquia.classList.add('text-primary');
+
+        if (!cantonId) {
+            selectParroquia.innerHTML = '<option value="">Seleccione un cantón primero...</option>';
+            selectParroquia.disabled = true;
+            buscarParroquia.disabled = true;
             return;
         }
 
-        selectParroquia.disable(); // Bloquear mientras carga
-        selectParroquia.load('Cargando...'); // Mostrar texto de carga en el input
+        try {
+            const response = await fetch("{{ url('cantones') }}/" + cantonId + "/parroquias");
+            if (!response.ok) throw new Error('Error en la red');
+            const data = await response.json();
 
-        // FETCH
-        fetch('/parroquias/by-canton/' + value) 
-            .then(response => {
-                if (!response.ok) throw new Error("Error en la red");
-                return response.json();
-            })
-            .then(data => {
-                selectParroquia.enable();
-                
-                // Agregar las nuevas opciones
-                data.forEach(function(p) {
-                    selectParroquia.addOption({value: p.id, text: p.nombre});
-                });
-                
-                // Si no hay datos
-                if(data.length === 0){
-                    selectParroquia.addOption({value: '', text: 'No hay parroquias registradas'});
-                }
+            selectParroquia.disabled = false;
+            buscarParroquia.disabled = false;
 
-                // IMPORTANTE: Refrescar las opciones para que TomSelect las pinte
-                selectParroquia.refreshOptions(false);
-            })
-            .catch(error => {
-                console.error('Error cargando parroquias:', error);
-                selectParroquia.enable();
-                selectParroquia.addOption({value: '', text: 'Error al cargar'});
+            // Reconstruir opciones
+            parroquiaOptions = [{ value: '', text: '-- Seleccionar --', searchData: '' }];
+            data.forEach(p => {
+                parroquiaOptions.push({ value: String(p.id), text: p.nombre, searchData: p.nombre.toLowerCase() });
             });
+
+            if (data.length === 0) {
+                parroquiaOptions = [{ value: '', text: 'No hay parroquias', searchData: '' }];
+                buscarParroquia.disabled = true;
+            }
+
+            // Renderizar
+            filterSelect(buscarParroquia, selectParroquia, labelParroquia, parroquiaOptions, '');
+
+        } catch (err) {
+            console.error(err);
+            selectParroquia.innerHTML = '<option value="">Error al cargar</option>';
+        }
     });
+})();
 </script>

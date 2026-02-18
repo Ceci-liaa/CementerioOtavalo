@@ -35,14 +35,25 @@
         <div class="container py-4">
             
             {{-- 2. ENCABEZADO --}}
-            <div class="mb-4">
-                <div class="d-flex align-items-center gap-3">
-                    <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Administración de Usuarios</h3>
-                    <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
-                        Total: {{ $users->total() }}
-                    </span>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                <div class="mb-3 mb-md-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Administración de Usuarios</h3>
+                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                            Total: {{ $users->total() }}
+                        </span>
+                    </div>
+                    <p class="mb-0 text-secondary text-sm">Aquí puedes gestionar los reportes y permisos de usuarios.</p>
                 </div>
-                <p class="mb-0 text-secondary text-sm">Aquí puedes gestionar los reportes y permisos de usuarios.</p>
+
+                {{-- Botón Nuevo Usuario --}}
+                @can('crear usuario')
+                <button type="button" class="btn btn-success px-4" style="height: fit-content;"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#createUserModal">
+                    <i class="fa-solid fa-plus me-2"></i> Nuevo Usuario
+                </button>
+                @endcan
             </div>
 
             {{-- 3. ALERTAS --}}
@@ -66,6 +77,7 @@
                 {{-- 4. BOTONES DE REPORTE Y BUSCADOR COMPACTO --}}
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
                     
+                    {{-- BOTÓN GENERAR REPORTE --}}
                     <div class="dropdown w-100 w-md-auto">
                         <button class="btn text-white dropdown-toggle mb-0 px-4 w-100 w-md-auto" 
                                 style="background-color: #5ea6f7; border-radius: 6px; font-weight: 600;" 
@@ -171,7 +183,20 @@
             </form>
         </div>
 
-        {{-- MODAL DINÁMICO --}}
+        {{-- MODAL CREAR USUARIO --}}
+        <div class="modal fade" id="createUserModal" tabindex="-1" role="dialog" aria-labelledby="createUserModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div class="modal-content" id="create-modal-content-wrapper">
+                    <div class="modal-body text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- MODAL EDITAR USUARIO --}}
         <div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
                 <div class="modal-content" id="modal-content-wrapper">
@@ -210,7 +235,53 @@
                     });
                 }
 
-                // 3. Lógica del Modal FETCH
+                // 3. Lógica del Modal CREAR USUARIO
+                var createUserModal = document.getElementById('createUserModal');
+                if (createUserModal) {
+                    createUserModal.addEventListener('show.bs.modal', function (event) {
+                        var modalContent = document.getElementById('create-modal-content-wrapper');
+                        var url = "{{ route('users.create') }}";
+
+                        modalContent.innerHTML = `
+                            <div class="modal-body text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-2 text-secondary">Cargando formulario...</p>
+                            </div>
+                        `;
+
+                        fetch(url)
+                            .then(response => {
+                                if (!response.ok) throw new Error('Error al cargar');
+                                return response.text();
+                            })
+                            .then(html => {
+                                modalContent.innerHTML = html;
+                                
+                                // EJECUTAR SCRIPTS INLINE DESPUÉS DE CARGAR HTML
+                                const scripts = modalContent.querySelectorAll('script');
+                                scripts.forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    if (oldScript.src) {
+                                        newScript.src = oldScript.src;
+                                    } else {
+                                        newScript.textContent = oldScript.textContent;
+                                    }
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
+                            })
+                            .catch(error => {
+                                modalContent.innerHTML = `
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title">Error</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-center">No se pudo cargar el formulario.</div>
+                                `;
+                            });
+                    });
+                }
+
+                // 4. Lógica del Modal EDITAR USUARIO
                 var editUserModal = document.getElementById('editUserModal');
                 editUserModal.addEventListener('show.bs.modal', function (event) {
                     var button = event.relatedTarget;
