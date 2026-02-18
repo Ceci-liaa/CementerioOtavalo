@@ -102,11 +102,11 @@ class AsignacionController extends Controller
     {
         try {
             // 1. NICHOS
+            // Contamos SOLO fallecidos activos (no exhumados) para mostrar ocupación real
             $nichosDisponibles = Nicho::with('bloque')
-                ->withCount('fallecidos')
-                // CORRECCIÓN AQUÍ:
-                // Usamos whereRaw para forzar la comparación booleana correcta en PostgreSQL
-                // en lugar de ->where('disponible', true) que envía un 1.
+                ->withCount(['fallecidos' => function($q) {
+                    $q->whereNull('fallecido_nicho.fecha_exhumacion');
+                }])
                 ->whereRaw('disponible = true')
                 ->orderBy('id', 'desc')
                 ->get();
@@ -193,12 +193,17 @@ class AsignacionController extends Controller
                 $siguienteId = $ultimoId + 1;
                 $codigoGenerado = 'ASG-' . str_pad($siguienteId, 2, '0', STR_PAD_LEFT);
 
-                // 4. Asignar Fallecido con el SOCIO_ID vinculado al registro
+                // 4. Calcular posición usando MAX para evitar conflictos con exhumados
+                $maxPosicion = DB::table('fallecido_nicho')
+                    ->where('nicho_id', $nicho->id)
+                    ->max('posicion') ?? 0;
+
+                // 5. Asignar Fallecido con el SOCIO_ID vinculado al registro
                 $nicho->fallecidos()->attach($request->fallecido_id, [
-                    'socio_id' => $request->socio_id, // <--- CAMBIO AQUÍ
+                    'socio_id' => $request->socio_id,
                     'codigo' => $codigoGenerado,
-                    'posicion' => $ocupantesActivos + 1,
-                    'fecha_inhumacion' => $request->fecha_inhumacion, // Usar fecha del formulario
+                    'posicion' => $maxPosicion + 1,
+                    'fecha_inhumacion' => $request->fecha_inhumacion,
                     'observacion' => 'Ingreso registrado'
                 ]);
 
