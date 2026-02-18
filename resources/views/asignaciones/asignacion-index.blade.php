@@ -153,7 +153,7 @@
                                         
                                         {{-- 2. CÓDIGO ASIGNACIÓN --}}
                                         <td>
-                                            @forelse($ocupantes as $f)
+                                            @forelse($nicho->fallecidos as $f)
                                                 <div class="fallecido-row">
                                                     <span class="badge bg-light text-dark border" style="font-size: 0.75rem;">
                                                         {{ $f->pivot->codigo ?? 'S/C' }}
@@ -166,19 +166,22 @@
 
                                         {{-- 3. FALLECIDO --}}
                                         <td class="text-start ps-3">
-                                            @forelse($ocupantes as $f)
-                                                <div class="fallecido-row text-sm">
+                                            @forelse($nicho->fallecidos as $f)
+                                                <div class="fallecido-row text-sm" style="{{ $f->pivot->fecha_exhumacion ? 'color: #555;' : '' }}">
                                                     {{ $f->apellidos }} {{ $f->nombres }}
+                                                    @if($f->pivot->fecha_exhumacion)
+                                                        <span class="badge" style="font-size: 0.6rem; background-color: #555; color: #fff;">Exhumado</span>
+                                                    @endif
                                                 </div>
                                             @empty
                                                 <span class="text-muted small fst-italic">-- Vacío --</span>
                                             @endforelse
                                         </td>
 
-                                        {{-- 3.1. FECHA INHUMACIÓN (NUEVA) --}}
+                                        {{-- 3.1. FECHA INHUMACIÓN --}}
                                         <td class="text-start ps-3">
-                                            @forelse($ocupantes as $f)
-                                                <div class="fallecido-row text-sm text-secondary">
+                                            @forelse($nicho->fallecidos as $f)
+                                                <div class="fallecido-row text-sm {{ $f->pivot->fecha_exhumacion ? 'text-muted' : 'text-secondary' }}">
                                                     {{ optional($f->pivot->fecha_inhumacion)->format('d/m/Y') ?? '--' }}
                                                 </div>
                                             @empty
@@ -262,7 +265,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="8" class="text-center py-4 text-muted">No se encontraron asignaciones registradas.</td></tr>
+                                    <tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron asignaciones registradas.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -317,6 +320,12 @@
                                 modalEl.querySelector('.modal-content').innerHTML = h;
                                 // INICIALIZAR BÚSQUEDA DESPUÉS DE CARGAR EL CONTENIDO
                                 setTimeout(() => initSearchableSelects(), 100);
+                                // Ejecutar scripts cargados dinámicamente
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = oldScript.textContent;
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
                             });
                     });
                 });
