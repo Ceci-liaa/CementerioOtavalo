@@ -29,7 +29,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Nichos</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="nichosTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $nichos->total() }}
                         </span>
                     </div>
@@ -106,8 +106,10 @@
 
                         {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
-                                    class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Responsable..."
                                 id="searchInput" value="{{ request('q') }}">
                         </div>
@@ -136,7 +138,7 @@
                                         <th class="opacity-10" style="width:170px;">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="nichosTbody">
                                     @forelse ($nichos as $n)
                                         <tr>
                                             <td>
@@ -249,11 +251,11 @@
                         </div>
 
                         {{-- Paginación --}}
-                        @if($nichos->hasPages())
-                            <div class="mt-3 px-3 d-flex justify-content-end">
+                        <div class="mt-3 px-3 d-flex justify-content-end" id="nichosPagination">
+                            @if($nichos->hasPages())
                                 {{ $nichos->appends(request()->query())->links() }}
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     </div>
                 </div>
             </form> {{-- FIN DEL FORMULARIO --}}
@@ -275,7 +277,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                // 1. Alertas
+                // 1. Alertas temporales
                 setTimeout(() => {
                     document.querySelectorAll('.alert-temporal').forEach(alert => {
                         alert.style.transition = "opacity 0.5s"; alert.style.opacity = 0;
@@ -283,81 +285,140 @@
                     });
                 }, 3000);
 
-                // 2. Filtros (GET Redirect)
-                const searchInput = document.getElementById('searchInput');
+                // 2. Referencias
+                const searchInput  = document.getElementById('searchInput');
                 const bloqueFilter = document.getElementById('bloqueFilter');
                 const estadoFilter = document.getElementById('estadoFilter');
 
-                function applyFilters() {
-                    const qValue = encodeURIComponent(searchInput.value);
-                    const bloqueValue = encodeURIComponent(bloqueFilter.value);
-                    const estadoValue = encodeURIComponent(estadoFilter.value);
-                    window.location.href = "{{ route('nichos.index') }}?q=" + qValue + "&bloque_id=" + bloqueValue + "&estado=" + estadoValue;
+                // ── Búsqueda en Tiempo Real (AJAX) ──
+                let searchTimeout = null;
+                let currentAbort  = null;
+                let requestId     = 0;
+
+                function buildFilterParams() {
+                    const params = new URLSearchParams();
+                    if (searchInput && searchInput.value.trim())  params.set('q', searchInput.value.trim());
+                    if (bloqueFilter && bloqueFilter.value)        params.set('bloque_id', bloqueFilter.value);
+                    if (estadoFilter && estadoFilter.value)        params.set('estado', estadoFilter.value);
+                    return params;
                 }
 
-                if (searchInput) {
-                    searchInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault(); 
-                            applyFilters();
-                        }
-                    });
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
                 }
 
-                if (bloqueFilter) {
-                    bloqueFilter.addEventListener('change', applyFilters);
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
                 }
 
-                if (estadoFilter) {
-                    estadoFilter.addEventListener('change', applyFilters);
-                }
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
 
-                // 3. Modal AJAX
-                const modalEl = document.getElementById('dynamicModal');
-                const modal = new bootstrap.Modal(modalEl);
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        modalEl.querySelector('.modal-content').innerHTML = `
-                            <div class="p-5 text-center">
-                                <div class="spinner-border text-primary"></div>
-                                <p class="mt-2 text-secondary">Cargando...</p>
-                            </div>`;
-                        modal.show();
-                        fetch(this.getAttribute('data-url'))
-                            .then(r => r.text())
-                            .then(h => { 
-                                modalEl.querySelector('.modal-content').innerHTML = h;
-                                // Ejecutar scripts cargados dinámicamente
-                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
-                                    const newScript = document.createElement('script');
-                                    newScript.textContent = oldScript.textContent;
-                                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                                });
-                            });
-                    });
-                });
+                    const myId = ++requestId;
+                    showSpinner();
 
-                // 4. Delete SweetAlert
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        Swal.fire({
-                            title: '¿Eliminar Nicho?',
-                            html: `¿Deseas eliminar el nicho <b>"${this.getAttribute('data-item')}"</b>?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => {
-                            if (r.isConfirmed) {
-                                const f = document.getElementById('deleteForm');
-                                f.action = this.getAttribute('data-url');
-                                f.submit();
+                    const params = buildFilterParams();
+                    const url = "{{ route('nichos.index') }}?" + params.toString();
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+
+                            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            const newTbody = doc.getElementById('nichosTbody');
+                            const curTbody = document.getElementById('nichosTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            const newPag = doc.getElementById('nichosPagination');
+                            const curPag = document.getElementById('nichosPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            const newBadge = doc.getElementById('nichosTotalBadge');
+                            const curBadge = document.getElementById('nichosTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
                             }
                         });
+                }
+
+                function triggerSearch() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(liveSearch, 350);
+                }
+
+                // Eventos del buscador
+                if (searchInput) {
+                    searchInput.addEventListener('input', triggerSearch);
+                    searchInput.addEventListener('keyup', triggerSearch);
+                    searchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+                }
+
+                // Los filtros dropdown también disparan búsqueda en vivo
+                if (bloqueFilter) bloqueFilter.addEventListener('change', liveSearch);
+                if (estadoFilter) estadoFilter.addEventListener('change', liveSearch);
+
+                // 3. Modal AJAX (Delegación de eventos para filas dinámicas)
+                const modalEl = document.getElementById('dynamicModal');
+                const modal = new bootstrap.Modal(modalEl);
+
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.open-modal');
+                    if (!btn) return;
+                    e.preventDefault();
+                    modalEl.querySelector('.modal-content').innerHTML = `
+                        <div class="p-5 text-center">
+                            <div class="spinner-border text-primary"></div>
+                            <p class="mt-2 text-secondary">Cargando...</p>
+                        </div>`;
+                    modal.show();
+                    fetch(btn.getAttribute('data-url'))
+                        .then(r => r.text())
+                        .then(h => {
+                            modalEl.querySelector('.modal-content').innerHTML = h;
+                            modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                const newScript = document.createElement('script');
+                                newScript.textContent = oldScript.textContent;
+                                oldScript.parentNode.replaceChild(newScript, oldScript);
+                            });
+                        });
+                });
+
+                // 4. Delete SweetAlert (Delegación de eventos para filas dinámicas)
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.js-delete-btn');
+                    if (!btn) return;
+                    e.preventDefault();
+                    Swal.fire({
+                        title: '¿Eliminar Nicho?',
+                        html: `¿Deseas eliminar el nicho <b>"${btn.getAttribute('data-item')}"</b>?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => {
+                        if (r.isConfirmed) {
+                            const f = document.getElementById('deleteForm');
+                            f.action = btn.getAttribute('data-url');
+                            f.submit();
+                        }
                     });
                 });
 
@@ -365,10 +426,7 @@
                 const selectAll = document.getElementById('selectAll');
                 if(selectAll) {
                     selectAll.addEventListener('change', function() {
-                        const checked = this.checked;
-                        document.querySelectorAll('.check-item').forEach(checkbox => {
-                            checkbox.checked = checked;
-                        });
+                        document.querySelectorAll('.check-item').forEach(cb => cb.checked = this.checked);
                     });
                 }
             });
