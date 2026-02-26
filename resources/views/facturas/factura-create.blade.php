@@ -30,21 +30,46 @@
                     <h6 class="mb-0 fw-bold text-primary small text-uppercase">1. Datos del Cliente</h6>
                 </div>
                 <div class="card-body py-2 px-3">
-                    {{-- Buscador Socio --}}
-                    <div class="mb-2">
-                        <select name="socio_id" id="select_socio" class="form-select form-select-sm border-secondary-subtle">
-                            <option value="">-- Cliente Particular (Llenado manual) --</option>
+                    {{-- Buscador Socio con autocompletado --}}
+                    <div class="mb-2 position-relative" id="socio_search_wrapper">
+                        <label class="form-label small fw-bold mb-1 text-muted">
+                            <i class="fas fa-search me-1"></i>Buscar Socio
+                        </label>
+                        <input type="text" id="socio_search_input" class="form-control form-control-sm border-secondary-subtle"
+                               placeholder="Escriba nombre, apellido o cédula para buscar..." autocomplete="off">
+                        <input type="hidden" name="socio_id" id="select_socio" value="">
+                        
+                        {{-- Dropdown de resultados --}}
+                        <div id="socio_dropdown" class="position-absolute w-100 bg-white border rounded-bottom shadow-sm" 
+                             style="display:none; max-height:200px; overflow-y:auto; z-index:1055;">
+                            <div class="socio-option px-3 py-2 border-bottom text-muted small" data-id="" 
+                                 data-nombre="" data-apellido="" data-cedula="" data-email="" data-telefono=""
+                                 style="cursor:pointer;">
+                                <i class="fas fa-user-edit me-1"></i> -- Cliente Particular (Llenado manual) --
+                            </div>
                             @foreach ($socios as $socio)
-                                <option value="{{ $socio->id }}" 
-                                        data-nombre="{{ $socio->nombres }}"
-                                        data-apellido="{{ $socio->apellidos }}"
-                                        data-cedula="{{ $socio->cedula }}"
-                                        data-email="{{ $socio->email }}"
-                                        data-telefono="{{ $socio->telefono }}">
-                                    👤 SOCIO: {{ $socio->apellidos }} {{ $socio->nombres }} ({{ $socio->cedula }})
-                                </option>
+                                <div class="socio-option px-3 py-2 border-bottom" data-id="{{ $socio->id }}"
+                                     data-nombre="{{ $socio->nombres }}"
+                                     data-apellido="{{ $socio->apellidos }}"
+                                     data-cedula="{{ $socio->cedula }}"
+                                     data-email="{{ $socio->email }}"
+                                     data-telefono="{{ $socio->telefono }}"
+                                     style="cursor:pointer; font-size:0.85rem;">
+                                    👤 <strong>{{ $socio->apellidos }} {{ $socio->nombres }}</strong> 
+                                    <span class="text-muted">({{ $socio->cedula }})</span>
+                                </div>
                             @endforeach
-                        </select>
+                        </div>
+
+                        {{-- Badge del socio seleccionado --}}
+                        <div id="socio_selected_badge" class="mt-2" style="display:none;">
+                            <div class="d-inline-flex align-items-center rounded-pill px-2 py-1 shadow-sm"
+                                 style="background: linear-gradient(135deg, #1a7f37, #2da44e); color: #fff; font-size: 0.78rem; font-weight: 600;">
+                                <i class="fas fa-user-check me-2" style="font-size:1rem;"></i>
+                                <span id="socio_badge_text"></span>
+                                <button type="button" class="btn-close btn-close-white ms-3" style="font-size:0.6rem;" id="socio_clear_btn" title="Quitar socio"></button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row g-2">
@@ -271,21 +296,112 @@
     // 5. INICIAR (Evento Botón y Cliente)
     document.getElementById('btn_add_linea').addEventListener('click', agregarLinea);
 
-    // Lógica Cliente (Igual que antes)
-    document.getElementById('select_socio').addEventListener('change', function() {
-        const op = this.options[this.selectedIndex];
-        if (this.value) {
-            document.getElementById('in_nombre').value = op.getAttribute('data-nombre');
-            document.getElementById('in_apellido').value = op.getAttribute('data-apellido');
-            document.getElementById('in_cedula').value = op.getAttribute('data-cedula');
-            document.getElementById('in_telefono').value = op.getAttribute('data-telefono');
-            document.getElementById('in_email').value = op.getAttribute('data-email');
-        } else {
-            document.getElementById('in_nombre').value = '';
-            document.getElementById('in_apellido').value = '';
-            document.getElementById('in_cedula').value = '';
-            document.getElementById('in_telefono').value = '';
-            document.getElementById('in_email').value = '';
+    // ============================================
+    // BUSCADOR DE SOCIOS (Autocompletado)
+    // ============================================
+    const socioInput = document.getElementById('socio_search_input');
+    const socioHidden = document.getElementById('select_socio');
+    const socioDropdown = document.getElementById('socio_dropdown');
+    const socioBadge = document.getElementById('socio_selected_badge');
+    const socioBadgeText = document.getElementById('socio_badge_text');
+    const socioClearBtn = document.getElementById('socio_clear_btn');
+    const allOptions = socioDropdown.querySelectorAll('.socio-option');
+
+    // Mostrar dropdown y filtrar al escribir
+    socioInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        socioDropdown.style.display = 'block';
+        let visibles = 0;
+
+        allOptions.forEach(opt => {
+            const nombre = (opt.dataset.nombre || '').toLowerCase();
+            const apellido = (opt.dataset.apellido || '').toLowerCase();
+            const cedula = (opt.dataset.cedula || '').toLowerCase();
+            const texto = nombre + ' ' + apellido + ' ' + cedula;
+
+            if (!opt.dataset.id && query === '') {
+                opt.style.display = 'block'; // Siempre mostrar "Cliente Particular" si no hay búsqueda
+                visibles++;
+            } else if (texto.includes(query) || query === '') {
+                opt.style.display = 'block';
+                visibles++;
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+
+        if (visibles === 0) {
+            socioDropdown.style.display = 'none';
+        }
+    });
+
+    // Mostrar dropdown al enfocar
+    socioInput.addEventListener('focus', function() {
+        socioDropdown.style.display = 'block';
+        // Mostrar todos si el campo está vacío
+        if (this.value.trim() === '') {
+            allOptions.forEach(opt => opt.style.display = 'block');
+        }
+    });
+
+    // Hover en opciones
+    allOptions.forEach(opt => {
+        opt.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#e9ecef';
+        });
+        opt.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+
+        // Seleccionar socio
+        opt.addEventListener('click', function() {
+            const id = this.dataset.id;
+            socioHidden.value = id;
+            socioDropdown.style.display = 'none';
+
+            if (id) {
+                // Llenar campos del cliente
+                document.getElementById('in_nombre').value = this.dataset.nombre;
+                document.getElementById('in_apellido').value = this.dataset.apellido;
+                document.getElementById('in_cedula').value = this.dataset.cedula;
+                document.getElementById('in_telefono').value = this.dataset.telefono;
+                document.getElementById('in_email').value = this.dataset.email;
+
+                // Mostrar badge
+                socioBadgeText.textContent = this.dataset.apellido + ' ' + this.dataset.nombre + ' (' + this.dataset.cedula + ')';
+                socioBadge.style.display = 'block';
+                socioInput.value = '';
+                socioInput.placeholder = 'Socio seleccionado ✓ — escriba para buscar otro';
+            } else {
+                // Cliente particular: limpiar campos
+                document.getElementById('in_nombre').value = '';
+                document.getElementById('in_apellido').value = '';
+                document.getElementById('in_cedula').value = '';
+                document.getElementById('in_telefono').value = '';
+                document.getElementById('in_email').value = '';
+                socioBadge.style.display = 'none';
+                socioInput.value = '';
+                socioInput.placeholder = 'Escriba nombre, apellido o cédula para buscar...';
+            }
+        });
+    });
+
+    // Botón limpiar socio seleccionado
+    socioClearBtn.addEventListener('click', function() {
+        socioHidden.value = '';
+        socioBadge.style.display = 'none';
+        socioInput.placeholder = 'Escriba nombre, apellido o cédula para buscar...';
+        document.getElementById('in_nombre').value = '';
+        document.getElementById('in_apellido').value = '';
+        document.getElementById('in_cedula').value = '';
+        document.getElementById('in_telefono').value = '';
+        document.getElementById('in_email').value = '';
+    });
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('socio_search_wrapper').contains(e.target)) {
+            socioDropdown.style.display = 'none';
         }
     });
 

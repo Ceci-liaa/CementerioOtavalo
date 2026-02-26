@@ -352,12 +352,15 @@ Route::middleware(['auth'])->group(function () {
 
 
     // --- FACTURAS ---
+    // ⚠️ Rutas estáticas PRIMERO, antes de las rutas con {factura}
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('can:ver factura');
-    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('can:ver factura');
 
     // Crear borrador
     Route::get('/facturas/create', [FacturaController::class, 'create'])->name('facturas.create')->middleware('can:crear factura');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('can:crear factura');
+
+    // Ver detalle (después de /create para no capturar "create" como {factura})
+    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('can:ver factura');
 
     // Editar
     Route::get('/facturas/{factura}/edit', [FacturaController::class, 'edit'])->name('facturas.edit')->middleware('can:editar factura');
