@@ -429,6 +429,30 @@
     <!-- Control Center for Corporate UI Dashboard Nuevo-->
     <script src="{{ asset('assets/js/corporate-ui-dashboard.min.js') }}?v=1.0.0"></script>
 
+    <!-- Interceptor global: redirigir al login si la sesión expiró -->
+    <script>
+        (function() {
+            const originalFetch = window.fetch;
+            window.fetch = function() {
+                return originalFetch.apply(this, arguments).then(function(response) {
+                    // Si la respuesta fue redirigida al login (sesión expirada)
+                    if (response.redirected && response.url.includes('/sign-in')) {
+                        // Cerrar cualquier modal abierto
+                        document.querySelectorAll('.modal.show').forEach(function(m) {
+                            var instance = bootstrap.Modal.getInstance(m);
+                            if (instance) instance.hide();
+                        });
+                        // Redirigir toda la página al login
+                        window.location.href = response.url;
+                        // Retornar una respuesta vacía para evitar que el código continúe
+                        return new Response('', { status: 401, statusText: 'Session Expired' });
+                    }
+                    return response;
+                });
+            };
+        })();
+    </script>
+
 </body>
 
 </html>

@@ -8,7 +8,8 @@ use App\Models\Nicho;
 use App\Models\Socio;
 use App\Models\Fallecido;
 use Barryvdh\DomPDF\Facade\Pdf;
-// Asegúrate de importar el PDF
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AsignacionesExport;
 
 class AsignacionController extends Controller
 {
@@ -104,7 +105,14 @@ class AsignacionController extends Controller
                 ->withCount(['fallecidos' => function($q) {
                     $q->whereNull('fallecido_nicho.fecha_exhumacion');
                 }])
-                ->whereRaw('disponible = true')
+                ->where(function($q) {
+                    // Mostrar nichos donde los ocupantes activos sean menor que la capacidad
+                    $q->whereRaw('(
+                        SELECT COUNT(*) FROM fallecido_nicho 
+                        WHERE fallecido_nicho.nicho_id = nichos.id 
+                        AND fallecido_nicho.fecha_exhumacion IS NULL
+                    ) < nichos.capacidad');
+                })
                 ->orderBy('id', 'desc')
                 ->get();
 
@@ -173,8 +181,8 @@ class AsignacionController extends Controller
                     ->wherePivot('fecha_exhumacion', null)
                     ->count();
 
-                if ($ocupantesActivos >= 3) {
-                    throw new \Exception("El nicho ya está al límite (3 fallecidos).");
+                if ($ocupantesActivos >= $nicho->capacidad) {
+                    throw new \Exception("El nicho ya está al límite ({$nicho->capacidad} fallecidos).");
                 }
 
                 // 2. Asignar Socio al Nicho (Relación general del espacio)
@@ -406,7 +414,47 @@ class AsignacionController extends Controller
             'bloque'
         ])->get();
 
-        // 6. Generar el PDF
+        // 6. Verificar tipo de reporte (excel o pdf)
+        $reportType = $request->input('report_type', 'pdf');
+
+        if ($reportType === 'excel') {
+            // EXCEL: Preparar datos planos
+            $headings = ['Nicho', 'Bloque', 'Cód. Acta', 'Fallecido', 'Fecha Inhumación', 'Socio Responsable', 'Estado', 'Ocupación'];
+
+            $data = collect();
+            foreach ($nichos as $nicho) {
+                $ocupantes = $nicho->fallecidos->where('pivot.fecha_exhumacion', null);
+                if ($ocupantes->isEmpty()) {
+                    $data->push([
+                        $nicho->codigo,
+                        $nicho->bloque->descripcion ?? 'N/A',
+                        '-',
+                        '-- Vacío --',
+                        '-',
+                        $nicho->socios->isNotEmpty() ? $nicho->socios->first()->apellidos . ' ' . $nicho->socios->first()->nombres : 'Sin Asignar',
+                        $nicho->estado,
+                        $ocupantes->count() . '/3',
+                    ]);
+                } else {
+                    foreach ($ocupantes as $f) {
+                        $data->push([
+                            $nicho->codigo,
+                            $nicho->bloque->descripcion ?? 'N/A',
+                            $f->pivot->codigo ?? 'S/N',
+                            $f->apellidos . ' ' . $f->nombres,
+                            optional($f->pivot->fecha_inhumacion)->format('d/m/Y') ?? '-',
+                            $nicho->socios->isNotEmpty() ? $nicho->socios->first()->apellidos . ' ' . $nicho->socios->first()->nombres : 'Sin Asignar',
+                            $nicho->estado,
+                            $ocupantes->count() . '/3',
+                        ]);
+                    }
+                }
+            }
+
+            return Excel::download(new AsignacionesExport($data, $headings), 'asignaciones_reporte_' . date('YmdHis') . '.xlsx');
+        }
+
+        // PDF: Generar como siempre
         $infoFiltros = [];
         if ($request->filled('mes')) {
             $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);

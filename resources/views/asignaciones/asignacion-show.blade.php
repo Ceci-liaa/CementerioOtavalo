@@ -29,6 +29,7 @@
                             <th>Socio Responsable</th> {{-- NUEVO CAMPO AGREGADO --}}
                             <th>Inhumación</th>
                             <th>Exhumación</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -48,6 +49,23 @@
                                     @if($f->pivot->fecha_exhumacion)
                                         <span class="text-danger fw-bold">{{ $f->pivot->fecha_exhumacion->format('d/m/Y') }}</span>
                                     @else - @endif
+                                </td>
+                                <td>
+                                    @if(!$f->pivot->fecha_exhumacion)
+                                        @can('eliminar asignacion')
+                                        <form action="{{ route('asignacion.destroy', [$nicho->id, $f->id]) }}" 
+                                              method="POST" class="d-inline form-delete-fallecido">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" 
+                                                    title="Quitar de este nicho">
+                                                <i class="fa-solid fa-trash" style="font-size: 0.65rem;"></i>
+                                            </button>
+                                        </form>
+                                        @endcan
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -73,3 +91,25 @@
 
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
 </div>
+
+<script>
+    document.querySelectorAll('.form-delete-fallecido').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Quitar este fallecido del nicho?',
+                text: 'Se eliminará la asignación. Podrás reasignarlo a otro nicho después.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, quitar',
+                cancelButtonText: 'Cancelar'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>

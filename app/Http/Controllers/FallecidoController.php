@@ -23,8 +23,7 @@ class FallecidoController extends Controller
         $comunidadId = $request->get('comunidad_id');
 
         $query = Fallecido::with(['comunidad.parroquia.canton', 'genero', 'estadoCivil'])
-            ->orderBy('apellidos')
-            ->orderBy('nombres');
+            ->orderBy('id');
 
         // Filtros
         if ($comunidadId) {
