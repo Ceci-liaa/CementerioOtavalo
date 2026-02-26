@@ -11,14 +11,24 @@ class AuditController extends Controller
     {
         $query = Audit::with('user')->latest();
 
-        // 🔍 Filtro por fecha específica
-        if ($request->filled('fecha')) {
-            $query->whereDate('created_at', $request->input('fecha'));
+        // 🔍 Filtro por rango de fechas (tiene prioridad sobre fecha específica)
+        if ($request->filled('fecha_inicio') || $request->filled('fecha_fin')) {
+            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+                $query->whereBetween('created_at', [
+                    $request->fecha_inicio . ' 00:00:00',
+                    $request->fecha_fin . ' 23:59:59',
+                ]);
+            }
+            elseif ($request->filled('fecha_inicio')) {
+                $query->where('created_at', '>=', $request->fecha_inicio . ' 00:00:00');
+            }
+            else {
+                $query->where('created_at', '<=', $request->fecha_fin . ' 23:59:59');
+            }
         }
-
-        // 🔍 Filtro por rango de fechas
-        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-            $query->whereBetween('created_at', [$request->fecha_inicio, $request->fecha_fin]);
+        // 🔍 Filtro por fecha específica (solo si no se usó rango)
+        elseif ($request->filled('fecha')) {
+            $query->whereDate('created_at', $request->input('fecha'));
         }
 
         $audits = $query->paginate(10)->appends($request->all()); // mantiene filtros en la paginación
@@ -26,4 +36,3 @@ class AuditController extends Controller
         return view('audits.index', compact('audits'));
     }
 }
-
