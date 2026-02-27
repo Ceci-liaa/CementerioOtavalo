@@ -23,6 +23,12 @@
         }
         .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
 
+        /* BOTONES PERSONALIZADOS */
+        .btn-purple { background-color: #6f42c1 !important; color: white !important; border: none; }
+        .btn-purple:hover { background-color: #59359a !important; }
+        .btn-grey { background-color: #6c757d !important; color: white !important; border: none; }
+        .btn-grey:hover { background-color: #5a6268 !important; }
+
         /* BADGES OSCUROS */
         .badge-created { background-color: #1b5e20 !important; color: white !important; } /* Verde oscuro */
         .badge-updated { background-color: #01579b !important; color: white !important; } /* Azul oscuro */
@@ -43,26 +49,49 @@
 
             <div class="card shadow-sm border mb-4">
                 <div class="card-body p-3">
-                    <!-- Filtros por fecha -->
-                    <form method="GET" action="{{ route('auditoria.index') }}" class="row g-2 align-items-end">
+                    <!-- Filtros y Búsqueda -->
+                    <form method="GET" action="{{ route('auditoria.index') }}" class="row g-2 align-items-end" id="auditFilterForm">
+                        <!-- Búsqueda General -->
                         <div class="col-md-3">
-                            <label for="fecha" class="form-label fw-bold small">🔍 Fecha específica:</label>
-                            <input type="date" name="fecha" id="fecha" value="{{ request('fecha') }}" class="form-control form-control-sm">
+                            <label class="form-label fw-bold small text-secondary mb-1">🔍 Buscar:</label>
+                            <div class="input-group input-group-sm bg-white border rounded shadow-none">
+                                <span class="input-group-text bg-white border-0 pe-1 text-secondary">
+                                    <i class="fas fa-search" id="searchIcon" style="font-size: 0.8rem;"></i>
+                                    <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none; font-size: 0.8rem;"></i>
+                                </span>
+                                <input type="text" name="search" id="searchInput" class="form-control border-0 ps-1 shadow-none" 
+                                       placeholder="Usuario, módulo..." value="{{ request('search') }}" style="font-size: 0.85rem;">
+                            </div>
                         </div>
 
-                        <div class="col-md-3">
-                            <label for="fecha_inicio" class="form-label fw-bold small">📆 Desde:</label>
-                            <input type="date" name="fecha_inicio" id="fecha_inicio" value="{{ request('fecha_inicio') }}" class="form-control form-control-sm">
+                        <!-- Fecha Específica -->
+                        <div class="col-md-2">
+                            <label for="fechaId" class="form-label fw-bold small text-secondary mb-1">📅 Fecha:</label>
+                            <input type="date" name="fecha" id="fechaId" value="{{ request('fecha') }}" class="form-control form-control-sm filter-input shadow-none">
                         </div>
 
-                        <div class="col-md-3">
-                            <label for="fecha_fin" class="form-label fw-bold small">📆 Hasta:</label>
-                            <input type="date" name="fecha_fin" id="fecha_fin" value="{{ request('fecha_fin') }}" class="form-control form-control-sm">
+                        <!-- Rango Desde -->
+                        <div class="col-md-2">
+                            <label for="fechaInicioId" class="form-label fw-bold small text-secondary mb-1">📆 Desde:</label>
+                            <input type="date" name="fecha_inicio" id="fechaInicioId" value="{{ request('fecha_inicio') }}" class="form-control form-control-sm filter-input shadow-none">
                         </div>
 
-                        <div class="col-md-3 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm w-100 mb-0">Filtrar</button>
-                            <a href="{{ route('auditoria.index') }}" class="btn btn-secondary btn-sm w-100 mb-0">Limpiar</a>
+                        <!-- Rango Hasta -->
+                        <div class="col-md-2">
+                            <label for="fechaFinId" class="form-label fw-bold small text-secondary mb-1">📆 Hasta:</label>
+                            <input type="date" name="fecha_fin" id="fechaFinId" value="{{ request('fecha_fin') }}" class="form-control form-control-sm filter-input shadow-none">
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="col-md-3">
+                            <div class="d-flex gap-2 h-100">
+                                <button type="submit" class="btn btn-purple btn-sm mb-0 flex-grow-1 shadow-sm d-flex align-items-center justify-content-center" style="font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; height: 31px;">
+                                    <i class="fas fa-filter me-1"></i> Filtrar
+                                </button>
+                                <a href="{{ route('auditoria.index') }}" class="btn btn-grey btn-sm mb-0 flex-grow-1 shadow-sm d-flex align-items-center justify-content-center" title="Limpiar Filtros" style="font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; height: 31px;">
+                                    <i class="fas fa-eraser me-1"></i> Limpiar
+                                </a>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -84,7 +113,7 @@
                                     <th class="opacity-10">Fecha / Hora</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="auditTbody">
                                 @forelse ($audits as $audit)
                                     <tr>
                                         <td class="text-xs fw-bold text-secondary">{{ $audit->id }}</td>
@@ -140,7 +169,7 @@
                         </table>
                     </div>
                     
-                    <div class="mt-3 px-3 d-flex justify-content-center">
+                    <div class="mt-3 px-3 d-flex justify-content-center" id="auditPagination">
                         {{ $audits->links() }}
                     </div>
                 </div>
@@ -149,4 +178,92 @@
 
         <x-app.footer />
     </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById('searchInput');
+            const fechaInput = document.getElementById('fechaId');
+            const fechaInicioInput = document.getElementById('fechaInicioId');
+            const fechaFinInput = document.getElementById('fechaFinId');
+            const filterForm = document.getElementById('auditFilterForm');
+            
+            let searchTimeout = null;
+            let currentAbort = null;
+            let requestId = 0;
+
+            function showSpinner() {
+                const icon = document.getElementById('searchIcon');
+                const spinner = document.getElementById('searchSpinner');
+                if(icon) icon.style.display = 'none';
+                if(spinner) spinner.style.display = 'inline-block';
+            }
+
+            function hideSpinner() {
+                const icon = document.getElementById('searchIcon');
+                const spinner = document.getElementById('searchSpinner');
+                if(icon) icon.style.display = 'inline-block';
+                if(spinner) spinner.style.display = 'none';
+            }
+
+            function performSearch() {
+                if (currentAbort) currentAbort.abort();
+                currentAbort = new AbortController();
+
+                const myId = ++requestId;
+                showSpinner();
+
+                const params = new URLSearchParams();
+                if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
+                if (fechaInput.value) params.set('fecha', fechaInput.value);
+                if (fechaInicioInput.value) params.set('fecha_inicio', fechaInicioInput.value);
+                if (fechaFinInput.value) params.set('fecha_fin', fechaFinInput.value);
+
+                const url = "{{ route('auditoria.index') }}?" + params.toString();
+                window.history.replaceState({}, '', url);
+
+                fetch(url, { 
+                    signal: currentAbort.signal,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(html => {
+                    if (myId !== requestId) return;
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                    const newBody = doc.getElementById('auditTbody');
+                    const currentBody = document.getElementById('auditTbody');
+                    if (newBody && currentBody) currentBody.innerHTML = newBody.innerHTML;
+
+                    const newPag = doc.getElementById('auditPagination');
+                    const currentPag = document.getElementById('auditPagination');
+                    if (newPag && currentPag) currentPag.innerHTML = newPag.innerHTML;
+                    
+                    hideSpinner();
+                })
+                .catch(e => {
+                    if (e.name !== 'AbortError') {
+                        console.error('Error en búsqueda:', e);
+                        hideSpinner();
+                    }
+                });
+            }
+
+            function triggerSearch() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(performSearch, 350);
+            }
+
+            if (filterForm) {
+                filterForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    performSearch();
+                });
+            }
+
+            searchInput.addEventListener('input', triggerSearch);
+            fechaInput.addEventListener('change', performSearch);
+            fechaInicioInput.addEventListener('change', performSearch);
+            fechaFinInput.addEventListener('change', performSearch);
+        });
+    </script>
 </x-app-layout>
