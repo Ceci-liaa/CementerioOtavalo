@@ -6,14 +6,15 @@
 </div>
 
 <div class="modal-body">
-    
+
     {{-- 1. RESUMEN DEL SOCIO --}}
     <div class="row mb-3">
         <div class="col-12 bg-light p-3 rounded border d-flex justify-content-between align-items-center shadow-sm">
             <div>
                 <small class="text-secondary d-block fw-bold">SOCIO</small>
                 <span class="fs-5 fw-bolder text-primary">{{ $socio->apellidos }} {{ $socio->nombres }}</span>
-                <div class="small text-muted mt-1">Cédula: <span class="text-dark fw-bold">{{ $socio->cedula }}</span></div>
+                <div class="small text-muted mt-1">Cédula: <span class="text-dark fw-bold">{{ $socio->cedula }}</span>
+                </div>
             </div>
             <div class="text-end">
                 <small class="text-secondary d-block fw-bold">ESTADO DE CUENTA</small>
@@ -38,52 +39,81 @@
                     <i class="fas fa-cash-register me-1 text-primary"></i> Registrar Nuevo Pago
                 </div>
                 <div class="card-body bg-light">
-                    <form action="{{ route('pagos.store', $socio) }}" method="POST">
+                    <form action="{{ route('pagos.store', $socio) }}" method="POST" id="formPago">
                         @csrf
-                        
+
+                        {{-- ALERTA DE ERROR (oculta por defecto) --}}
+                        <div class="alert alert-danger d-none mb-3 py-2 px-3 fw-bold small" id="errorPago">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            <span id="errorPagoMsg"></span>
+                        </div>
+
                         {{-- LISTA DE AÑOS (Checkboxes) --}}
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">Seleccione Años a Pagar:</label>
-                            
+
                             <div class="border rounded p-2 bg-white" style="max-height: 200px; overflow-y: auto;">
                                 @if(count($aniosPendientes) > 0)
                                     @foreach($aniosPendientes as $anio)
                                         <div class="form-check border-bottom pb-2 mb-2">
                                             {{-- Checkbox normal --}}
-                                            <input class="form-check-input" type="checkbox" name="anios_pagados[]" value="{{ $anio }}" id="anio_{{ $anio }}" style="cursor: pointer; transform: scale(1.1);">
-                                            
-                                            <label class="form-check-label fw-bold text-dark w-100 ps-1" for="anio_{{ $anio }}" style="cursor: pointer;">
+                                            <input class="form-check-input chk-anio" type="checkbox" name="anios_pagados[]"
+                                                value="{{ $anio }}" id="anio_{{ $anio }}"
+                                                style="cursor: pointer; transform: scale(1.1);">
+
+                                            <label class="form-check-label fw-bold text-dark w-100 ps-1" for="anio_{{ $anio }}"
+                                                style="cursor: pointer;">
                                                 Año {{ $anio }}
-                                                <span class="float-end badge bg-danger text-white" style="font-size: 0.65rem;">PENDIENTE</span>
+                                                <span class="float-end badge bg-danger text-white"
+                                                    style="font-size: 0.65rem;">PENDIENTE</span>
                                             </label>
                                         </div>
                                     @endforeach
                                 @else
-                                    <div class="text-success small fw-bold text-center py-4 bg-light rounded border border-success border-opacity-25">
+                                    <div
+                                        class="text-success small fw-bold text-center py-4 bg-light rounded border border-success border-opacity-25">
                                         <i class="fas fa-check-circle fa-2x mb-2"></i><br>
                                         No tiene deudas pendientes.
                                     </div>
                                 @endif
-                                
-                                {{-- AQUÍ QUITAMOS EL BLOQUE DE ADELANTO QUE HABÍA ANTES --}}
 
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">Fecha de Pago</label>
-                            <input type="date" name="fecha_pago" value="{{ date('Y-m-d') }}" class="form-control fw-bold text-dark" required>
+                            <input type="date" name="fecha_pago" value="{{ date('Y-m-d') }}"
+                                class="form-control fw-bold text-dark" required>
                         </div>
-                        
+
                         <div class="mb-3">
-                             <label class="form-label small fw-bold text-secondary">Observación</label>
-                             <input type="text" name="observacion" class="form-control" placeholder="Ej: Recibo N° 123...">
+                            <label class="form-label small fw-bold text-secondary">Observación</label>
+                            <input type="text" name="observacion" class="form-control"
+                                placeholder="Ej: Recibo N° 123...">
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
                             <i class="fas fa-save me-2"></i> Guardar Pagos
                         </button>
                     </form>
+
+                    <script>
+                        document.getElementById('formPago').addEventListener('submit', function (e) {
+                            var checked = this.querySelectorAll('.chk-anio:checked');
+                            var errorDiv = document.getElementById('errorPago');
+                            var errorMsg = document.getElementById('errorPagoMsg');
+
+                            if (checked.length === 0) {
+                                e.preventDefault();
+                                errorMsg.textContent = 'Debe seleccionar al menos un año para registrar el pago.';
+                                errorDiv.classList.remove('d-none');
+                                // Scroll al error
+                                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } else {
+                                errorDiv.classList.add('d-none');
+                            }
+                        });
+                    </script>
                 </div>
             </div>
         </div>
@@ -107,7 +137,8 @@
                             @forelse($socio->pagos as $pago)
                                 <tr>
                                     <td>
-                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold border border-success border-opacity-25 px-2 py-1">
+                                        <span
+                                            class="badge bg-success bg-opacity-10 text-success fw-bold border border-success border-opacity-25 px-2 py-1">
                                             {{ $pago->anio_pagado }}
                                         </span>
                                     </td>
@@ -140,32 +171,32 @@
         // Inicializar el modal de Bootstrap
         const modalEl = document.getElementById('dynamicModal');
         // Asegurarse de que el modal exista en el layout (si no está, lo creamos al vuelo para prevenir errores)
-        if(!modalEl) {
-             console.error("Falta el div #dynamicModal en tu layout principal.");
-             return;
+        if (!modalEl) {
+            console.error("Falta el div #dynamicModal en tu layout principal.");
+            return;
         }
         const modal = new bootstrap.Modal(modalEl);
 
         // Escuchar clics en cualquier botón con clase .open-modal
         document.body.addEventListener('click', function (e) {
             const btn = e.target.closest('.open-modal');
-            
+
             if (btn) {
                 e.preventDefault();
-                
+
                 // 1. Poner un spinner de carga mientras busca la info
                 modalEl.querySelector('.modal-content').innerHTML = `
                     <div class="modal-body text-center p-5">
                         <div class="spinner-border text-primary" role="status"></div>
                         <p class="mt-3 fw-bold text-secondary">Cargando...</p>
                     </div>`;
-                
+
                 // 2. Mostrar el modal
                 modal.show();
 
                 // 3. Pedir la información al servidor (AJAX)
                 const url = btn.getAttribute('data-url');
-                
+
                 fetch(url)
                     .then(response => {
                         if (!response.ok) throw new Error('Error al cargar');
@@ -174,7 +205,7 @@
                     .then(html => {
                         // 4. Poner el contenido dentro del modal
                         modalEl.querySelector('.modal-content').innerHTML = html;
-                        
+
                         // Si hay scripts dentro del modal cargado, ejecutarlos manualmente
                         const scripts = modalEl.querySelectorAll("script");
                         scripts.forEach(oldScript => {
