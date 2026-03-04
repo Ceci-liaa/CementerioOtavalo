@@ -265,6 +265,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('nichos/{nicho}/qr', [NichoController::class, 'downloadQr'])->name('nichos.qr')->middleware('can:ver qr nicho');
     Route::get('nichos/{nicho}/qr-image', [NichoController::class, 'downloadQrImage'])->name('nichos.qr.image')->middleware('can:ver qr nicho');
 
+    // API: Nichos GIS filtrados por Bloque (AJAX)
+    Route::get('/api/nichos-geom-por-bloque', [NichoController::class, 'getNichosByBloque'])->name('nichos.geomPorBloque');
+
     // --- BENEFICIOS ---
     Route::resource('beneficios', BeneficioController::class); // Se pueden aplicar permisos en constructor también
     Route::post('beneficios/reports', [BeneficioController::class, 'reports'])->name('beneficios.reports')->middleware('can:reportar beneficio');

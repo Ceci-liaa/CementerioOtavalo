@@ -316,4 +316,39 @@ class NichoController extends Controller
         // Retorna una vista simple pública
         return view('nichos.public-info', compact('nicho'));
     }
+
+    // ── API: Nichos GIS filtrados por Bloque ──────────────────────────
+    public function getNichosByBloque(Request $request)
+    {
+        $bloqueId = $request->get('bloque_id');
+
+        if (!$bloqueId) {
+            return response()->json([]);
+        }
+
+        $bloque = Bloque::find($bloqueId);
+
+        if (!$bloque || !$bloque->bloque_geom_id) {
+            return response()->json([]);
+        }
+
+        $query = NichoGeom::where('bloques_geom_id', $bloque->bloque_geom_id)
+            ->whereNotIn('id', function ($q) use ($request) {
+                $q->select('nicho_geom_id')
+                  ->from('nichos')
+                  ->whereNotNull('nicho_geom_id')
+                  ->whereNull('deleted_at');
+
+                // En modo edición, excluir el nicho actual para que su geom siga visible
+                if ($request->filled('exclude_nicho_id')) {
+                    $q->where('nichos.id', '!=', $request->exclude_nicho_id);
+                }
+            })
+            ->select('id', 'codigo')
+            ->get()
+            ->sortBy('codigo', SORT_NATURAL)
+            ->values();
+
+        return response()->json($query);
+    }
 }

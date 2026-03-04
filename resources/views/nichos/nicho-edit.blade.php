@@ -120,7 +120,64 @@
 
 <script>
     var settingsEdit = { create: false, sortField: { field: "text", direction: "asc" }, plugins: ['dropdown_input'] };
-    new TomSelect("#select_gis_edit", settingsEdit);
-    new TomSelect("#select_bloque_edit", settingsEdit);
+    var gisInstance = new TomSelect("#select_gis_edit", settingsEdit);
+    var bloqueInstance = new TomSelect("#select_bloque_edit", settingsEdit);
     new TomSelect("#select_socio_edit", settingsEdit);
+
+    // ========== FILTRO EN CASCADA: Bloque → Nichos GIS (Edit) ==========
+    var currentNichoId = {{ $nicho->id }};
+    var currentGeomId = {{ $nicho->nicho_geom_id ?? 'null' }};
+
+    function loadGisForBloque(bloqueId) {
+        if (!bloqueId) {
+            gisInstance.clear();
+            gisInstance.clearOptions();
+            gisInstance.addOption({ value: '', text: '-- Seleccione un bloque primero --' });
+            gisInstance.setValue('');
+            return;
+        }
+
+        gisInstance.clear();
+        gisInstance.clearOptions();
+        gisInstance.addOption({ value: '', text: '⏳ Cargando...' });
+        gisInstance.setValue('');
+
+        fetch('/api/nichos-geom-por-bloque?bloque_id=' + bloqueId + '&exclude_nicho_id=' + currentNichoId)
+            .then(r => r.json())
+            .then(data => {
+                gisInstance.clearOptions();
+                gisInstance.addOption({ value: '', text: '-- Ninguno --' });
+
+                if (data.length === 0) {
+                    gisInstance.addOption({ value: '', text: '⚠️ No hay nichos GIS para este bloque' });
+                }
+
+                data.forEach(ng => {
+                    gisInstance.addOption({ value: String(ng.id), text: ng.codigo });
+                });
+
+                // Si el geom actual está en los resultados, preseleccionarlo
+                if (currentGeomId) {
+                    var found = data.find(ng => ng.id == currentGeomId);
+                    if (found) {
+                        gisInstance.setValue(String(currentGeomId));
+                    }
+                }
+            })
+            .catch(() => {
+                gisInstance.clearOptions();
+                gisInstance.addOption({ value: '', text: '-- Error al cargar --' });
+            });
+    }
+
+    // Escuchar cambio en el bloque
+    bloqueInstance.on('change', function(value) {
+        loadGisForBloque(value);
+    });
+
+    // Cargar inicial con el bloque actual
+    var initialBloque = bloqueInstance.getValue();
+    if (initialBloque) {
+        loadGisForBloque(initialBloque);
+    }
 </script>

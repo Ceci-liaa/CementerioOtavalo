@@ -148,7 +148,83 @@
 </form>
 
 <script>
-    // ========== BÚSQUEDA PARA SELECTS (Mismo patrón que asignaciones) ==========
+    // ========== FILTRO EN CASCADA: Bloque → Nichos GIS ==========
+    (function() {
+        const selectBloque = document.getElementById('selectBloque');
+        const selectGis = document.getElementById('selectGis');
+        const buscarGis = document.getElementById('buscarGis');
+        const gisSeleccionado = document.getElementById('gisSeleccionado');
+
+        // Guardar las opciones GIS originales (para búsqueda local después del filtro)
+        let gisOptions = [];
+
+        function updateGisFromApi(bloqueId) {
+            if (!bloqueId) {
+                // Sin bloque seleccionado: limpiar GIS
+                selectGis.innerHTML = '<option value="">-- Seleccione un bloque primero --</option>';
+                gisOptions = [];
+                if (gisSeleccionado) {
+                    gisSeleccionado.textContent = 'Ninguno';
+                    gisSeleccionado.className = 'fw-bold text-primary';
+                }
+                return;
+            }
+
+            selectGis.innerHTML = '<option value="">⏳ Cargando...</option>';
+
+            fetch('/api/nichos-geom-por-bloque?bloque_id=' + bloqueId)
+                .then(r => r.json())
+                .then(data => {
+                    gisOptions = [];
+                    selectGis.innerHTML = '<option value="">-- Ninguno (Manual) --</option>';
+
+                    if (data.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.disabled = true;
+                        opt.textContent = '⚠️ No hay nichos GIS disponibles para este bloque';
+                        selectGis.appendChild(opt);
+                    }
+
+                    data.forEach(ng => {
+                        const opt = document.createElement('option');
+                        opt.value = ng.id;
+                        opt.textContent = ng.codigo;
+                        opt.setAttribute('data-search', (ng.codigo || '').toLowerCase());
+                        selectGis.appendChild(opt);
+                        gisOptions.push({
+                            value: String(ng.id),
+                            text: ng.codigo,
+                            searchData: (ng.codigo || '').toLowerCase()
+                        });
+                    });
+
+                    if (gisSeleccionado) {
+                        gisSeleccionado.textContent = 'Ninguno';
+                        gisSeleccionado.className = 'fw-bold text-primary';
+                    }
+                })
+                .catch(() => {
+                    selectGis.innerHTML = '<option value="">-- Error al cargar --</option>';
+                });
+        }
+
+        // Escuchar cambio en el select de Bloque
+        if (selectBloque) {
+            selectBloque.addEventListener('change', function() {
+                updateGisFromApi(this.value);
+            });
+        }
+
+        // Inicializar: si no hay bloque seleccionado, mostrar mensaje
+        if (selectBloque && !selectBloque.value) {
+            selectGis.innerHTML = '<option value="">-- Seleccione un bloque primero --</option>';
+        } else if (selectBloque && selectBloque.value) {
+            // Si hay un bloque preseleccionado (old()), cargar sus nichos
+            updateGisFromApi(selectBloque.value);
+        }
+    })();
+
+    // ========== BÚSQUEDA PARA SELECTS ==========
     (function() {
         const configs = [
             { inputId: 'buscarGis', selectId: 'selectGis', labelId: 'gisSeleccionado' },
@@ -164,15 +240,24 @@
             if (!input || !select) return;
             
             // Guardar opciones originales
-            const allOptions = [];
-            Array.from(select.options).forEach(opt => {
-                allOptions.push({
-                    value: opt.value,
-                    text: opt.text,
-                    selected: opt.selected,
-                    searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+            let allOptions = [];
+            function captureOptions() {
+                allOptions = [];
+                Array.from(select.options).forEach(opt => {
+                    allOptions.push({
+                        value: opt.value,
+                        text: opt.text,
+                        selected: opt.selected,
+                        disabled: opt.disabled,
+                        searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+                    });
                 });
-            });
+            }
+            captureOptions();
+
+            // Re-capturar opciones cuando el select cambia dinámicamente (después del fetch GIS)
+            const observer = new MutationObserver(() => { captureOptions(); });
+            observer.observe(select, { childList: true });
             
             function updateOptions(searchTerm) {
                 const term = searchTerm.toLowerCase().trim();
@@ -189,8 +274,9 @@
                         const option = document.createElement('option');
                         option.value = optData.value;
                         option.textContent = optData.text;
+                        if (optData.disabled) option.disabled = true;
                         
-                        if (term !== '' && optData.value !== '' && matches) {
+                        if (term !== '' && optData.value !== '' && !optData.disabled && matches) {
                             matchCount++;
                             if (firstMatchIndex === -1) {
                                 firstMatchIndex = select.options.length;
@@ -258,6 +344,11 @@
                             }
                         }
                         updateLabel();
+
+                        // Si confirmamos un bloque, disparar el filtro GIS
+                        if (config.selectId === 'selectBloque') {
+                            select.dispatchEvent(new Event('change'));
+                        }
                         
                         const originalPlaceholder = this.placeholder;
                         this.placeholder = '✅ ' + selectedText.substring(0, 35);
