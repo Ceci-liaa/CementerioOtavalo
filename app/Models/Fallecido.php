@@ -28,7 +28,7 @@ class Fallecido extends Model implements Auditable
             $nuevoId = $ultimoId + 1;
             
             // Genera: FAL0001, FAL0002...
-            $fallecido->codigo = 'FAL' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
+            $fallecido->codigo = 'FA-' . str_pad($nuevoId, 2, '0', STR_PAD_LEFT);
         });
     }
 

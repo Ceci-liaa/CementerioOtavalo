@@ -32,7 +32,7 @@ class Beneficio extends Model implements Auditable
                 $siguienteId = $ultimo ? $ultimo->id + 1 : 1;
 
                 // 2. Formateamos: BENN001, BENN002, etc.
-                $beneficio->codigo = 'BEN' . str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
+                $beneficio->codigo = 'BE-' . str_pad($siguienteId, 2, '0', STR_PAD_LEFT);
             }
         });
     }

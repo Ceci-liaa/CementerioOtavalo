@@ -31,7 +31,7 @@ class Servicio extends Model implements Auditable
             $siguienteId = $ultimo ? $ultimo->id + 1 : 1;
 
             // Genera S001, S002, S0010, etc.
-            $servicio->codigo = 'S' . str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
+            $servicio->codigo = 'SE-' . str_pad($siguienteId, 2, '0', STR_PAD_LEFT);
         });
     }
 }
