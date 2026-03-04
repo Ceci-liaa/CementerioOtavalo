@@ -23,7 +23,11 @@ class NichoController extends Controller
         $bloqueId = $request->get('bloque_id');
         $estado = $request->get('estado');
 
-        $query = Nicho::with(['bloque', 'socio'])->orderBy('codigo', 'asc');
+        $query = Nicho::with(['bloque', 'socio'])
+            ->withCount(['fallecidos' => function ($q) {
+                $q->whereNull('fallecido_nicho.fecha_exhumacion');
+            }])
+            ->orderBy('codigo', 'asc');
 
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
@@ -64,7 +68,7 @@ class NichoController extends Controller
     {
         $request->validate([
             'bloque_id' => 'required|exists:bloques,id',
-            'socio_id' => 'nullable|exists:socios,id',
+            'socio_id' => 'required|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
             // NUEVO CAMPO: CLASE
             'clase_nicho' => 'required|in:BOVEDA,TIERRA',
@@ -129,7 +133,7 @@ class NichoController extends Controller
     {
         $request->validate([
             'bloque_id' => 'required|exists:bloques,id',
-            'socio_id' => 'nullable|exists:socios,id',
+            'socio_id' => 'required|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
             'clase_nicho' => 'required|in:BOVEDA,TIERRA', // VALIDACIÓN NUEVA
             'capacidad' => 'required|integer|min:1',

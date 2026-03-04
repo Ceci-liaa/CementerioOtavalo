@@ -1,15 +1,9 @@
-{{-- REUTILIZAMOS LOS MISMOS ESTILOS Y LIBRERÍAS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-
 <style>
-    /* PEGAR EL MISMO CSS DE 'CREATE' AQUÍ PARA QUE SEAN IDÉNTICOS */
-    .ts-wrapper .ts-control { border: 1px solid #dee2e6 !important; background-color: #fff !important; border-radius: 0.375rem !important; padding: 0.5rem 0.75rem !important; min-height: 40px !important; font-size: 1rem !important; box-shadow: none !important; display: flex; align-items: center; }
-    .ts-wrapper.focus .ts-control { border-color: #5ea6f7 !important; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25) !important; outline: 0 !important; }
-    .ts-dropdown { z-index: 99999 !important; border-color: #5ea6f7 !important; border-radius: 0.375rem !important; margin-top: 4px !important; }
-    .ts-dropdown .option { padding: 10px 15px !important; font-size: 0.9rem !important; }
-    .ts-dropdown .active { background-color: #e7f1ff !important; color: #1c2a48 !important; font-weight: 600 !important; }
-    .ts-wrapper.single .ts-control::after { display: none !important; }
+    /* Estilos de búsqueda (idénticos a create) */
+    .search-match { background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%) !important; font-weight: 600 !important; }
+    .search-first-match { background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important; color: white !important; font-weight: 700 !important; }
+    .search-input-found { border: 2px solid #28a745 !important; box-shadow: 0 0 8px rgba(40, 167, 69, 0.4) !important; }
+    .search-input-empty { border: 2px solid #dc3545 !important; box-shadow: 0 0 8px rgba(220, 53, 69, 0.4) !important; }
 </style>
 
 <div class="modal-header bg-warning text-dark">
@@ -23,58 +17,90 @@
     @csrf @method('PUT')
     
     <div class="modal-body">
+
+        @if ($errors->any())
+            <div class="alert alert-danger py-2 text-xs">
+                <ul class="mb-0 ps-3">
+                    @foreach ($errors->all() as $e) <li>{{ $e }}</li> @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- TABS --}}
         <ul class="nav nav-tabs nav-fill mb-3" id="editTabs" role="tablist">
             <li class="nav-item">
-                <button class="nav-link active fw-bold small" data-bs-toggle="tab" data-bs-target="#edit-ubicacion" type="button"><i class="fas fa-map-marker-alt me-1"></i> Ubicación</button>
+                <button class="nav-link active fw-bold small" data-bs-toggle="tab" data-bs-target="#edit-ubicacion" type="button">
+                    <i class="fas fa-map-marker-alt me-1"></i> Ubicación
+                </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#edit-caracteristicas" type="button"><i class="fas fa-cogs me-1"></i> Datos Técnicos</button>
+                <button class="nav-link fw-bold small" data-bs-toggle="tab" data-bs-target="#edit-caracteristicas" type="button">
+                    <i class="fas fa-cogs me-1"></i> Datos Técnicos
+                </button>
             </li>
         </ul>
 
         <div class="tab-content">
-            {{-- TAB 1 --}}
+            {{-- TAB 1: UBICACIÓN --}}
             <div class="tab-pane fade show active" id="edit-ubicacion">
                 <div class="row g-3">
+
+                    {{-- Código Actual (solo lectura) --}}
                     <div class="col-12">
                         <label class="form-label fw-bold text-muted small">Código Actual</label>
                         <input value="{{ $nicho->codigo }}" class="form-control bg-light" readonly>
                     </div>
 
+                    {{-- GIS (Buscable) --}}
                     <div class="col-12">
-                        <label class="form-label fw-bold text-primary small">Mapa GIS</label>
-                        {{-- ID único para Edit --}}
-                        <select name="nicho_geom_id" id="select_gis_edit">
-                            <option value="">-- Ninguno --</option>
+                        <label class="form-label fw-bold text-primary small">Mapa GIS (Opcional)</label>
+                        <input type="text" id="buscarGisEdit" class="form-control mb-2" placeholder="🔍 Buscar código en mapa...">
+                        <select name="nicho_geom_id" id="selectGisEdit" class="form-select" size="2" style="height: auto;">
+                            <option value="">-- Ninguno (Manual) --</option>
                             @isset($nichosGeom)
                                 @foreach($nichosGeom as $ng)
-                                    <option value="{{ $ng->id }}" @selected(old('nicho_geom_id', $nicho->nicho_geom_id) == $ng->id)>{{ $ng->codigo }}</option>
+                                    <option value="{{ $ng->id }}" 
+                                        data-search="{{ strtolower($ng->codigo) }}"
+                                        @selected(old('nicho_geom_id', $nicho->nicho_geom_id) == $ng->id)>{{ $ng->codigo }}</option>
                                 @endforeach
                             @endisset
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="gisSeleccionadoEdit" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
 
+                    {{-- Bloque (Buscable) --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Bloque <span class="text-danger">*</span></label>
-                        <select name="bloque_id" id="select_bloque_edit" required>
+                        <input type="text" id="buscarBloqueEdit" class="form-control mb-2" placeholder="🔍 Buscar bloque...">
+                        <select name="bloque_id" id="selectBloqueEdit" class="form-select" required size="2" style="height: auto;">
+                            <option value="">-- Seleccionar --</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->id }}" @selected(old('bloque_id', $nicho->bloque_id)==$b->id)>{{ $b->nombre }}</option>
+                                <option value="{{ $b->id }}" 
+                                    data-search="{{ strtolower($b->nombre . ' ' . ($b->codigo ?? '')) }}"
+                                    @selected(old('bloque_id', $nicho->bloque_id) == $b->id)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="bloqueSeleccionadoEdit" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
-
+                    
+                    {{-- Socio (Buscable) --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold small">Socio Titular <span class="text-danger">*</span></label>
-                        <select name="socio_id" id="select_socio_edit" required>
+                        <input type="text" id="buscarSocioEdit" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
+                        <select name="socio_id" id="selectSocioEdit" class="form-select" required size="2" style="height: auto;">
+                            <option value="">-- Seleccionar --</option>
                             @foreach($socios as $s)
-                                <option value="{{ $s->id }}" @selected(old('socio_id', $nicho->socio_id)==$s->id)>{{ $s->apellidos }} {{ $s->nombres }}</option>
+                                <option value="{{ $s->id }}" 
+                                    data-search="{{ strtolower($s->cedula . ' ' . $s->apellidos . ' ' . $s->nombres) }}"
+                                    @selected(old('socio_id', $nicho->socio_id) == $s->id)>{{ $s->apellidos }} {{ $s->nombres }} ({{ $s->cedula }})</option>
                             @endforeach
                         </select>
+                        <small class="text-muted">Seleccionado: <span id="socioSeleccionadoEdit" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                 </div>
             </div>
 
-            {{-- TAB 2 --}}
+            {{-- TAB 2: DATOS TÉCNICOS --}}
             <div class="tab-pane fade" id="edit-caracteristicas">
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -119,65 +145,278 @@
 </form>
 
 <script>
-    var settingsEdit = { create: false, sortField: { field: "text", direction: "asc" }, plugins: ['dropdown_input'] };
-    var gisInstance = new TomSelect("#select_gis_edit", settingsEdit);
-    var bloqueInstance = new TomSelect("#select_bloque_edit", settingsEdit);
-    new TomSelect("#select_socio_edit", settingsEdit);
-
     // ========== FILTRO EN CASCADA: Bloque → Nichos GIS (Edit) ==========
-    var currentNichoId = {{ $nicho->id }};
-    var currentGeomId = {{ $nicho->nicho_geom_id ?? 'null' }};
+    (function() {
+        var currentNichoId = {{ $nicho->id }};
+        var currentGeomId = {{ $nicho->nicho_geom_id ?? 'null' }};
 
-    function loadGisForBloque(bloqueId) {
-        if (!bloqueId) {
-            gisInstance.clear();
-            gisInstance.clearOptions();
-            gisInstance.addOption({ value: '', text: '-- Seleccione un bloque primero --' });
-            gisInstance.setValue('');
-            return;
+        var selectBloque = document.getElementById('selectBloqueEdit');
+        var selectGis = document.getElementById('selectGisEdit');
+        var buscarGis = document.getElementById('buscarGisEdit');
+        var gisSeleccionado = document.getElementById('gisSeleccionadoEdit');
+
+        var gisOptions = [];
+
+        function updateGisFromApi(bloqueId) {
+            if (!bloqueId) {
+                selectGis.innerHTML = '<option value="">-- Seleccione un bloque primero --</option>';
+                gisOptions = [];
+                if (gisSeleccionado) {
+                    gisSeleccionado.textContent = 'Ninguno';
+                    gisSeleccionado.className = 'fw-bold text-primary';
+                }
+                return;
+            }
+
+            selectGis.innerHTML = '<option value="">⏳ Cargando...</option>';
+
+            fetch('/api/nichos-geom-por-bloque?bloque_id=' + bloqueId + '&exclude_nicho_id=' + currentNichoId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    gisOptions = [];
+                    selectGis.innerHTML = '<option value="">-- Ninguno (Manual) --</option>';
+
+                    if (data.length === 0) {
+                        var opt = document.createElement('option');
+                        opt.disabled = true;
+                        opt.textContent = '⚠️ No hay nichos GIS disponibles para este bloque';
+                        selectGis.appendChild(opt);
+                    }
+
+                    data.forEach(function(ng) {
+                        var opt = document.createElement('option');
+                        opt.value = ng.id;
+                        opt.textContent = ng.codigo;
+                        opt.setAttribute('data-search', (ng.codigo || '').toLowerCase());
+                        if (currentGeomId && ng.id == currentGeomId) {
+                            opt.selected = true;
+                        }
+                        selectGis.appendChild(opt);
+                        gisOptions.push({
+                            value: String(ng.id),
+                            text: ng.codigo,
+                            searchData: (ng.codigo || '').toLowerCase()
+                        });
+                    });
+
+                    // Actualizar label
+                    if (gisSeleccionado) {
+                        var selectedOpt = selectGis.options[selectGis.selectedIndex];
+                        if (selectedOpt && selectedOpt.value !== '') {
+                            gisSeleccionado.textContent = selectedOpt.text;
+                            gisSeleccionado.className = 'fw-bold text-success';
+                        } else {
+                            gisSeleccionado.textContent = 'Ninguno';
+                            gisSeleccionado.className = 'fw-bold text-primary';
+                        }
+                    }
+                })
+                .catch(function() {
+                    selectGis.innerHTML = '<option value="">-- Error al cargar --</option>';
+                });
         }
 
-        gisInstance.clear();
-        gisInstance.clearOptions();
-        gisInstance.addOption({ value: '', text: '⏳ Cargando...' });
-        gisInstance.setValue('');
+        // Escuchar cambio en el select de Bloque
+        if (selectBloque) {
+            selectBloque.addEventListener('change', function() {
+                updateGisFromApi(this.value);
+            });
+        }
 
-        fetch('/api/nichos-geom-por-bloque?bloque_id=' + bloqueId + '&exclude_nicho_id=' + currentNichoId)
-            .then(r => r.json())
-            .then(data => {
-                gisInstance.clearOptions();
-                gisInstance.addOption({ value: '', text: '-- Ninguno --' });
+        // Carga inicial con el bloque actual del nicho
+        if (selectBloque && selectBloque.value) {
+            updateGisFromApi(selectBloque.value);
+        }
+    })();
 
-                if (data.length === 0) {
-                    gisInstance.addOption({ value: '', text: '⚠️ No hay nichos GIS para este bloque' });
-                }
+    // ========== BÚSQUEDA PARA SELECTS (Edit) ==========
+    (function() {
+        var configs = [
+            { inputId: 'buscarGisEdit', selectId: 'selectGisEdit', labelId: 'gisSeleccionadoEdit' },
+            { inputId: 'buscarBloqueEdit', selectId: 'selectBloqueEdit', labelId: 'bloqueSeleccionadoEdit' },
+            { inputId: 'buscarSocioEdit', selectId: 'selectSocioEdit', labelId: 'socioSeleccionadoEdit' }
+        ];
 
-                data.forEach(ng => {
-                    gisInstance.addOption({ value: String(ng.id), text: ng.codigo });
+        configs.forEach(function(config) {
+            var input = document.getElementById(config.inputId);
+            var select = document.getElementById(config.selectId);
+            var label = document.getElementById(config.labelId);
+            
+            if (!input || !select) return;
+            
+            // Guardar opciones originales
+            var allOptions = [];
+            function captureOptions() {
+                allOptions = [];
+                Array.from(select.options).forEach(function(opt) {
+                    allOptions.push({
+                        value: opt.value,
+                        text: opt.text,
+                        selected: opt.selected,
+                        disabled: opt.disabled,
+                        searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+                    });
                 });
+            }
+            captureOptions();
 
-                // Si el geom actual está en los resultados, preseleccionarlo
-                if (currentGeomId) {
-                    var found = data.find(ng => ng.id == currentGeomId);
-                    if (found) {
-                        gisInstance.setValue(String(currentGeomId));
+            // Re-capturar opciones cuando el select cambia dinámicamente
+            var observer = new MutationObserver(function() { captureOptions(); });
+            observer.observe(select, { childList: true });
+            
+            function updateOptions(searchTerm) {
+                var term = searchTerm.toLowerCase().trim();
+                select.innerHTML = '';
+                var matchCount = 0;
+                var firstMatchIndex = -1;
+                
+                allOptions.forEach(function(optData) {
+                    var matches = optData.value === '' || 
+                                   optData.searchData.includes(term) || 
+                                   optData.text.toLowerCase().includes(term);
+                    
+                    if (term === '' || matches) {
+                        var option = document.createElement('option');
+                        option.value = optData.value;
+                        option.textContent = optData.text;
+                        if (optData.disabled) option.disabled = true;
+                        
+                        if (term !== '' && optData.value !== '' && !optData.disabled && matches) {
+                            matchCount++;
+                            if (firstMatchIndex === -1) {
+                                firstMatchIndex = select.options.length;
+                                option.className = 'search-first-match';
+                            } else {
+                                option.className = 'search-match';
+                            }
+                        }
+                        select.appendChild(option);
+                    }
+                });
+                
+                input.classList.remove('search-input-found', 'search-input-empty');
+                if (term !== '') {
+                    if (matchCount > 0) {
+                        input.classList.add('search-input-found');
+                        if (firstMatchIndex !== -1) {
+                            select.selectedIndex = firstMatchIndex;
+                            updateLabel();
+                        }
+                    } else {
+                        input.classList.add('search-input-empty');
                     }
                 }
-            })
-            .catch(() => {
-                gisInstance.clearOptions();
-                gisInstance.addOption({ value: '', text: '-- Error al cargar --' });
+            }
+            
+            function updateLabel() {
+                if (!label) return;
+                var selectedOpt = select.options[select.selectedIndex];
+                if (selectedOpt && selectedOpt.value !== '') {
+                    label.textContent = selectedOpt.text;
+                    label.classList.remove('text-primary');
+                    label.classList.add('text-success');
+                } else {
+                    label.textContent = 'Ninguno';
+                    label.classList.remove('text-success');
+                    label.classList.add('text-primary');
+                }
+            }
+            
+            // Evento: escribir
+            input.addEventListener('input', function() {
+                updateOptions(this.value);
             });
-    }
+            
+            // Evento: teclas
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    var selectedOpt = select.options[select.selectedIndex];
+                    if (selectedOpt && selectedOpt.value !== '') {
+                        var selectedValue = selectedOpt.value;
+                        var selectedText = selectedOpt.text;
+                        
+                        this.value = '';
+                        this.classList.remove('search-input-found', 'search-input-empty');
+                        updateOptions('');
+                        
+                        for (var i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value === selectedValue) {
+                                select.selectedIndex = i;
+                                break;
+                            }
+                        }
+                        updateLabel();
 
-    // Escuchar cambio en el bloque
-    bloqueInstance.on('change', function(value) {
-        loadGisForBloque(value);
-    });
+                        // Si confirmamos un bloque, disparar el filtro GIS
+                        if (config.selectId === 'selectBloqueEdit') {
+                            select.dispatchEvent(new Event('change'));
+                        }
+                        
+                        var originalPlaceholder = this.placeholder;
+                        this.placeholder = '✅ ' + selectedText.substring(0, 35);
+                        this.style.background = '#d4edda';
+                        var self = this;
+                        setTimeout(function() {
+                            self.placeholder = originalPlaceholder;
+                            self.style.background = '';
+                        }, 1500);
+                    }
+                    return false;
+                }
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (select.selectedIndex < select.options.length - 1) {
+                        select.selectedIndex++;
+                        updateLabel();
+                    }
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (select.selectedIndex > 0) {
+                        select.selectedIndex--;
+                        updateLabel();
+                    }
+                }
+            });
+            
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
 
-    // Cargar inicial con el bloque actual
-    var initialBloque = bloqueInstance.getValue();
-    if (initialBloque) {
-        loadGisForBloque(initialBloque);
-    }
+            // Inicializar label con valor actual del nicho
+            updateLabel();
+        });
+    })();
+
+    // ========== INICIALIZAR VALORES ACTUALES DEL NICHO ==========
+    (function() {
+        function selectAndLabel(selectId, labelId, targetValue) {
+            var sel = document.getElementById(selectId);
+            var lbl = document.getElementById(labelId);
+            if (!sel || !lbl || !targetValue) return;
+
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value == targetValue) {
+                    sel.selectedIndex = i;
+                    sel.options[i].selected = true;
+                    lbl.textContent = sel.options[i].text;
+                    lbl.className = 'fw-bold text-success';
+                    // Scroll para que se vea el item seleccionado
+                    sel.scrollTop = sel.options[i].offsetTop - sel.offsetTop;
+                    break;
+                }
+            }
+        }
+
+        // Preseleccionar Bloque (valor del servidor)
+        selectAndLabel('selectBloqueEdit', 'bloqueSeleccionadoEdit', '{{ old("bloque_id", $nicho->bloque_id) }}');
+
+        // Preseleccionar Socio (valor del servidor)
+        selectAndLabel('selectSocioEdit', 'socioSeleccionadoEdit', '{{ old("socio_id", $nicho->socio_id) }}');
+
+        // GIS se preselecciona desde el callback del API (ya implementado en el cascade)
+    })();
 </script>

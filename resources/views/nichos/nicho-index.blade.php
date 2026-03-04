@@ -176,8 +176,8 @@
                                             </td>
 
                                             <td>
-                                                <span class="fw-bold text-xs {{ $n->ocupacion >= $n->capacidad ? 'text-danger' : 'text-success' }}">
-                                                    {{ $n->ocupacion }} / {{ $n->capacidad }}
+                                                <span class="fw-bold text-xs {{ $n->fallecidos_count >= $n->capacidad ? 'text-danger' : 'text-success' }}">
+                                                    {{ $n->fallecidos_count }} / {{ $n->capacidad }}
                                                 </span>
                                             </td>
 
