@@ -106,7 +106,8 @@
             <div class="col-md-4">
                 <label>Estado</label>
                 <div class="form-check form-switch mt-2">
-                    <input class="form-check-input" type="checkbox" name="status" id="statusSwitch" 
+                    <input type="hidden" name="status" value="0">
+                    <input class="form-check-input" type="checkbox" name="status" id="statusSwitch" value="1"
                            {{ old('status', true) ? 'checked' : '' }}>
                     <label class="form-check-label" for="statusSwitch">
                         Activo

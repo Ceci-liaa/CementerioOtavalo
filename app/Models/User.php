@@ -38,4 +38,5 @@ class User extends Authenticatable implements Auditable
             $user->codigo_usuario = 'US-' . str_pad(User::count() + 1, 2, '0', STR_PAD_LEFT);
         });
     }
+
 }

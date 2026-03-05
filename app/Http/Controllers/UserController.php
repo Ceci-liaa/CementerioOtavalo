@@ -84,7 +84,7 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'location' => $request->location,
                 'role_id' => $role->id,
-                'status' => (bool) $request->has('status'),
+                'status' => filter_var($request->input('status', false), FILTER_VALIDATE_BOOLEAN),
             ]);
 
             // Asignar rol usando Spatie Permission
@@ -122,7 +122,7 @@ class UserController extends Controller
                     'location' => $request->location,
                     'phone' => $request->phone,
                     'about' => $request->about,
-                    'status' => filter_var($request->status, FILTER_VALIDATE_BOOLEAN),
+                    'status' => filter_var($request->status, FILTER_VALIDATE_BOOLEAN) ? true : false,
                     'role_id' => $role->id, 
                 ]);
 
@@ -141,7 +141,7 @@ class UserController extends Controller
     public function toggleStatus(User $user)
     {
         try {
-            $user->status = !filter_var($user->status, FILTER_VALIDATE_BOOLEAN);
+            $user->status = !$user->status;
             $user->save();
             return redirect()->route('users-management')->with('success', 'Estado actualizado correctamente.');
         } catch (\Exception $e) {
