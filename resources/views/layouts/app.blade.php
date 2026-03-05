@@ -62,7 +62,7 @@
     <link href="{{ asset('assets/css/nucleo-svg.css') }}" rel="stylesheet" />
 
     <!-- Font Awesome Icons nuevo-->
-    <script src="https://kit.fontawesome.com/349ee9c857.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
     <link href="{{ asset('assets/css/nucleo-svg.css') }}" rel="stylesheet" />
 
     <!-- CSS Files antiguo-->
