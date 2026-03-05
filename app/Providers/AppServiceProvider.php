@@ -23,5 +23,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             \URL::forceScheme('https');
         }
+
+        // Usar Bootstrap 5 para paginación globalmente
+        \Illuminate\Pagination\Paginator::useBootstrapFive();
     }
 }
