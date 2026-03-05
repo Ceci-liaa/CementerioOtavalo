@@ -355,4 +355,41 @@ class NichoController extends Controller
 
         return response()->json($query);
     }
+
+    // ── API: Buscar Bloques ──────────────────────────────────────────
+    public function searchBloques(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+
+        $query = Bloque::select('identificacion', 'nombre', 'codigo')
+            ->orderBy('nombre');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nombre', 'ILIKE', "%{$q}%")
+                    ->orWhere('codigo', 'ILIKE', "%{$q}%");
+            });
+        }
+
+        return response()->json($query->limit(50)->get());
+    }
+
+    // ── API: Buscar Socios ───────────────────────────────────────────
+    public function searchSocios(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+
+        $query = Socio::select('id', 'cedula', 'apellidos', 'nombres')
+            ->orderBy('apellidos');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('cedula', 'ILIKE', "%{$q}%")
+                    ->orWhere('apellidos', 'ILIKE', "%{$q}%")
+                    ->orWhere('nombres', 'ILIKE', "%{$q}%");
+            });
+        }
+
+        return response()->json($query->limit(50)->get());
+    }
 }

@@ -234,7 +234,7 @@
                                             <div class="d-flex justify-content-center">
                                                 @can('ver asignacion')
                                                 <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
-                                                        data-url="{{ route('asignaciones.show', $nicho->id) }}" title="Ver Detalles">
+                                                        data-url="{{ route('asignaciones.show', $nicho->identificacion) }}" title="Ver Detalles">
                                                     <i class="fa fa-eye"style="font-size: 0.7rem;"></i>
                                                 </button>
                                                 @endcan
@@ -242,7 +242,7 @@
                                                 @if($ocupantes->count() > 0 || $nicho->socios->count() > 0)
                                                     @can('editar asignacion')
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('asignaciones.edit', $nicho->id) }}" title="Editar/Corregir">
+                                                            data-url="{{ route('asignaciones.edit', $nicho->identificacion) }}" title="Editar/Corregir">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
@@ -251,7 +251,7 @@
                                                 @if($ocupantes->count() > 0)
                                                     @can('exhumar cuerpo')
                                                     <button type="button" class="btn btn-sm btn-dark mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('asignaciones.exhumarForm', $nicho->id) }}" title="Registrar Exhumación">
+                                                            data-url="{{ route('asignaciones.exhumarForm', $nicho->identificacion) }}" title="Registrar Exhumación">
                                                         <i class="fas fa-person-digging"style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
@@ -260,7 +260,7 @@
                                                 @if($nicho->fallecidos->count() > 0)
                                                     @can('eliminar asignacion')
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                            data-url="{{ route('asignacion.destroy', [$nicho->id, $nicho->fallecidos->last()->id]) }}"
+                                                            data-url="{{ route('asignacion.destroy', [$nicho->identificacion, $nicho->fallecidos->last()->id]) }}"
                                                             data-item="Asignación {{ $nicho->codigo }}" title="Eliminar Registro (Error)">
                                                         <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>

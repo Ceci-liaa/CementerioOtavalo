@@ -43,13 +43,12 @@ class AsignacionController extends Controller
         }
         // CASO 2: Si NO filtra por estado, pero tampoco busca nada (VISTA INICIAL)
         else if (!$buscando) {
-            // Regla por defecto: Mostrar (Con Gente) O (En Mantenimiento)
+            // Regla por defecto: Mostrar solo nichos con Socio o con Fallecidos activos
             $query->where(function ($q) {
                 $q->has('socios')
                     ->orWhereHas('fallecidos', function ($qf) {
                         $qf->where('fallecido_nicho.fecha_exhumacion', null);
-                    })
-                    ->orWhereRaw('UPPER(estado) = ?', ['MANTENIMIENTO']);
+                    });
             });
         }
         // CASO 3: Si solo está buscando texto (Search), buscamos en todo lado sin restringir.
@@ -109,11 +108,11 @@ class AsignacionController extends Controller
                     // Mostrar nichos donde los ocupantes activos sean menor que la capacidad
                     $q->whereRaw('(
                         SELECT COUNT(*) FROM fallecido_nicho 
-                        WHERE fallecido_nicho.nicho_id = nichos.id 
+                        WHERE fallecido_nicho.nicho_id = nichos.identificacion 
                         AND fallecido_nicho.fecha_exhumacion IS NULL
                     ) < nichos.capacidad');
                 })
-                ->orderBy('id', 'desc')
+                ->orderBy('identificacion', 'desc')
                 ->get();
 
             // 2. SOCIOS
@@ -150,7 +149,7 @@ class AsignacionController extends Controller
         // Esto permite cambiar al fallecido en el select si te equivocaste.
         $fallecidos = Fallecido::doesntHave('nichos')
             ->orWhereHas('nichos', function ($q) use ($id) {
-                $q->where('nichos.id', $id);
+                $q->where('nichos.identificacion', $id);
             })
             ->orderBy('apellidos')
             ->get();
@@ -200,7 +199,7 @@ class AsignacionController extends Controller
 
                 // 4. Calcular posición usando MAX para evitar conflictos con exhumados
                 $maxPosicion = DB::table('fallecido_nicho')
-                    ->where('nicho_id', $nicho->id)
+                    ->where('nicho_id', $nicho->identificacion)
                     ->max('posicion') ?? 0;
 
                 // 5. Asignar Fallecido con el SOCIO_ID vinculado al registro

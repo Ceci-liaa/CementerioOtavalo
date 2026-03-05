@@ -229,194 +229,237 @@
         }
     })();
 
-    // ========== BÚSQUEDA PARA SELECTS (Edit) ==========
+    // ========== BÚSQUEDA AJAX PARA BLOQUES Y SOCIOS (Edit) ==========
     (function() {
-        var configs = [
-            { inputId: 'buscarGisEdit', selectId: 'selectGisEdit', labelId: 'gisSeleccionadoEdit' },
-            { inputId: 'buscarBloqueEdit', selectId: 'selectBloqueEdit', labelId: 'bloqueSeleccionadoEdit' },
-            { inputId: 'buscarSocioEdit', selectId: 'selectSocioEdit', labelId: 'socioSeleccionadoEdit' }
-        ];
+        var currentBloqueId = '{{ old("bloque_id", $nicho->bloque_id) }}';
+        var currentSocioId = '{{ old("socio_id", $nicho->socio_id) }}';
 
-        configs.forEach(function(config) {
-            var input = document.getElementById(config.inputId);
-            var select = document.getElementById(config.selectId);
-            var label = document.getElementById(config.labelId);
-            
+        // ── Búsqueda de Bloques (AJAX) ──
+        (function() {
+            var input = document.getElementById('buscarBloqueEdit');
+            var select = document.getElementById('selectBloqueEdit');
+            var label = document.getElementById('bloqueSeleccionadoEdit');
             if (!input || !select) return;
-            
-            // Guardar opciones originales
-            var allOptions = [];
-            function captureOptions() {
-                allOptions = [];
-                Array.from(select.options).forEach(function(opt) {
-                    allOptions.push({
-                        value: opt.value,
-                        text: opt.text,
-                        selected: opt.selected,
-                        disabled: opt.disabled,
-                        searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
-                    });
-                });
-            }
-            captureOptions();
 
-            // Re-capturar opciones cuando el select cambia dinámicamente
-            var observer = new MutationObserver(function() { captureOptions(); });
-            observer.observe(select, { childList: true });
-            
-            function updateOptions(searchTerm) {
-                var term = searchTerm.toLowerCase().trim();
-                select.innerHTML = '';
-                var matchCount = 0;
-                var firstMatchIndex = -1;
-                
-                allOptions.forEach(function(optData) {
-                    var matches = optData.value === '' || 
-                                   optData.searchData.includes(term) || 
-                                   optData.text.toLowerCase().includes(term);
-                    
-                    if (term === '' || matches) {
-                        var option = document.createElement('option');
-                        option.value = optData.value;
-                        option.textContent = optData.text;
-                        if (optData.disabled) option.disabled = true;
-                        
-                        if (term !== '' && optData.value !== '' && !optData.disabled && matches) {
-                            matchCount++;
-                            if (firstMatchIndex === -1) {
-                                firstMatchIndex = select.options.length;
-                                option.className = 'search-first-match';
+            var debounceTimer = null;
+
+            function renderBloques(data, keepVal) {
+                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                data.forEach(function(b) {
+                    var opt = document.createElement('option');
+                    opt.value = b.identificacion;
+                    opt.textContent = b.nombre;
+                    if (String(b.identificacion) === String(keepVal)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                updateLabel();
+            }
+
+            function fetchBloques(q) {
+                fetch('/api/bloques/search?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderBloques(data, currentBloqueId);
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (q.trim() !== '') {
+                            if (data.length > 0) {
+                                input.classList.add('search-input-found');
+                                if (select.options.length > 1) { select.selectedIndex = 1; updateLabel(); }
                             } else {
-                                option.className = 'search-match';
+                                input.classList.add('search-input-empty');
                             }
                         }
-                        select.appendChild(option);
-                    }
-                });
-                
-                input.classList.remove('search-input-found', 'search-input-empty');
-                if (term !== '') {
-                    if (matchCount > 0) {
-                        input.classList.add('search-input-found');
-                        if (firstMatchIndex !== -1) {
-                            select.selectedIndex = firstMatchIndex;
-                            updateLabel();
-                        }
-                    } else {
-                        input.classList.add('search-input-empty');
-                    }
-                }
+                    });
             }
-            
+
             function updateLabel() {
                 if (!label) return;
-                var selectedOpt = select.options[select.selectedIndex];
-                if (selectedOpt && selectedOpt.value !== '') {
-                    label.textContent = selectedOpt.text;
-                    label.classList.remove('text-primary');
-                    label.classList.add('text-success');
-                } else {
-                    label.textContent = 'Ninguno';
-                    label.classList.remove('text-success');
-                    label.classList.add('text-primary');
-                }
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
             }
-            
-            // Evento: escribir
+
+            fetchBloques('');
+
             input.addEventListener('input', function() {
-                updateOptions(this.value);
+                clearTimeout(debounceTimer);
+                var val = input.value;
+                debounceTimer = setTimeout(function() { fetchBloques(val); }, 300);
             });
-            
-            // Evento: teclas
+
             input.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    var selectedOpt = select.options[select.selectedIndex];
-                    if (selectedOpt && selectedOpt.value !== '') {
-                        var selectedValue = selectedOpt.value;
-                        var selectedText = selectedOpt.text;
-                        
-                        this.value = '';
-                        this.classList.remove('search-input-found', 'search-input-empty');
-                        updateOptions('');
-                        
-                        for (var i = 0; i < select.options.length; i++) {
-                            if (select.options[i].value === selectedValue) {
-                                select.selectedIndex = i;
-                                break;
-                            }
-                        }
-                        updateLabel();
-
-                        // Si confirmamos un bloque, disparar el filtro GIS
-                        if (config.selectId === 'selectBloqueEdit') {
-                            select.dispatchEvent(new Event('change'));
-                        }
-                        
-                        var originalPlaceholder = this.placeholder;
-                        this.placeholder = '✅ ' + selectedText.substring(0, 35);
-                        this.style.background = '#d4edda';
-                        var self = this;
+                    e.preventDefault(); e.stopPropagation();
+                    var opt = select.options[select.selectedIndex];
+                    if (opt && opt.value !== '') {
+                        currentBloqueId = opt.value;
+                        var txt = opt.text;
+                        input.value = '';
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        fetchBloques('');
                         setTimeout(function() {
-                            self.placeholder = originalPlaceholder;
-                            self.style.background = '';
-                        }, 1500);
+                            for (var i = 0; i < select.options.length; i++) {
+                                if (select.options[i].value === currentBloqueId) { select.selectedIndex = i; break; }
+                            }
+                            updateLabel();
+                            select.dispatchEvent(new Event('change'));
+                        }, 400);
+                        input.placeholder = '✅ ' + txt.substring(0, 35);
+                        input.style.background = '#d4edda';
+                        setTimeout(function() { input.placeholder = '🔍 Buscar bloque...'; input.style.background = ''; }, 1500);
                     }
                     return false;
                 }
-                
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (select.selectedIndex < select.options.length - 1) {
-                        select.selectedIndex++;
-                        updateLabel();
-                    }
-                }
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (select.selectedIndex > 0) {
-                        select.selectedIndex--;
-                        updateLabel();
-                    }
-                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
             });
-            
+
             select.addEventListener('change', updateLabel);
             select.addEventListener('click', updateLabel);
+        })();
 
-            // Inicializar label con valor actual del nicho
-            updateLabel();
-        });
-    })();
+        // ── Búsqueda de Socios (AJAX) ──
+        (function() {
+            var input = document.getElementById('buscarSocioEdit');
+            var select = document.getElementById('selectSocioEdit');
+            var label = document.getElementById('socioSeleccionadoEdit');
+            if (!input || !select) return;
 
-    // ========== INICIALIZAR VALORES ACTUALES DEL NICHO ==========
-    (function() {
-        function selectAndLabel(selectId, labelId, targetValue) {
-            var sel = document.getElementById(selectId);
-            var lbl = document.getElementById(labelId);
-            if (!sel || !lbl || !targetValue) return;
+            var debounceTimer = null;
 
-            for (var i = 0; i < sel.options.length; i++) {
-                if (sel.options[i].value == targetValue) {
-                    sel.selectedIndex = i;
-                    sel.options[i].selected = true;
-                    lbl.textContent = sel.options[i].text;
-                    lbl.className = 'fw-bold text-success';
-                    // Scroll para que se vea el item seleccionado
-                    sel.scrollTop = sel.options[i].offsetTop - sel.offsetTop;
-                    break;
-                }
+            function renderSocios(data, keepVal) {
+                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                data.forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.apellidos + ' ' + s.nombres + ' (' + s.cedula + ')';
+                    if (String(s.id) === String(keepVal)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                updateLabel();
             }
-        }
 
-        // Preseleccionar Bloque (valor del servidor)
-        selectAndLabel('selectBloqueEdit', 'bloqueSeleccionadoEdit', '{{ old("bloque_id", $nicho->bloque_id) }}');
+            function fetchSocios(q) {
+                fetch('/api/socios/search?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderSocios(data, currentSocioId);
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (q.trim() !== '') {
+                            if (data.length > 0) {
+                                input.classList.add('search-input-found');
+                                if (select.options.length > 1) { select.selectedIndex = 1; updateLabel(); }
+                            } else {
+                                input.classList.add('search-input-empty');
+                            }
+                        }
+                    });
+            }
 
-        // Preseleccionar Socio (valor del servidor)
-        selectAndLabel('selectSocioEdit', 'socioSeleccionadoEdit', '{{ old("socio_id", $nicho->socio_id) }}');
+            function updateLabel() {
+                if (!label) return;
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
+            }
 
-        // GIS se preselecciona desde el callback del API (ya implementado en el cascade)
+            fetchSocios('');
+
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                var val = input.value;
+                debounceTimer = setTimeout(function() { fetchSocios(val); }, 300);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); e.stopPropagation();
+                    var opt = select.options[select.selectedIndex];
+                    if (opt && opt.value !== '') {
+                        currentSocioId = opt.value;
+                        var txt = opt.text;
+                        input.value = '';
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        fetchSocios('');
+                        setTimeout(function() {
+                            for (var i = 0; i < select.options.length; i++) {
+                                if (select.options[i].value === currentSocioId) { select.selectedIndex = i; break; }
+                            }
+                            updateLabel();
+                        }, 400);
+                        input.placeholder = '✅ ' + txt.substring(0, 35);
+                        input.style.background = '#d4edda';
+                        setTimeout(function() { input.placeholder = '🔍 Buscar por nombre o cédula...'; input.style.background = ''; }, 1500);
+                    }
+                    return false;
+                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
+            });
+
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
+        })();
+
+        // ── Búsqueda de GIS (Client-side, se carga por API al seleccionar bloque) ──
+        (function() {
+            var input = document.getElementById('buscarGisEdit');
+            var select = document.getElementById('selectGisEdit');
+            var label = document.getElementById('gisSeleccionadoEdit');
+            if (!input || !select) return;
+
+            var allGisOptions = [];
+            function captureGis() {
+                allGisOptions = [];
+                Array.from(select.options).forEach(function(opt) {
+                    allGisOptions.push({ value: opt.value, text: opt.text, disabled: opt.disabled, search: (opt.getAttribute('data-search') || opt.text).toLowerCase() });
+                });
+            }
+            captureGis();
+            var obs = new MutationObserver(captureGis);
+            obs.observe(select, { childList: true });
+
+            function updateLabel() {
+                if (!label) return;
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
+            }
+
+            input.addEventListener('input', function() {
+                var term = this.value.toLowerCase().trim();
+                select.innerHTML = '';
+                var count = 0, first = -1;
+                allGisOptions.forEach(function(o) {
+                    if (term === '' || o.value === '' || o.search.includes(term)) {
+                        var opt = document.createElement('option');
+                        opt.value = o.value; opt.textContent = o.text;
+                        if (o.disabled) opt.disabled = true;
+                        if (term !== '' && o.value !== '' && !o.disabled && o.search.includes(term)) {
+                            count++;
+                            if (first === -1) { first = select.options.length; opt.className = 'search-first-match'; }
+                            else { opt.className = 'search-match'; }
+                        }
+                        select.appendChild(opt);
+                    }
+                });
+                setTimeout(function() { captureGis(); }, 50);
+                input.classList.remove('search-input-found', 'search-input-empty');
+                if (term !== '') {
+                    if (count > 0) { input.classList.add('search-input-found'); if (first !== -1) { select.selectedIndex = first; updateLabel(); } }
+                    else { input.classList.add('search-input-empty'); }
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); updateLabel(); return false; }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
+            });
+
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
+            updateLabel();
+        })();
     })();
 </script>

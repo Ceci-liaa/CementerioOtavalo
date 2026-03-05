@@ -56,10 +56,9 @@ class Fallecido extends Model implements Auditable
     // Relación con Nichos (Usando el modelo Pivot corregido)
     public function nichos()
     {
-        return $this->belongsToMany(Nicho::class, 'fallecido_nicho')
+        return $this->belongsToMany(Nicho::class, 'fallecido_nicho', 'fallecido_id', 'nicho_id')
                     ->using(FallecidoNicho::class)
-                    ->withPivot('socio_id',
-                    'codigo','posicion', 'fecha_inhumacion', 'fecha_exhumacion','observacion')
+                    ->withPivot('socio_id', 'codigo','posicion', 'fecha_inhumacion', 'fecha_exhumacion','observacion')
                     ->withTimestamps();
     }
 }
