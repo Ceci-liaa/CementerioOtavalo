@@ -135,6 +135,7 @@ class AsignacionController extends Controller
     public function searchNichosDisponibles(Request $request)
     {
         $q = trim($request->q);
+        $socioId = $request->socio_id; // Nuevo parámetro
         
         $query = Nicho::with('bloque')
             ->withCount(['fallecidos' => function($qu) {
@@ -147,6 +148,16 @@ class AsignacionController extends Controller
                     AND fallecido_nicho.fecha_exhumacion IS NULL
                 ) < nichos.capacidad');
             });
+
+        // Si viene socio_id, filtramos nichos que ya tengan relación con ese socio
+        if (!empty($socioId)) {
+            $query->where(function($sq) use ($socioId) {
+                $sq->where('socio_id', $socioId)
+                   ->orWhereHas('socios', function($ss) use ($socioId) {
+                       $ss->where('socios.id', $socioId);
+                   });
+            });
+        }
 
         if ($q !== '') {
             $query->where(function($qu) use ($q) {

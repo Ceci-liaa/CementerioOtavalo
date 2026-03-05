@@ -15,13 +15,13 @@
         {{-- NAVEGACIÓN TABS --}}
         <ul class="nav nav-tabs nav-fill mb-3" id="asignacionTabs" role="tablist">
             <li class="nav-item">
-                <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tabNicho" type="button">
-                    <i class="fas fa-cube me-1"></i> 1. Nicho
+                <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tabSocio" type="button">
+                    <i class="fas fa-user me-1"></i> 1. Socio
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabSocio" type="button">
-                    <i class="fas fa-user me-1"></i> 2. Socio
+                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tabNicho" type="button">
+                    <i class="fas fa-cube me-1"></i> 2. Nicho
                 </button>
             </li>
             <li class="nav-item">
@@ -32,23 +32,8 @@
         </ul>
 
         <div class="tab-content">
-            
-            {{-- TAB 1: NICHO --}}
-            <div class="tab-pane fade show active" id="tabNicho">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Nicho Disponible <span class="text-danger">*</span></label>
-                        <input type="text" id="buscarNichoData" class="form-control mb-2" placeholder="🔍 Buscar por código o bloque...">
-                        <select name="nicho_id" id="selectNichoData" class="form-select" required size="5" style="height: auto;">
-                            <!-- Opciones cargadas por AJAX -->
-                        </select>
-                        <small class="text-muted">Seleccionado: <span id="nichoSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
-                    </div>
-                </div>
-            </div>
-
-            {{-- TAB 2: SOCIO --}}
-            <div class="tab-pane fade" id="tabSocio">
+            {{-- TAB 1: SOCIO --}}
+            <div class="tab-pane fade show active" id="tabSocio">
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold">Socio Responsable <span class="text-danger">*</span></label>
@@ -58,7 +43,6 @@
                         </select>
                         <small class="text-muted">Seleccionado: <span id="socioSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
-                    
                     <div class="col-12">
                         <label class="form-label fw-bold">Rol del Socio</label>
                         <select name="rol" class="form-select">
@@ -66,6 +50,23 @@
                             <option value="RESPONSABLE">RESPONSABLE</option>
                             <option value="CO-TITULAR">CO-TITULAR</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            {{-- TAB 2: NICHO --}}
+            <div class="tab-pane fade" id="tabNicho">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Nicho Disponible <span class="text-danger">*</span></label>
+                        <div class="alert alert-info py-1 px-2 text-xs mb-2">
+                            <i class="fas fa-info-circle me-1"></i> Se muestran nichos asociados al socio.
+                        </div>
+                        <input type="text" id="buscarNichoData" class="form-control mb-2" placeholder="🔍 Buscar por código o bloque...">
+                        <select name="nicho_id" id="selectNichoData" class="form-select" required size="5" style="height: auto;">
+                            <!-- Opciones cargadas por AJAX -->
+                        </select>
+                        <small class="text-muted">Seleccionado: <span id="nichoSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                 </div>
             </div>
@@ -81,7 +82,6 @@
                         </select>
                         <small class="text-muted">Seleccionado: <span id="fallecidoSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
-                    
                     <div class="col-12">
                         <label class="form-label fw-bold">Fecha de Inhumación <span class="text-danger">*</span></label>
                         <input type="date" name="fecha_inhumacion" class="form-control" required value="{{ date('Y-m-d') }}">
@@ -99,7 +99,7 @@
 
 <script>
     (function() {
-        function setupAjaxSearch(inputId, selectId, labelId, apiUrl, renderCallback) {
+        function setupAjaxSearch(inputId, selectId, labelId, apiUrl, renderCallback, getExtraParams) {
             var input = document.getElementById(inputId);
             var select = document.getElementById(selectId);
             var label = document.getElementById(labelId);
@@ -119,7 +119,15 @@
             }
 
             function fetchData(q) {
-                fetch(apiUrl + '?q=' + encodeURIComponent(q))
+                var url = apiUrl + '?q=' + encodeURIComponent(q);
+                if (getExtraParams) {
+                    var extra = getExtraParams();
+                    for (var key in extra) {
+                        url += '&' + key + '=' + encodeURIComponent(extra[key]);
+                    }
+                }
+
+                fetch(url)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         select.innerHTML = '<option value="">-- Seleccionar --</option>';
@@ -160,8 +168,13 @@
                         input.value = '';
                         input.classList.remove('search-input-found', 'search-input-empty');
                         
-                        // Refetch all and preserve selection
-                        fetch(apiUrl + '?q=')
+                        var url = apiUrl + '?q=';
+                        if (getExtraParams) {
+                            var extra = getExtraParams();
+                            for (var key in extra) { url += '&' + key + '=' + encodeURIComponent(extra[key]); }
+                        }
+
+                        fetch(url)
                             .then(function(r) { return r.json(); })
                             .then(function(data) {
                                 select.innerHTML = '<option value="">-- Seleccionar --</option>';
@@ -187,18 +200,27 @@
 
             select.addEventListener('change', updateLabel);
             select.addEventListener('click', updateLabel);
+
+            return { fetchData: fetchData };
         }
 
-        // Búsqueda de Nichos Disponibles
-        setupAjaxSearch('buscarNichoData', 'selectNichoData', 'nichoSeleccionadoData', '/api/asignaciones/nichos-disponibles', function(opt, item) {
-            opt.value = item.id;
-            opt.textContent = item.codigo + " - Bloque " + item.bloque_nombre + " (" + item.ocupados + "/" + item.capacidad + " Ocupados)";
-        });
-
-        // Búsqueda de Socios (reutilizamos la ruta del nicho que ya busca socios)
-        setupAjaxSearch('buscarSocioData', 'selectSocioData', 'socioSeleccionadoData', '/api/socios/search', function(opt, item) {
+        // Búsqueda de Socios
+        var socioSearch = setupAjaxSearch('buscarSocioData', 'selectSocioData', 'socioSeleccionadoData', '/api/socios/search', function(opt, item) {
             opt.value = item.id;
             opt.textContent = item.apellidos + " " + item.nombres + " (" + item.cedula + ")";
+        });
+
+        // Búsqueda de Nichos Disponibles (depende de socio_id)
+        var nichoSearch = setupAjaxSearch('buscarNichoData', 'selectNichoData', 'nichoSeleccionadoData', '/api/asignaciones/nichos-disponibles', function(opt, item) {
+            opt.value = item.id;
+            opt.textContent = item.codigo + " - Bloque " + item.bloque_nombre + " (" + item.ocupados + "/" + item.capacidad + " Ocupados)";
+        }, function() {
+            return { socio_id: document.getElementById('selectSocioData').value };
+        });
+
+        // Cuando cambia el socio, refrescamos los nichos
+        document.getElementById('selectSocioData').addEventListener('change', function() {
+            nichoSearch.fetchData(document.getElementById('buscarNichoData').value);
         });
 
         // Búsqueda de Fallecidos Disponibles
