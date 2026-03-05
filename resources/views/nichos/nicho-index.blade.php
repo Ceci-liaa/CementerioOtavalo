@@ -142,7 +142,7 @@
                                     @forelse ($nichos as $n)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" name="ids[]" value="{{ $n->id }}" class="check-item"
+                                                <input type="checkbox" name="ids[]" value="{{ $n->identificacion }}" class="check-item"
                                                     style="cursor: pointer;">
                                             </td>
 
@@ -211,7 +211,7 @@
                                             <td>
                                                 <div class="d-flex justify-content-center align-items-center">
                                                     {{-- Botón QR DIRECTO (Sin dropdown) --}}
-                                                    <a href="{{ route('nichos.qr', ['nicho' => $n->id, 'mode' => 'text']) }}" 
+                                                    <a href="{{ route('nichos.qr', ['nicho' => $n->identificacion, 'mode' => 'text']) }}" 
                                                        target="_blank" 
                                                        class="btn btn-sm btn-dark mb-0 btn-action" 
                                                        title="Ver QR">
@@ -220,13 +220,13 @@
 
                                                     {{-- Botón Ver --}}
                                                     <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal"
-                                                        data-url="{{ route('nichos.show', $n->id) }}" title="Ver">
+                                                        data-url="{{ route('nichos.show', $n->identificacion) }}" title="Ver">
                                                         <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     
                                                     {{-- Botón Editar --}}
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal"
-                                                        data-url="{{ route('nichos.edit', $n->id) }}" title="Editar">
+                                                        data-url="{{ route('nichos.edit', $n->identificacion) }}" title="Editar">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     

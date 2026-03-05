@@ -147,7 +147,7 @@
 <script>
     // ========== FILTRO EN CASCADA: Bloque → Nichos GIS (Edit) ==========
     (function() {
-        var currentNichoId = {{ $nicho->id }};
+        var currentNichoId = {{ $nicho->identificacion }};
         var currentGeomId = {{ $nicho->nicho_geom_id ?? 'null' }};
 
         var selectBloque = document.getElementById('selectBloqueEdit');

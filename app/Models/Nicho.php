@@ -14,6 +14,7 @@ class Nicho extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'nichos';
+    protected $primaryKey = 'identificacion';
     protected $guarded = [];
 
     protected $casts = [
@@ -24,7 +25,7 @@ class Nicho extends Model implements Auditable
     /**
      * RELACIONES
      */
-    public function bloque() { return $this->belongsTo(Bloque::class); }
+    public function bloque() { return $this->belongsTo(Bloque::class, 'bloque_id', 'identificacion'); }
     public function creador() { return $this->belongsTo(User::class, 'created_by'); }
     public function socio() { return $this->belongsTo(Socio::class, 'socio_id'); }
     
@@ -34,7 +35,7 @@ class Nicho extends Model implements Auditable
     // Relaciones Pivot
     public function socios()
     {
-        return $this->belongsToMany(Socio::class, 'socio_nicho')
+        return $this->belongsToMany(Socio::class, 'socio_nicho', 'nicho_id', 'socio_id')
                     ->using(SocioNicho::class)
                     ->withPivot('id', 'rol', 'desde', 'hasta')
                     ->withTimestamps();
@@ -42,7 +43,7 @@ class Nicho extends Model implements Auditable
 
     public function fallecidos()
     {
-        return $this->belongsToMany(Fallecido::class, 'fallecido_nicho')
+        return $this->belongsToMany(Fallecido::class, 'fallecido_nicho', 'nicho_id', 'fallecido_id')
                     ->using(FallecidoNicho::class)
                     ->withPivot('socio_id','codigo','posicion', 'fecha_inhumacion', 'fecha_exhumacion', 'observacion')
                     ->withTimestamps();
@@ -58,7 +59,7 @@ class Nicho extends Model implements Auditable
             // Si el controlador NO le pasó un código (porque es un nicho manual),
             // generamos uno secuencial: N0001, N0002...
             if (empty($model->codigo)) {
-                $last = self::withTrashed()->where('codigo', 'LIKE', 'N%')->orderBy('id', 'desc')->first();
+                $last = self::withTrashed()->where('codigo', 'LIKE', 'N%')->orderBy('identificacion', 'desc')->first();
                 
                 // Extraemos el número si existe, sino empezamos en 1
                 $number = 0;
