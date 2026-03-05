@@ -1,29 +1,21 @@
 <x-app-layout>
     {{-- 1. ESTILOS (Idénticos a Socios) --}}
     <style>
-        /* ESTILO ALERTAS (VERDE PASTEL) */
-        .alert-success {
-            background-color: #e4f4db !important;
-            color: #708736 !important;
-            border-color: #e4f4db !important;
-            font-weight: 400 !important;
-            font-size: 14px !important;
-        }
+        .alert-success { background-color: #e4f4db !important; color: #708736 !important; border-color: #e4f4db !important; font-weight: 400 !important; font-size: 14px !important; }
         .alert-success .btn-close { filter: none !important; opacity: 0.5; color: #708736; }
         .alert-success .btn-close:hover { opacity: 1; }
-
-        /* Estilos para input groups y focus */
         .input-group-text { border-color: #dee2e6; }
-        .form-control:focus, .form-select:focus {
-            border-color: #5ea6f7;
-            box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25);
-        }
+        .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
+        .compact-filter { width: auto; min-width: 140px; max-width: 250px; }
 
-        /* Clase para inputs "delgados" como botones */
-        .compact-filter {
-            width: auto; 
-            min-width: 140px; 
-            max-width: 250px;
+        /* TABLA ESTILO PARROQUIA */
+        .table thead th {
+            font-size: 14px !important;    
+            text-transform: uppercase;    
+            letter-spacing: 0.05rem;      
+            font-weight: 700 !important;  
+            padding-top: 15px !important; 
+            padding-bottom: 15px !important; 
         }
     </style>
 
@@ -98,18 +90,18 @@
 
                 {{-- 5. TABLA --}}
                 <div class="card shadow-sm border">
-                    <div class="card-body p-3">
+                    <div class="card-body p-0 pb-2">
                         <div class="table-responsive">
-                            <table class="table table-hover table-bordered align-middle text-center mb-0">
-                                <thead class="table-dark">
+                            <table class="table table-hover align-middle text-center mb-0">
+                                <thead class="bg-dark text-white">
                                     <tr>
-                                        <th style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" style="cursor: pointer;"></th>
-                                        <th style="width: 50px;">#</th>
-                                        <th>Código</th>
-                                        <th class="text-start ps-4">Nombre</th>
-                                        <th class="text-start ps-4">Descripción</th>
-                                        <th>Valor ($)</th>
-                                        <th style="width:140px;">Acciones</th>
+                                        <th class="opacity-10" style="width: 40px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()" style="cursor: pointer;"></th>
+                                        <th class="opacity-10" style="width: 50px;">#</th>
+                                        <th class="opacity-10">Código</th>
+                                        <th class="opacity-10 text-start ps-4">Nombre</th>
+                                        <th class="opacity-10 text-start ps-4">Descripción</th>
+                                        <th class="opacity-10">Valor ($)</th>
+                                        <th class="opacity-10" style="width:140px;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -125,7 +117,9 @@
                                             <td class="fw-bold text-dark">{{ $s->codigo }}</td>
                                             
                                             {{-- Nombre --}}
-                                            <td class="text-start ps-4">{{ $s->nombre }}</td>
+                                            <td class="text-start ps-4">
+                                                <span class="text-sm font-weight-bold text-dark">{{ $s->nombre }}</span>
+                                            </td>
                                             
                                             {{-- Descripción (Truncada) --}}
                                             <td class="text-start ps-4 text-muted small">
