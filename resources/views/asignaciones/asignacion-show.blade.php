@@ -14,7 +14,7 @@
         @if($nicho->socios->isNotEmpty())
             @php $socio = $nicho->socios->first(); @endphp
             <div class="col-md-8 fw-semibold">{{ $socio->apellidos }} {{ $socio->nombres }}</div>
-            <div class="col-md-4 text-end badge bg-secondary">{{ $socio->pivot->rol }}</div>
+            <div class="col-md-4 text-end badge bg-secondary text-dark">{{ $socio->pivot->rol }}</div>
         @else
             <div class="col-12 text-muted">-- Sin responsable --</div>
         @endif
@@ -81,7 +81,7 @@
     {{-- Verificamos si hay un código para buscar --}}
     @if(!empty($nicho->codigo))
         <a href="https://visor-cementerio.onrender.com?buscar={{ urlencode($nicho->codigo) }}" 
-           target="_blank" 
+           target="visor_mapa" 
            class="btn btn-info text-white shadow-sm">
             <i class="fas fa-map-location-dot me-2"></i> Ubicar en Mapa
         </a>

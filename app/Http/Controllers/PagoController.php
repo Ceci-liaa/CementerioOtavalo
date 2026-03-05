@@ -176,23 +176,22 @@ class PagoController extends Controller
         return back()->with('success', 'Recibo eliminado.');
     }
 
-    // --- 8. BUSCADOR DE SOCIO (El que ya tenías) ---
+    // --- 8. BUSCADOR DE SOCIO ---
     public function create(Request $request)
     {
-        // ... (Copia aquí tu función create del paso anterior tal cual estaba) ...
-        // Si no la tienes a mano, avísame y te la pongo.
-        // Es la que busca al socio para iniciar el cobro.
-        $search = trim($request->get('search', ''));
-        $socios = Socio::query()->orderBy('apellidos')->orderBy('nombres');
-        if ($search !== '') {
-            $socios->where(function ($w) use ($search) {
-                $w->whereRaw("CAST(cedula AS TEXT) ILIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("CONCAT(apellidos, ' ', nombres) ILIKE ?", ["%{$search}%"]);
-            });
-        }
-        $resultados = $socios->paginate(5)->withQueryString();
-        if ($request->ajax())
+        $search = $request->get('search');
+        
+        $resultados = Socio::query()
+            ->buscar($search)
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->paginate(5)
+            ->withQueryString();
+
+        if ($request->ajax()) {
             return view('pagos.partials.lista-socios', compact('resultados'))->render();
+        }
+
         return view('pagos.create', compact('resultados'));
     }
     // --- 9. NUEVO: HISTORIAL INDIVIDUAL DEL SOCIO (El "Ojo") ---
