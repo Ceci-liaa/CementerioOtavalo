@@ -184,8 +184,18 @@ class AsignacionController extends Controller
     public function searchFallecidosDisponibles(Request $request)
     {
         $q = trim($request->q);
+        $includeId = $request->include_id; // Nuevo parámetro para edición
         
-        $query = Fallecido::doesntHave('nichos');
+        $query = Fallecido::query();
+
+        if ($includeId) {
+            $query->where(function($sq) use ($includeId) {
+                $sq->doesntHave('nichos')
+                   ->orWhere('id', $includeId);
+            });
+        } else {
+            $query->doesntHave('nichos');
+        }
 
         if ($q !== '') {
             $query->where(function($qu) use ($q) {
@@ -344,47 +354,55 @@ class AsignacionController extends Controller
     public function update(Request $request, $nicho_id)
     {
         $request->validate([
-            'socio_id' => 'required|exists:socios,id',
-            'socio_anterior_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'fallecido_anterior_id' => 'required|exists:fallecidos,id',
             'fecha_inhumacion' => 'required|date',
-            'rol' => 'required|string'
         ]);
 
         try {
             DB::transaction(function () use ($request, $nicho_id) {
                 $nicho = Nicho::findOrFail($nicho_id);
+                $nuevoFallecidoId = $request->fallecido_id;
+                $antiguoFallecidoId = $request->fallecido_anterior_id;
 
-                // A. Actualizar Socio en la tabla general de nichos
-                if ($request->socio_id != $request->socio_anterior_id) {
+                // Si el fallecido cambió, debemos hacer el swap en la tabla pivot
+                if ($nuevoFallecidoId != $antiguoFallecidoId) {
                     
-                    // --- CORRECCIÓN ---
-                    // En lugar de detach() directo, buscamos el modelo Pivot y lo borramos.
-                    // Esto carga el ID en memoria para que la auditoría funcione.
-                    $pivotSocio = \App\Models\SocioNicho::where('nicho_id', $nicho_id)
-                                    ->where('socio_id', $request->socio_anterior_id)
-                                    ->first();
-                    
-                    if ($pivotSocio) {
-                        $pivotSocio->delete();
+                    // 1. Obtener datos del registro anterior para no perder correlativos
+                    $pivotAntiguo = DB::table('fallecido_nicho')
+                        ->where('nicho_id', $nicho_id)
+                        ->where('fallecido_id', $antiguoFallecidoId)
+                        ->whereNull('fecha_exhumacion')
+                        ->first();
+
+                    if (!$pivotAntiguo) {
+                        throw new \Exception("No se encontró el registro del fallecido anterior activo.");
                     }
 
-                    // Ahora asignamos el nuevo socio
-                    $nicho->socios()->syncWithoutDetaching([
-                        $request->socio_id => ['rol' => $request->rol, 'desde' => now()]
+                    // 2. Eliminar el vínculo antiguo (o marcar como error si prefieres, 
+                    // pero el usuario pidió "corregir", así que borramos para liberar al fallecido anterior)
+                    DB::table('fallecido_nicho')
+                        ->where('id', $pivotAntiguo->id)
+                        ->delete();
+
+                    // 3. Crear el nuevo vínculo con el fallecido nuevo pero los mismos datos de espacio/socio
+                    $nicho->fallecidos()->attach($nuevoFallecidoId, [
+                        'socio_id' => $pivotAntiguo->socio_id,
+                        'codigo' => $pivotAntiguo->codigo,
+                        'posicion' => $pivotAntiguo->posicion,
+                        'fecha_inhumacion' => $request->fecha_inhumacion,
+                        'observacion' => $request->observacion ?? 'Corrección de dato: fallecido cambiado.'
+                    ]);
+                } else {
+                    // Si es el mismo fallecido, solo actualizamos fecha y observación
+                    $nicho->fallecidos()->updateExistingPivot($nuevoFallecidoId, [
+                        'fecha_inhumacion' => $request->fecha_inhumacion,
+                        'observacion' => $request->observacion,
                     ]);
                 }
-
-                // B. Actualizar registro en fallecido_nicho incluyendo el nuevo socio_id
-                $nicho->fallecidos()->updateExistingPivot($request->fallecido_id, [
-                    'socio_id' => $request->socio_id, // <--- Mantiene sincronía
-                    'fecha_inhumacion' => $request->fecha_inhumacion,
-                    'observacion' => $request->observacion,
-                ]);
             });
 
-            return back()->with('success', 'Datos corregidos y socio sincronizado.');
+            return back()->with('success', 'Datos de inhumación corregidos correctamente.');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error al actualizar: ' . $e->getMessage());
