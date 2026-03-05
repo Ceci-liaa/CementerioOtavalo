@@ -28,6 +28,13 @@
                                             {{ session('success') }}
                                         </div>
                                     @endif
+                                    @if (session('error'))
+                                        <div class="alert alert-warning px-3 py-2 text-sm rounded mb-3"
+                                            style="max-width: 400px;">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ session('error') }}
+                                        </div>
+                                    @endif
                                     <div class="text-center">
                                         @if ($errors->any())
                                             <div class="alert alert-danger px-3 py-2 text-sm rounded"
