@@ -171,7 +171,7 @@
                                                 @if($n->tipo_nicho === 'PROPIO')
                                                     <span class="badge bg-info text-dark" style="font-size: 0.65rem;">PROPIO</span>
                                                 @else
-                                                    <span class="badge bg-primary" style="font-size: 0.65rem;">COMPARTIDO</span>
+                                                    <span class="badge bg-primary text-dark" style="font-size: 0.65rem;">COMPARTIDO</span>
                                                 @endif
                                             </td>
 
@@ -183,10 +183,10 @@
 
                                             <td>
                                                 @switch($n->estado)
-                                                    @case('BUENO') <span class="badge bg-success" style="font-size: 0.65rem;">Bueno</span> @break
+                                                    @case('BUENO') <span class="badge bg-success text-dark" style="font-size: 0.65rem;">Bueno</span> @break
                                                     @case('MANTENIMIENTO') <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">Mant.</span> @break
-                                                    @case('MALO') <span class="badge bg-danger" style="font-size: 0.65rem;">Malo</span> @break
-                                                    @case('ABANDONADO') <span class="badge bg-secondary" style="font-size: 0.65rem;">Aband.</span> @break
+                                                    @case('MALO') <span class="badge bg-danger text-dark" style="font-size: 0.65rem;">Malo</span> @break
+                                                    @case('ABANDONADO') <span class="badge bg-secondary text-dark" style="font-size: 0.65rem;">Aband.</span> @break
                                                     @default <span class="badge bg-light text-dark" style="font-size: 0.65rem;">{{ $n->estado }}</span>
                                                 @endswitch
                                             </td>

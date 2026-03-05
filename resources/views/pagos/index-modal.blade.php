@@ -64,7 +64,7 @@
                                             <label class="form-check-label fw-bold text-dark w-100 ps-1" for="anio_{{ $anio }}"
                                                 style="cursor: pointer;">
                                                 Año {{ $anio }}
-                                                <span class="float-end badge bg-danger text-white"
+                                                <span class="float-end badge bg-danger text-dark"
                                                     style="font-size: 0.65rem;">PENDIENTE</span>
                                             </label>
                                         </div>

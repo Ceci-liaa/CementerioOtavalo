@@ -14,10 +14,10 @@
         <div class="text-end border-start ps-3">
             <small class="d-block text-muted text-uppercase" style="font-size: 0.65rem;">Estado</small>
             @switch($nicho->estado)
-                @case('BUENO') <span class="badge bg-success">Bueno</span> @break
+                @case('BUENO') <span class="badge bg-success text-dark">Bueno</span> @break
                 @case('MANTENIMIENTO') <span class="badge bg-warning text-dark">Mantenimiento</span> @break
-                @case('MALO') <span class="badge bg-danger">Malo</span> @break
-                @default <span class="badge bg-secondary">{{ ucfirst(strtolower($nicho->estado)) }}</span>
+                @case('MALO') <span class="badge bg-danger text-dark">Malo</span> @break
+                @default <span class="badge bg-secondary text-dark">{{ ucfirst(strtolower($nicho->estado)) }}</span>
             @endswitch
         </div>
     </div>
@@ -73,9 +73,9 @@
                 <div class="col-6">
                     <label class="d-block text-muted text-uppercase mb-0" style="font-size: 0.65rem;">Clase</label>
                     @if($nicho->clase_nicho == 'TIERRA')
-                        <span class="badge bg-secondary w-100 py-2"><i class="fas fa-seedling me-1"></i> TIERRA</span>
+                        <span class="badge bg-secondary w-100 py-2 text-dark"><i class="fas fa-seedling me-1"></i> TIERRA</span>
                     @else
-                        <span class="badge bg-dark w-100 py-2"><i class="fas fa-dungeon me-1"></i> BÓVEDA</span>
+                        <span class="badge bg-dark w-100 py-2 text-dark"><i class="fas fa-dungeon me-1"></i> BÓVEDA</span>
                     @endif
                 </div>
                 <div class="col-6">

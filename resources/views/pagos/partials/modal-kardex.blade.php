@@ -20,7 +20,7 @@
             <div class="text-end">
                 <small class="text-secondary d-block fw-bold">ESTADO ACTUAL</small>
                 @if(count($aniosPendientes) > 0)
-                    <span class="badge bg-danger fs-6 px-3 py-2 shadow-sm">
+                    <span class="badge bg-danger fs-6 px-3 py-2 shadow-sm text-dark">
                         Debe {{ count($aniosPendientes) }} años
                     </span>
                 @else
