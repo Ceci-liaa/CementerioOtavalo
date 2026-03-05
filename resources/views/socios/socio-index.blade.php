@@ -12,6 +12,11 @@
         /* Alerta Candidatos (Amarillo) */
         .alert-warning-custom { background-color: #fff3cd !important; border-color: #ffecb5 !important; color: #664d03 !important; }
 
+        /* Alerta Tercera Edad (Verde/Azul Pastel) */
+        .alert-subsidio-custom { background-color: #e0f2f1 !important; border-color: #b2dfdb !important; color: #00695c !important; }
+        .text-teal { color: #00695c !important; }
+        .border-teal { border-color: #b2dfdb !important; }
+
         /* INPUTS Y FILTROS */
         .input-group-text { border-color: #dee2e6; }
         .form-control:focus, .form-select:focus { border-color: #5ea6f7; box-shadow: 0 0 0 0.2rem rgba(94, 166, 247, 0.25); }
@@ -189,6 +194,40 @@
                             <div class="mt-2 border-top border-warning pt-2" style="border-color: rgba(102, 77, 3, 0.2) !important;">
                                 <ul class="list-unstyled mb-0 row">
                                     @foreach($candidatos as $c)
+                                        <li class="col-md-6 mb-1 candidate-list-item p-1 d-flex justify-content-between align-items-center">
+                                            <span class="text-sm text-dark">
+                                                • <strong>{{ $c->apellidos }} {{ $c->nombres }}</strong>
+                                                <span class="text-muted ms-1">({{ $c->edad }} años)</span>
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-link text-primary fw-bold p-0 m-0 open-modal"
+                                                data-url="{{ route('socios.edit', $c) }}" style="text-decoration: underline; font-size: 0.8rem;">
+                                                Gestionar
+                                            </button>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            @endif
+
+            {{-- 4.1. ALERTA DE SOCIOS PARA SUBSIDIO (65+ AÑOS) --}}
+            @if(isset($candidatosSubsidio) && $candidatosSubsidio->isNotEmpty())
+                <div class="alert alert-subsidio-custom mb-4 shadow-sm rounded-3 border">
+                    <div class="d-flex align-items-start">
+                        <div class="me-3 mt-1"><i class="fas fa-info-circle fa-lg text-teal"></i></div>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading fw-bold mb-1" style="font-size: 0.95rem;">
+                                <i class="fas fa-user-clock me-1"></i> Sugerencia: Socios para Beneficio "Con Subsidio"
+                            </h6>
+                            <p class="mb-2 small opacity-8">
+                                Estos socios han cumplido 65 años (Tercera Edad). Considere actualizar su beneficio a "Con Subsidio".
+                            </p>
+                            <div class="mt-2 border-top border-teal pt-2" style="border-color: rgba(0, 105, 92, 0.2) !important;">
+                                <ul class="list-unstyled mb-0 row">
+                                    @foreach($candidatosSubsidio as $c)
                                         <li class="col-md-6 mb-1 candidate-list-item p-1 d-flex justify-content-between align-items-center">
                                             <span class="text-sm text-dark">
                                                 • <strong>{{ $c->apellidos }} {{ $c->nombres }}</strong>

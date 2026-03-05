@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\SociosExport;
 use Carbon\Carbon;
 use App\Models\Nicho;
+use Illuminate\Support\Facades\Log;
 
 class SocioController extends Controller
 {
@@ -31,6 +32,14 @@ class SocioController extends Controller
             ->get()
             ->filter(function ($s) {
                 return $s->edad >= 75;
+            });
+
+        // 2.1. Lógica para la alerta de "Tercera Edad" (65+ años sin subsidio)
+        $candidatosSubsidio = Socio::where('tipo_beneficio', 'sin_subsidio')
+            ->whereNotNull('fecha_nac')
+            ->get()
+            ->filter(function ($s) {
+                return $s->edad >= 65 && $s->edad < 75;
             });
 
         // 3. Consulta Principal de Socios
@@ -93,7 +102,7 @@ class SocioController extends Controller
             ->withQueryString();
 
         // 4. Retornar la vista con todas las variables necesarias
-        return view('socios.socio-index', compact('socios', 'comunidades', 'candidatos'));
+        return view('socios.socio-index', compact('socios', 'comunidades', 'candidatos', 'candidatosSubsidio'));
     }
 
     public function create()
