@@ -289,6 +289,10 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth'])->group(function () {
 
+    // --- 0. API (Búsquedas AJAX) ---
+    Route::get('/api/asignaciones/nichos-disponibles', [AsignacionController::class, 'searchNichosDisponibles'])->name('api.asignaciones.nichos');
+    Route::get('/api/asignaciones/fallecidos-disponibles', [AsignacionController::class, 'searchFallecidosDisponibles'])->name('api.asignaciones.fallecidos');
+
     // --- 1. REPORTES (Van primero para evitar conflictos con {id}) ---
     Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])
         ->name('asignaciones.pdf.general')->middleware('can:reportar asignacion');

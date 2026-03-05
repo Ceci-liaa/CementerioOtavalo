@@ -53,7 +53,7 @@
                                 <td>
                                     @if(!$f->pivot->fecha_exhumacion)
                                         @can('eliminar asignacion')
-                                        <form action="{{ route('asignacion.destroy', [$nicho->id, $f->id]) }}" 
+                                        <form action="{{ route('asignacion.destroy', [$nicho->identificacion, $f->id]) }}" 
                                               method="POST" class="d-inline form-delete-fallecido">
                                             @csrf
                                             @method('DELETE')

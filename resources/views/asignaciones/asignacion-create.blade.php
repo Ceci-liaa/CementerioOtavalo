@@ -38,18 +38,11 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold">Nicho Disponible <span class="text-danger">*</span></label>
-                        <input type="text" id="buscarNicho" class="form-control mb-2" placeholder="🔍 Buscar por código o bloque...">
-                        <select name="nicho_id" id="selectNicho" class="form-select" required size="5" style="height: auto;">
-                            <option value="">-- Seleccionar Nicho --</option>
-                            @foreach($nichosDisponibles as $n)
-                                <option value="{{ $n->id }}" 
-                                    data-search="{{ strtolower($n->codigo . ' ' . optional($n->bloque)->nombre) }}">
-                                    {{ $n->codigo }} - Bloque {{ optional($n->bloque)->nombre ?? 'N/A' }} 
-                                    ({{ $n->fallecidos_count ?? 0 }}/{{ $n->capacidad }} Ocupados)
-                                </option>
-                            @endforeach
+                        <input type="text" id="buscarNichoData" class="form-control mb-2" placeholder="🔍 Buscar por código o bloque...">
+                        <select name="nicho_id" id="selectNichoData" class="form-select" required size="5" style="height: auto;">
+                            <!-- Opciones cargadas por AJAX -->
                         </select>
-                        <small class="text-muted">Seleccionado: <span id="nichoSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
+                        <small class="text-muted">Seleccionado: <span id="nichoSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                 </div>
             </div>
@@ -59,17 +52,11 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold">Socio Responsable <span class="text-danger">*</span></label>
-                        <input type="text" id="buscarSocio" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
-                        <select name="socio_id" id="selectSocio" class="form-select" required size="5" style="height: auto;">
-                            <option value="">-- Seleccionar Socio --</option>
-                            @foreach($socios as $s)
-                                <option value="{{ $s->id }}" 
-                                    data-search="{{ strtolower($s->cedula . ' ' . $s->apellidos . ' ' . $s->nombres) }}">
-                                    {{ $s->apellidos }} {{ $s->nombres }} ({{ $s->cedula }})
-                                </option>
-                            @endforeach
+                        <input type="text" id="buscarSocioData" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
+                        <select name="socio_id" id="selectSocioData" class="form-select" required size="5" style="height: auto;">
+                            <!-- Opciones cargadas por AJAX -->
                         </select>
-                        <small class="text-muted">Seleccionado: <span id="socioSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
+                        <small class="text-muted">Seleccionado: <span id="socioSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                     
                     <div class="col-12">
@@ -88,17 +75,11 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-bold">Fallecido a Inhumar <span class="text-danger">*</span></label>
-                        <input type="text" id="buscarFallecido" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
-                        <select name="fallecido_id" id="selectFallecido" class="form-select" required size="5" style="height: auto;">
-                            <option value="">-- Seleccionar Fallecido --</option>
-                            @foreach($fallecidos as $f)
-                                <option value="{{ $f->id }}" 
-                                    data-search="{{ strtolower($f->cedula . ' ' . $f->apellidos . ' ' . $f->nombres) }}">
-                                    {{ $f->apellidos }} {{ $f->nombres }} ({{ $f->cedula }})
-                                </option>
-                            @endforeach
+                        <input type="text" id="buscarFallecidoData" class="form-control mb-2" placeholder="🔍 Buscar por nombre o cédula...">
+                        <select name="fallecido_id" id="selectFallecidoData" class="form-select" required size="5" style="height: auto;">
+                            <!-- Opciones cargadas por AJAX -->
                         </select>
-                        <small class="text-muted">Seleccionado: <span id="fallecidoSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
+                        <small class="text-muted">Seleccionado: <span id="fallecidoSeleccionadoData" class="fw-bold text-primary">Ninguno</span></small>
                     </div>
                     
                     <div class="col-12">
@@ -115,3 +96,115 @@
         <button type="submit" class="btn btn-success fw-bold">Guardar</button>
     </div>
 </form>
+
+<script>
+    (function() {
+        function setupAjaxSearch(inputId, selectId, labelId, apiUrl, renderCallback) {
+            var input = document.getElementById(inputId);
+            var select = document.getElementById(selectId);
+            var label = document.getElementById(labelId);
+            if (!input || !select || !label) return;
+
+            var debounceTimer = null;
+
+            function updateLabel() {
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== "") {
+                    label.textContent = opt.text;
+                    label.className = "fw-bold text-success";
+                } else {
+                    label.textContent = "Ninguno";
+                    label.className = "fw-bold text-primary";
+                }
+            }
+
+            function fetchData(q) {
+                fetch(apiUrl + '?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                        data.forEach(function(item) {
+                            var opt = document.createElement("option");
+                            renderCallback(opt, item);
+                            select.appendChild(opt);
+                        });
+                        
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (q.trim() !== '') {
+                            if (data.length > 0) {
+                                input.classList.add('search-input-found');
+                                if (select.options.length > 1) { select.selectedIndex = 1; updateLabel(); }
+                            } else {
+                                input.classList.add('search-input-empty');
+                            }
+                        }
+                    });
+            }
+
+            // Inicializar con vacío
+            fetchData('');
+
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                var val = this.value;
+                debounceTimer = setTimeout(function() { fetchData(val); }, 300);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); e.stopPropagation();
+                    var opt = select.options[select.selectedIndex];
+                    if (opt && opt.value !== '') {
+                        var text = opt.text;
+                        var val = opt.value;
+                        input.value = '';
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        
+                        // Refetch all and preserve selection
+                        fetch(apiUrl + '?q=')
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                                data.forEach(function(item) {
+                                    var newOpt = document.createElement("option");
+                                    renderCallback(newOpt, item);
+                                    if(String(newOpt.value) === String(val)) newOpt.selected = true;
+                                    select.appendChild(newOpt);
+                                });
+                                updateLabel();
+                            });
+
+                        input.placeholder = '✅ ' + text.substring(0, 35);
+                        input.style.background = '#d4edda';
+                        var inputRef = input;
+                        setTimeout(function() { inputRef.placeholder = '🔍 Buscar...'; inputRef.style.background = ''; }, 1500);
+                    }
+                    return false;
+                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
+            });
+
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
+        }
+
+        // Búsqueda de Nichos Disponibles
+        setupAjaxSearch('buscarNichoData', 'selectNichoData', 'nichoSeleccionadoData', '/api/asignaciones/nichos-disponibles', function(opt, item) {
+            opt.value = item.id;
+            opt.textContent = item.codigo + " - Bloque " + item.bloque_nombre + " (" + item.ocupados + "/" + item.capacidad + " Ocupados)";
+        });
+
+        // Búsqueda de Socios (reutilizamos la ruta del nicho que ya busca socios)
+        setupAjaxSearch('buscarSocioData', 'selectSocioData', 'socioSeleccionadoData', '/api/socios/search', function(opt, item) {
+            opt.value = item.id;
+            opt.textContent = item.apellidos + " " + item.nombres + " (" + item.cedula + ")";
+        });
+
+        // Búsqueda de Fallecidos Disponibles
+        setupAjaxSearch('buscarFallecidoData', 'selectFallecidoData', 'fallecidoSeleccionadoData', '/api/asignaciones/fallecidos-disponibles', function(opt, item) {
+            opt.value = item.id;
+            opt.textContent = item.apellidos + " " + item.nombres + " (" + item.cedula + ")";
+        });
+    })();
+</script>

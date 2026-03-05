@@ -3,7 +3,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form method="POST" action="{{ route('asignaciones.update', $nicho->id) }}">
+<form method="POST" action="{{ route('asignaciones.update', $nicho->identificacion) }}">
     @csrf @method('PUT')
 
     @php

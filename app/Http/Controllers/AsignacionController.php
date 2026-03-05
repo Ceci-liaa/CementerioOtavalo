@@ -131,6 +131,64 @@ class AsignacionController extends Controller
         }
     }
 
+    // --- BÚSQUEDA AJAX PARA MODALES ---
+    public function searchNichosDisponibles(Request $request)
+    {
+        $q = trim($request->q);
+        
+        $query = Nicho::with('bloque')
+            ->withCount(['fallecidos' => function($qu) {
+                $qu->whereNull('fallecido_nicho.fecha_exhumacion');
+            }])
+            ->where(function($qu) {
+                $qu->whereRaw('(
+                    SELECT COUNT(*) FROM fallecido_nicho 
+                    WHERE fallecido_nicho.nicho_id = nichos.identificacion 
+                    AND fallecido_nicho.fecha_exhumacion IS NULL
+                ) < nichos.capacidad');
+            });
+
+        if ($q !== '') {
+            $query->where(function($qu) use ($q) {
+                $qu->where('codigo', 'ILIKE', "%{$q}%")
+                   ->orWhereHas('bloque', function($qb) use ($q) {
+                       $qb->where('nombre', 'ILIKE', "%{$q}%");
+                   });
+            });
+        }
+
+        $nichos = $query->orderBy('identificacion', 'desc')->limit(50)->get()->map(function($n) {
+             return [
+                 'id' => $n->identificacion,
+                 'codigo' => $n->codigo,
+                 'bloque_nombre' => $n->bloque->nombre ?? 'N/A',
+                 'ocupados' => $n->fallecidos_count ?? 0,
+                 'capacidad' => $n->capacidad
+             ];
+        });
+
+        return response()->json($nichos);
+    }
+
+    public function searchFallecidosDisponibles(Request $request)
+    {
+        $q = trim($request->q);
+        
+        $query = Fallecido::doesntHave('nichos');
+
+        if ($q !== '') {
+            $query->where(function($qu) use ($q) {
+                $qu->where('apellidos', 'ILIKE', "%{$q}%")
+                   ->orWhere('nombres', 'ILIKE', "%{$q}%")
+                   ->orWhere('cedula', 'ILIKE', "%{$q}%");
+            });
+        }
+
+        $fallecidos = $query->orderBy('id', 'desc')->limit(50)->get(['id', 'apellidos', 'nombres', 'cedula']);
+
+        return response()->json($fallecidos);
+    }
+
     // --- 3. SHOW: VER DETALLE ---
     public function show($id)
     {
@@ -164,7 +222,7 @@ class AsignacionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,id',
+            'nicho_id' => 'required|exists:nichos,identificacion',
             'socio_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'rol' => 'required|string',
@@ -245,7 +303,7 @@ class AsignacionController extends Controller
     public function exhumar(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,id',
+            'nicho_id' => 'required|exists:nichos,identificacion',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'fecha_exhumacion' => 'required|date', // Validamos que venga fecha
         ]);
