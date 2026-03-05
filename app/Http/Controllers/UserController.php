@@ -29,7 +29,7 @@ class UserController extends Controller
         // CORRECCIÓN AQUÍ: Cambiamos ->get() por ->paginate(10)
         // Esto soluciona el error "Collection::total does not exist"
         // =================================================================
-        $users = $query->orderBy('codigo_usuario', 'asc')->paginate(10); 
+        $users = $query->orderBy('codigo_usuario', 'asc')->paginate(10)->withQueryString(); 
 
         // Obtener Roles para el Modal
         $roles = Role::pluck('name', 'id'); 

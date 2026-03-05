@@ -8,10 +8,20 @@ use App\Models\Role;
 
 class RoleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Role::with('permissions');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = strtolower($request->get('search'));
+            $query->where(function($q) use ($searchTerm) {
+                // Roles table typically just searches 'name'
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchTerm}%"]);
+            });
+        }
+
         // Orden ascendente por ID para mantener orden visual (R001, R002...)
-        $roles = Role::with('permissions')->orderBy('id', 'asc')->paginate(12);
+        $roles = $query->orderBy('id', 'asc')->paginate(12)->withQueryString();
         
         return view('roles.role-index', compact('roles'));
     }

@@ -35,7 +35,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Cantones</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="cantonesTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $cantones->total() }}
                         </span>
                     </div>
@@ -92,14 +92,16 @@
 
             {{-- 4. BUSCADOR --}}
             <div class="d-flex justify-content-end mb-4">
-                <form method="GET" action="{{ route('cantones.index') }}">
-                    <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter shadow-sm">
-                        <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
-                        <input type="text" name="q" value="{{ request('q') }}"
-                            class="form-control border-0 ps-1 shadow-none"
-                            placeholder="Buscar...">
-                    </div>
-                </form>
+                <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter shadow-sm">
+                    <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                        <i class="fas fa-search" id="searchIcon"></i>
+                        <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ request('q') }}"
+                        class="form-control border-0 ps-1 shadow-none"
+                        id="searchInput"
+                        placeholder="Buscar...">
+                </div>
             </div>
 
             {{-- 5. TABLA --}}
@@ -120,7 +122,7 @@
                                     <th class="opacity-10" style="width:180px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="cantonesTbody">
                                 @forelse ($cantones as $canton)
                                     <tr>
                                         <td>
@@ -178,7 +180,7 @@
 
                     {{-- Paginación --}}
                     @if($cantones->hasPages())
-                        <div class="mt-3 px-3 d-flex justify-content-end">
+                        <div class="mt-3 px-3 d-flex justify-content-end" id="cantonesPagination">
                             {{ $cantones->appends(request()->query())->links() }}
                         </div>
                     @endif
@@ -209,16 +211,98 @@
                     }); 
                 }, 4000); // Subí a 4 segundos para que dé tiempo a leer el error
 
+                // Buscador en Tiempo Real
+                const searchInput = document.getElementById('searchInput');
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const searchVal = searchInput ? searchInput.value.trim() : '';
+                    const url = "{{ route('cantones.index') }}" + (searchVal ? "?q=" + encodeURIComponent(searchVal) : "");
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('cantonesTbody');
+                            var curTbody = document.getElementById('cantonesTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('cantonesPagination');
+                            var curPag = document.getElementById('cantonesPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('cantonesTotalBadge');
+                            var curBadge = document.getElementById('cantonesTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                            
+                            // Re-bind modal
+                            bindModals();
+                            bindSweetAlerts();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(liveSearch, 350);
+                    });
+                    searchInput.addEventListener('keypress', function (e) {
+                        if (e.key === 'Enter') e.preventDefault();
+                    });
+                }
+
                 // Modal
                 const modalEl = document.getElementById('dynamicModal');
                 const modal = new bootstrap.Modal(modalEl);
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
-                        modal.show();
-                        fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                
+                function bindModals() {
+                    // Limpiar listeners anteriores si hay (no estrictamente necesario si re-bindeamos sobre elementos nuevos, pero es buena práctica)
+                    document.querySelectorAll('.open-modal').forEach(btn => {
+                        // Clonar y reemplazar para quitar viejos eventos (truco rápido js)
+                        const newBtn = btn.cloneNode(true);
+                        btn.parentNode.replaceChild(newBtn, btn);
+                        
+                        newBtn.addEventListener('click', function () {
+                            modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
+                            modal.show();
+                            fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
+                        });
                     });
-                });
+                }
+                bindModals();
 
                 // Delete
                 document.querySelectorAll('.js-delete-btn').forEach(btn => {

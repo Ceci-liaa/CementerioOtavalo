@@ -98,7 +98,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Roles</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="rolesTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $roles->total() }}
                         </span>
                     </div>
@@ -128,8 +128,10 @@
             {{-- 4. BARRA DE BÚSQUEDA --}}
             <div class="d-flex justify-content-end mb-4">
                 <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                    <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
-                            class="fas fa-search"></i></span>
+                    <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                        <i class="fas fa-search" id="searchIcon"></i>
+                        <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                    </span>
                     <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar rol..."
                         id="searchInput" value="{{ request('search') }}">
                 </div>
@@ -149,7 +151,7 @@
                                     <th class="opacity-10" style="width: 150px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rolesTbody">
                                 @forelse ($roles as $role)
                                     <tr>
                                         <td class="text-sm fw-bold text-secondary">{{ $roles->firstItem() + $loop->index }}
@@ -211,7 +213,7 @@
                     </div>
 
                     @if(method_exists($roles, 'links'))
-                        <div class="mt-3 px-3 d-flex justify-content-end">
+                        <div class="mt-3 px-3 d-flex justify-content-end" id="rolesPagination">
                             {{ $roles->appends(request()->query())->links() }}
                         </div>
                     @endif
@@ -243,14 +245,72 @@
                     });
                 }, 3000);
 
-                // 2. Buscador con Enter
+                // 2. Buscador en Tiempo Real
                 const searchInput = document.getElementById('searchInput');
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const searchVal = searchInput ? searchInput.value.trim() : '';
+                    const url = "{{ route('roles.index') }}" + (searchVal ? "?search=" + encodeURIComponent(searchVal) : "");
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('rolesTbody');
+                            var curTbody = document.getElementById('rolesTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('rolesPagination');
+                            var curPag = document.getElementById('rolesPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('rolesTotalBadge');
+                            var curBadge = document.getElementById('rolesTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
                 if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(liveSearch, 350);
+                    });
                     searchInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            window.location.href = "{{ route('roles.index') }}?search=" + encodeURIComponent(this.value);
-                        }
+                        if (e.key === 'Enter') e.preventDefault();
                     });
                 }
 

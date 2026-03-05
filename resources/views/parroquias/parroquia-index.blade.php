@@ -75,7 +75,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Parroquias</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="parroquiasTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $parroquias->total() }}
                         </span>
                     </div>
@@ -159,8 +159,10 @@
 
                         {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
-                                    class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
                                 id="searchInput" value="{{ request('search') }}">
                         </div>
@@ -186,7 +188,7 @@
                                     <th class="opacity-10" style="width:180px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="parroquiasTbody">
                                 @forelse ($parroquias as $p)
                                     <tr>
                                         <td>
@@ -248,7 +250,7 @@
 
                     {{-- Paginación --}}
                     @if($parroquias->hasPages())
-                        <div class="mt-3 px-3 d-flex justify-content-end">
+                        <div class="mt-3 px-3 d-flex justify-content-end" id="parroquiasPagination">
                             {{ $parroquias->appends(request()->query())->links() }}
                         </div>
                     @endif
@@ -279,72 +281,147 @@
                     });
                 }, 3000);
 
-                // 2. Filtros (Enter y Change)
+                // 2. Filtros (En tiempo real)
                 const searchInput = document.getElementById('searchInput');
                 const cantonFilter = document.getElementById('cantonFilter');
+                
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
 
-                function applyFilters() {
-                    const searchValue = encodeURIComponent(searchInput.value);
-                    const cantonValue = encodeURIComponent(cantonFilter.value);
-                    window.location.href = "{{ route('parroquias.index') }}?search=" + searchValue + "&canton_id=" + cantonValue;
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const searchVal = searchInput ? searchInput.value.trim() : '';
+                    const cantonVal = cantonFilter ? cantonFilter.value : '';
+                    
+                    let params = new URLSearchParams();
+                    if(searchVal) params.append('search', searchVal);
+                    if(cantonVal) params.append('canton_id', cantonVal);
+                    
+                    const url = "{{ route('parroquias.index') }}" + (params.toString() ? "?" + params.toString() : "");
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('parroquiasTbody');
+                            var curTbody = document.getElementById('parroquiasTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('parroquiasPagination');
+                            var curPag = document.getElementById('parroquiasPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('parroquiasTotalBadge');
+                            var curBadge = document.getElementById('parroquiasTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                            
+                            // Re-bind actions for new rows
+                            bindModals();
+                            bindSweetAlerts();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
                 }
 
                 if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(liveSearch, 350); // delay before requesting
+                    });
                     searchInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            applyFilters();
-                        }
+                        if (e.key === 'Enter') e.preventDefault(); // Don't reload on enter
                     });
                 }
 
                 if (cantonFilter) {
-                    cantonFilter.addEventListener('change', applyFilters);
+                    cantonFilter.addEventListener('change', liveSearch);
                 }
 
                 // 3. Modal
                 const modalEl = document.getElementById('dynamicModal');
                 const modal = new bootstrap.Modal(modalEl);
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        modalEl.querySelector('.modal-content').innerHTML = `
-                            <div class="p-5 text-center">
-                                <div class="spinner-border text-primary"></div>
-                                <p class="mt-2 text-secondary">Cargando...</p>
-                            </div>`;
-                        modal.show();
-                        fetch(this.getAttribute('data-url'))
-                            .then(r => r.text())
-                            .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
-                    });
-                });
+                
+                function bindModals() {
+                    document.querySelectorAll('.open-modal').forEach(btn => {
+                        const newBtn = btn.cloneNode(true);
+                        btn.parentNode.replaceChild(newBtn, btn);
 
-                // 4. Delete
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        Swal.fire({
-                            title: '¿Eliminar Cantón?',
-                            html: `¿Deseas eliminar el cantón <b>"${this.getAttribute('data-item')}"</b>?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-
-                            // COLOR DEL BOTÓN CONFIRMAR (Rojo para peligro)
-                            confirmButtonColor: '#d33',
-
-                            // COLOR DEL BOTÓN CANCELAR (Aquí pones el Azul)
-                            cancelButtonColor: '#3085d6',
-
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => {
-                            if (r.isConfirmed) {
-                                const f = document.getElementById('deleteForm');
-                                f.action = this.getAttribute('data-url');
-                                f.submit();
-                            }
+                        newBtn.addEventListener('click', function () {
+                            modalEl.querySelector('.modal-content').innerHTML = `
+                                <div class="p-5 text-center">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-2 text-secondary">Cargando...</p>
+                                </div>`;
+                            modal.show();
+                            fetch(this.getAttribute('data-url'))
+                                .then(r => r.text())
+                                .then(h => { modalEl.querySelector('.modal-content').innerHTML = h; });
                         });
                     });
-                });
+                }
+                bindModals();
+
+                // 4. Delete
+                function bindSweetAlerts() {
+                    document.querySelectorAll('.js-delete-btn').forEach(btn => {
+                        const newBtn = btn.cloneNode(true);
+                        btn.parentNode.replaceChild(newBtn, btn);
+
+                        newBtn.addEventListener('click', function () {
+                            Swal.fire({
+                                title: '¿Eliminar Parroquia?',
+                                html: `¿Deseas eliminar la parroquia <b>"${this.getAttribute('data-item')}"</b>?`,
+                                icon: 'warning',
+                                showCancelButton: true,
+
+                                // COLOR DEL BOTÓN CONFIRMAR (Rojo para peligro)
+                                confirmButtonColor: '#d33',
+
+                                // COLOR DEL BOTÓN CANCELAR (Aquí pones el Azul)
+                                cancelButtonColor: '#3085d6',
+
+                                confirmButtonText: 'Sí, eliminar',
+                                cancelButtonText: 'Cancelar'
+                            }).then((r) => {
+                                if (r.isConfirmed) {
+                                    const f = document.getElementById('deleteForm');
+                                    f.action = this.getAttribute('data-url');
+                                    f.submit();
+                                }
+                            });
+                        });
+                    });
+                }
+                bindSweetAlerts();
 
                 function toggleSelectAll() {
                     const c = document.getElementById('selectAll').checked;

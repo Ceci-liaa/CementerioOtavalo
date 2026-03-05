@@ -39,7 +39,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Administración de Usuarios</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="usersTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $users->total() }}
                         </span>
                     </div>
@@ -92,7 +92,10 @@
 
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" 
                                    placeholder="Buscar usuario..." id="searchInput" 
                                    value="{{ request('search') }}">
@@ -118,7 +121,7 @@
                                         <th class="opacity-10" style="width:120px;">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="usersTbody">
                                     @forelse ($users as $user)
                                         <tr>
                                             <td><input type="checkbox" name="users[]" value="{{ $user->id }}" style="cursor: pointer;"></td>
@@ -174,7 +177,7 @@
                         </div>
                         
                         @if(method_exists($users, 'links'))
-                            <div class="mt-3 px-3 d-flex justify-content-end">
+                            <div class="mt-3 px-3 d-flex justify-content-end" id="usersPagination">
                                 {{ $users->appends(request()->query())->links() }}
                             </div>
                         @endif
@@ -223,15 +226,72 @@
                     });
                 }, 3000);
 
-                // 2. Buscador (Enter para filtrar)
+                // 2. Buscador en Tiempo Real
                 const searchInput = document.getElementById('searchInput');
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const searchVal = searchInput ? searchInput.value.trim() : '';
+                    const url = "{{ route('users-management') }}" + (searchVal ? "?search=" + encodeURIComponent(searchVal) : "");
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('usersTbody');
+                            var curTbody = document.getElementById('usersTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('usersPagination');
+                            var curPag = document.getElementById('usersPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('usersTotalBadge');
+                            var curBadge = document.getElementById('usersTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
                 if(searchInput){
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(liveSearch, 350);
+                    });
                     searchInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault(); 
-                            const searchTerm = this.value;
-                            window.location.href = "{{ route('users-management') }}?search=" + encodeURIComponent(searchTerm);
-                        }
+                        if (e.key === 'Enter') e.preventDefault(); 
                     });
                 }
 

@@ -38,7 +38,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Comunidades</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="comunidadesTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $comunidades->total() }}
                         </span>
                     </div>
@@ -97,7 +97,10 @@
 
                         {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
                                 id="searchInput" value="{{ request('search') }}">
                         </div>
@@ -123,7 +126,7 @@
                                     <th class="opacity-10" style="width:180px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="comunidadesTbody">
                                 @forelse ($comunidades as $c)
                                     <tr>
                                         <td>
@@ -186,8 +189,8 @@
                     </div>
                     
                     {{-- Paginación --}}
-                    <div class="mt-3 px-3 d-flex justify-content-end">
-                        {{ $comunidades->links() }}
+                    <div class="mt-3 px-3 d-flex justify-content-end" id="comunidadesPagination">
+                        {{ $comunidades->appends(request()->query())->links() }}
                     </div>
                 </div>
             </div>
@@ -216,56 +219,142 @@
                     }); 
                 }, 3000);
 
-                // 2. Filtros
+                // 2. Filtros (En tiempo real)
                 const searchInput = document.getElementById('searchInput');
                 const parroquiaFilter = document.getElementById('parroquiaFilter');
 
-                function applyFilters() {
-                    window.location.href = "{{ route('comunidades.index') }}?search=" + encodeURIComponent(searchInput.value) + "&parroquia_id=" + parroquiaFilter.value;
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
                 }
 
-                if (searchInput) searchInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyFilters(); } });
-                if (parroquiaFilter) parroquiaFilter.addEventListener('change', applyFilters);
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const searchVal = searchInput ? searchInput.value.trim() : '';
+                    const parroquiaVal = parroquiaFilter ? parroquiaFilter.value : '';
+                    
+                    let params = new URLSearchParams();
+                    if(searchVal) params.append('search', searchVal);
+                    if(parroquiaVal) params.append('parroquia_id', parroquiaVal);
+                    
+                    const url = "{{ route('comunidades.index') }}" + (params.toString() ? "?" + params.toString() : "");
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(r => r.text())
+                        .then(html => {
+                            if (myId !== requestId) return;
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('comunidadesTbody');
+                            var curTbody = document.getElementById('comunidadesTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('comunidadesPagination');
+                            var curPag = document.getElementById('comunidadesPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('comunidadesTotalBadge');
+                            var curBadge = document.getElementById('comunidadesTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                            
+                            // Re-bind actions for new rows
+                            bindModals();
+                            bindSweetAlerts();
+                        })
+                        .catch(e => {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(liveSearch, 350);
+                    });
+                    searchInput.addEventListener('keypress', function (e) {
+                        if (e.key === 'Enter') e.preventDefault();
+                    });
+                }
+                if (parroquiaFilter) {
+                    parroquiaFilter.addEventListener('change', liveSearch);
+                }
 
                 // 3. Modal AJAX
                 const modalEl = document.getElementById('dynamicModal');
                 const modal = new bootstrap.Modal(modalEl);
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
-                        modal.show();
-                        fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { 
-                            modalEl.querySelector('.modal-content').innerHTML = h;
-                            modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
-                                const newScript = document.createElement('script');
-                                newScript.textContent = oldScript.textContent;
-                                oldScript.parentNode.replaceChild(newScript, oldScript);
+                
+                function bindModals() {
+                    document.querySelectorAll('.open-modal').forEach(btn => {
+                        const newBtn = btn.cloneNode(true);
+                        btn.parentNode.replaceChild(newBtn, btn);
+
+                        newBtn.addEventListener('click', function () {
+                            modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
+                            modal.show();
+                            fetch(this.getAttribute('data-url')).then(r => r.text()).then(h => { 
+                                modalEl.querySelector('.modal-content').innerHTML = h;
+                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = oldScript.textContent;
+                                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                                });
                             });
                         });
                     });
-                });
+                }
+                bindModals();
 
                 // 4. Delete
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        Swal.fire({
-                            title: '¿Eliminar Comunidad?',
-                            html: `¿Deseas eliminar la comunidad <b>"${this.getAttribute('data-item')}"</b>?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => {
-                            if (r.isConfirmed) {
-                                const f = document.getElementById('deleteForm');
-                                f.action = this.getAttribute('data-url');
-                                f.submit();
-                            }
+                function bindSweetAlerts() {
+                    document.querySelectorAll('.js-delete-btn').forEach(btn => {
+                        const newBtn = btn.cloneNode(true);
+                        btn.parentNode.replaceChild(newBtn, btn);
+
+                        newBtn.addEventListener('click', function () {
+                            Swal.fire({
+                                title: '¿Eliminar Comunidad?',
+                                html: `¿Deseas eliminar la comunidad <b>"${this.getAttribute('data-item')}"</b>?`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#3085d6',
+                                confirmButtonText: 'Sí, eliminar',
+                                cancelButtonText: 'Cancelar'
+                            }).then((r) => {
+                                if (r.isConfirmed) {
+                                    const f = document.getElementById('deleteForm');
+                                    f.action = this.getAttribute('data-url');
+                                    f.submit();
+                                }
+                            });
                         });
                     });
-                });
+                }
+                bindSweetAlerts();
 
                 // 5. Carga Dinámica (Preservado para el uso en Modales)
                 document.body.addEventListener('change', async function (e) {
