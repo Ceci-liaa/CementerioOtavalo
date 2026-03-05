@@ -262,7 +262,7 @@
                                 <i class="fas fa-search" id="searchIcon"></i>
                                 <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
                             </span>
-                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
+                            <input type="text" name="search" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
                                 id="searchInput" value="{{ request('search') }}">
                         </div>
                     </div>

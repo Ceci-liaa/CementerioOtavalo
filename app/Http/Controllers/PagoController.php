@@ -20,8 +20,8 @@ class PagoController extends Controller
 
         if ($search !== '') {
             $query->whereHas('socio', function ($q) use ($search) {
-                $q->whereRaw("CAST(cedula AS TEXT) ILIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("CONCAT(apellidos, ' ', nombres) ILIKE ?", ["%{$search}%"]);
+                $q->where('cedula', 'LIKE', "%{$search}%")
+                    ->orWhereRaw("CONCAT(apellidos, ' ', nombres) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -48,10 +48,10 @@ class PagoController extends Controller
             'fecha_pago' => 'required|date',
         ]);
 
-        $precio = 25.00; // Tu precio base
+        // $precio = 25.00; // Eliminamos precio estático
 
         try {
-            DB::transaction(function () use ($request, $socio, $precio) {
+            DB::transaction(function () use ($request, $socio) {
 
                 // 1. BUSCAR SI YA EXISTE UN RECIBO DE ESTE SOCIO EN ESTA FECHA
                 $recibo = Recibo::where('socio_id', $socio->id)
@@ -77,7 +77,7 @@ class PagoController extends Controller
                 }
 
                 // 3. AGREGAMOS LOS NUEVOS AÑOS A ESE RECIBO (Sea nuevo o viejo)
-                $nuevosPagosCount = 0;
+                $montoTotalNuevos = 0;
 
                 foreach ($request->anios_pagados as $anio) {
 
@@ -87,20 +87,20 @@ class PagoController extends Controller
                         ->exists();
 
                     if (!$existePago) {
+                        $precioAnio = $socio->getPrecioParaAnio($anio);
                         Pago::create([
-                            'recibo_id' => $recibo->id, // Usamos el ID del recibo encontrado/creado
+                            'recibo_id' => $recibo->id, 
                             'socio_id' => $socio->id,
                             'anio_pagado' => $anio,
-                            'monto' => $precio,
+                            'monto' => $precioAnio,
                             'fecha_pago' => $request->fecha_pago,
                         ]);
-                        $nuevosPagosCount++;
+                        $montoTotalNuevos += $precioAnio;
                     }
                 }
 
                 // 4. RECALCULAR EL TOTAL DEL RECIBO
-                // Sumamos lo que ya tenía + lo nuevo
-                $recibo->increment('total', $nuevosPagosCount * $precio);
+                $recibo->increment('total', $montoTotalNuevos);
             });
 
             return back()->with('success', 'Pago registrado/actualizado correctamente.');
@@ -141,25 +141,30 @@ class PagoController extends Controller
     public function update(Request $request, Recibo $recibo)
     {
         $request->validate(['anios_pagados' => 'required|array|min:1']);
-        $precio = 25.00;
+        // $precio = 25.00;
 
         try {
-            DB::transaction(function () use ($request, $recibo, $precio) {
+            DB::transaction(function () use ($request, $recibo) {
                 // Borrar pagos viejos de este recibo y crear los nuevos seleccionados
                 $recibo->pagos()->delete();
+                
+                $nuevoTotal = 0;
+                $socio = $recibo->socio;
 
                 foreach ($request->anios_pagados as $anio) {
+                    $precioAnio = $socio->getPrecioParaAnio($anio);
                     Pago::create([
                         'recibo_id' => $recibo->id,
                         'socio_id' => $recibo->socio_id,
                         'anio_pagado' => $anio,
-                        'monto' => $precio,
+                        'monto' => $precioAnio,
                         'fecha_pago' => $recibo->fecha_pago,
                     ]);
+                    $nuevoTotal += $precioAnio;
                 }
                 // Actualizar total
                 $recibo->update([
-                    'total' => count($request->anios_pagados) * $precio,
+                    'total' => $nuevoTotal,
                     'observacion' => $request->observacion
                 ]);
             });

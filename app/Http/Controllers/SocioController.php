@@ -135,8 +135,18 @@ public function store(Request $request)
     try {
         // ... (El resto de tu código sigue igual)
         $edad = Carbon::parse($request->fecha_nac)->age;
-        if ($request->tipo_beneficio === 'exonerado' && $edad < 75) {
-            return back()->withInput()->with('error', "No se puede crear como Exonerado. Edad: $edad (Mínimo 75).");
+        if ($request->tipo_beneficio === 'exonerado') {
+            if ($edad < 75) {
+                return back()->withInput()->with('error', "No se puede crear como Exonerado. Edad: $edad (Mínimo 75).");
+            }
+            
+            // Verificación de deudas para exoneración
+            // Nota: En 'store' (nuevo socio) usualmente no hay deudas previas en el sistema, 
+            // pero si la fecha de inscripción es antigua, podría haberlas.
+            $tempSocio = new Socio($request->all());
+            if (count($tempSocio->anios_deuda) > 0) {
+                return back()->withInput()->with('error', "No se puede marcar como Exonerado. El socio tiene deudas pendientes.");
+            }
         }
 
         $data = $request->except(['_token', '_method']);
@@ -172,8 +182,16 @@ public function update(Request $request, Socio $socio)
 
         try {
             $edad = Carbon::parse($request->fecha_nac)->age;
-            if ($request->tipo_beneficio === 'exonerado' && $edad < 75) {
-                return back()->withInput()->with('error', "Acción denegada: Edad $edad (Mínimo 75).");
+            if ($request->tipo_beneficio === 'exonerado') {
+                if ($edad < 75) {
+                    return back()->withInput()->with('error', "Acción denegada: Edad $edad (Mínimo 75).");
+                }
+                
+                // Validación estricta de deudas antes de exonerar
+                if (count($socio->anios_deuda) > 0) {
+                    $anios = implode(', ', $socio->anios_deuda);
+                    return back()->withInput()->with('error', "No se puede cambiar a Exonerado. Debe pagar los años pendientes: $anios.");
+                }
             }
 
             $data = $request->except(['_token', '_method']);

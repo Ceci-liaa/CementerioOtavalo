@@ -19,7 +19,7 @@
             <div class="text-end">
                 <small class="text-secondary d-block fw-bold">ESTADO DE CUENTA</small>
                 @if(count($aniosPendientes) > 0)
-                    <span class="badge bg-danger fs-6 px-3 py-2 shadow-sm">
+                    <span class="badge fs-6 px-3 py-2 shadow-sm" style="background-color: #dc3545 !important; color: white;">
                         Debe {{ count($aniosPendientes) }} años
                     </span>
                 @else
@@ -64,8 +64,13 @@
                                             <label class="form-check-label fw-bold text-dark w-100 ps-1" for="anio_{{ $anio }}"
                                                 style="cursor: pointer;">
                                                 Año {{ $anio }}
-                                                <span class="float-end badge bg-danger text-dark"
-                                                    style="font-size: 0.65rem;">PENDIENTE</span>
+                                                @php
+                                                    $precioAnio = $socio->getPrecioParaAnio($anio);
+                                                @endphp
+                                                <span class="float-end badge shadow-sm" 
+                                                      style="background-color: #cfe2ff !important; color: #000 !important; font-size: 0.75rem; border: 1px solid #9ec5fe;">
+                                                    ${{ number_format($precioAnio, 2) }}
+                                                </span>
                                             </label>
                                         </div>
                                     @endforeach
