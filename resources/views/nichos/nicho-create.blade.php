@@ -73,9 +73,9 @@
                         <select name="bloque_id" id="selectBloque" class="form-select" required size="2" style="height: auto;">
                             <option value="">-- Seleccionar --</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->id }}" 
+                                <option value="{{ $b->identificacion }}" 
                                     data-search="{{ strtolower($b->nombre . ' ' . ($b->codigo ?? '')) }}"
-                                    @selected(old('bloque_id') == $b->id)>{{ $b->nombre }}</option>
+                                    @selected(old('bloque_id') == $b->identificacion)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
                         <small class="text-muted">Seleccionado: <span id="bloqueSeleccionado" class="fw-bold text-primary">Ninguno</span></small>
@@ -148,149 +148,314 @@
 </form>
 
 <script>
-    // ========== BÚSQUEDA PARA SELECTS (Mismo patrón que asignaciones) ==========
+    // ========== FILTRO EN CASCADA: Bloque → Nichos GIS ==========
     (function() {
-        const configs = [
-            { inputId: 'buscarGis', selectId: 'selectGis', labelId: 'gisSeleccionado' },
-            { inputId: 'buscarBloque', selectId: 'selectBloque', labelId: 'bloqueSeleccionado' },
-            { inputId: 'buscarSocio', selectId: 'selectSocio', labelId: 'socioSeleccionado' }
-        ];
+        const selectBloque = document.getElementById('selectBloque');
+        const selectGis = document.getElementById('selectGis');
+        const buscarGis = document.getElementById('buscarGis');
+        const gisSeleccionado = document.getElementById('gisSeleccionado');
 
-        configs.forEach(config => {
-            const input = document.getElementById(config.inputId);
-            const select = document.getElementById(config.selectId);
-            const label = document.getElementById(config.labelId);
-            
-            if (!input || !select) return;
-            
-            // Guardar opciones originales
-            const allOptions = [];
-            Array.from(select.options).forEach(opt => {
-                allOptions.push({
-                    value: opt.value,
-                    text: opt.text,
-                    selected: opt.selected,
-                    searchData: (opt.getAttribute('data-search') || opt.text).toLowerCase()
+        // Guardar las opciones GIS originales (para búsqueda local después del filtro)
+        let gisOptions = [];
+
+        function updateGisFromApi(bloqueId) {
+            if (!bloqueId) {
+                // Sin bloque seleccionado: limpiar GIS
+                selectGis.innerHTML = '<option value="">-- Seleccione un bloque primero --</option>';
+                gisOptions = [];
+                if (gisSeleccionado) {
+                    gisSeleccionado.textContent = 'Ninguno';
+                    gisSeleccionado.className = 'fw-bold text-primary';
+                }
+                return;
+            }
+
+            selectGis.innerHTML = '<option value="">⏳ Cargando...</option>';
+
+            fetch('/api/nichos-geom-por-bloque?bloque_id=' + bloqueId)
+                .then(r => r.json())
+                .then(data => {
+                    gisOptions = [];
+                    selectGis.innerHTML = '<option value="">-- Ninguno (Manual) --</option>';
+
+                    if (data.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.disabled = true;
+                        opt.textContent = '⚠️ No hay nichos GIS disponibles para este bloque';
+                        selectGis.appendChild(opt);
+                    }
+
+                    data.forEach(ng => {
+                        const opt = document.createElement('option');
+                        opt.value = ng.id;
+                        opt.textContent = ng.codigo;
+                        opt.setAttribute('data-search', (ng.codigo || '').toLowerCase());
+                        selectGis.appendChild(opt);
+                        gisOptions.push({
+                            value: String(ng.id),
+                            text: ng.codigo,
+                            searchData: (ng.codigo || '').toLowerCase()
+                        });
+                    });
+
+                    if (gisSeleccionado) {
+                        gisSeleccionado.textContent = 'Ninguno';
+                        gisSeleccionado.className = 'fw-bold text-primary';
+                    }
+                })
+                .catch(() => {
+                    selectGis.innerHTML = '<option value="">-- Error al cargar --</option>';
                 });
+        }
+
+        // Escuchar cambio en el select de Bloque
+        if (selectBloque) {
+            selectBloque.addEventListener('change', function() {
+                updateGisFromApi(this.value);
             });
-            
-            function updateOptions(searchTerm) {
-                const term = searchTerm.toLowerCase().trim();
-                select.innerHTML = '';
-                let matchCount = 0;
-                let firstMatchIndex = -1;
-                
-                allOptions.forEach((optData) => {
-                    const matches = optData.value === '' || 
-                                   optData.searchData.includes(term) || 
-                                   optData.text.toLowerCase().includes(term);
-                    
-                    if (term === '' || matches) {
-                        const option = document.createElement('option');
-                        option.value = optData.value;
-                        option.textContent = optData.text;
-                        
-                        if (term !== '' && optData.value !== '' && matches) {
-                            matchCount++;
-                            if (firstMatchIndex === -1) {
-                                firstMatchIndex = select.options.length;
-                                option.className = 'search-first-match';
+        }
+
+        // Inicializar: si no hay bloque seleccionado, mostrar mensaje
+        if (selectBloque && !selectBloque.value) {
+            selectGis.innerHTML = '<option value="">-- Seleccione un bloque primero --</option>';
+        } else if (selectBloque && selectBloque.value) {
+            // Si hay un bloque preseleccionado (old()), cargar sus nichos
+            updateGisFromApi(selectBloque.value);
+        }
+    })();
+
+    // ========== BÚSQUEDA AJAX PARA BLOQUES Y SOCIOS ==========
+    (function() {
+        // ── Búsqueda de Bloques (AJAX) ──
+        (function() {
+            var input = document.getElementById('buscarBloque');
+            var select = document.getElementById('selectBloque');
+            var label = document.getElementById('bloqueSeleccionado');
+            if (!input || !select) return;
+
+            var debounceTimer = null;
+            var currentSelected = select.value;
+
+            function renderBloques(data, keepVal) {
+                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                data.forEach(function(b) {
+                    var opt = document.createElement('option');
+                    opt.value = b.identificacion;
+                    opt.textContent = b.nombre;
+                    if (String(b.identificacion) === String(keepVal)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                updateLabel();
+            }
+
+            function fetchBloques(q) {
+                fetch('/api/bloques/search?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderBloques(data, currentSelected);
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (q.trim() !== '') {
+                            if (data.length > 0) {
+                                input.classList.add('search-input-found');
+                                if (select.options.length > 1) { select.selectedIndex = 1; updateLabel(); }
                             } else {
-                                option.className = 'search-match';
+                                input.classList.add('search-input-empty');
                             }
                         }
-                        select.appendChild(option);
-                    }
-                });
-                
-                input.classList.remove('search-input-found', 'search-input-empty');
-                if (term !== '') {
-                    if (matchCount > 0) {
-                        input.classList.add('search-input-found');
-                        if (firstMatchIndex !== -1) {
-                            select.selectedIndex = firstMatchIndex;
-                            updateLabel();
-                        }
-                    } else {
-                        input.classList.add('search-input-empty');
-                    }
-                }
+                    });
             }
-            
+
             function updateLabel() {
                 if (!label) return;
-                const selectedOpt = select.options[select.selectedIndex];
-                if (selectedOpt && selectedOpt.value !== '') {
-                    label.textContent = selectedOpt.text;
-                    label.classList.remove('text-primary');
-                    label.classList.add('text-success');
-                } else {
-                    label.textContent = 'Ninguno';
-                    label.classList.remove('text-success');
-                    label.classList.add('text-primary');
-                }
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
             }
-            
-            // Evento: escribir
+
+            fetchBloques('');
+
             input.addEventListener('input', function() {
-                updateOptions(this.value);
+                clearTimeout(debounceTimer);
+                var val = input.value;
+                debounceTimer = setTimeout(function() { fetchBloques(val); }, 300);
             });
-            
-            // Evento: teclas
+
             input.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const selectedOpt = select.options[select.selectedIndex];
-                    if (selectedOpt && selectedOpt.value !== '') {
-                        const selectedValue = selectedOpt.value;
-                        const selectedText = selectedOpt.text;
-                        
-                        this.value = '';
-                        this.classList.remove('search-input-found', 'search-input-empty');
-                        updateOptions('');
-                        
-                        for (let i = 0; i < select.options.length; i++) {
-                            if (select.options[i].value === selectedValue) {
-                                select.selectedIndex = i;
-                                break;
+                    e.preventDefault(); e.stopPropagation();
+                    var opt = select.options[select.selectedIndex];
+                    if (opt && opt.value !== '') {
+                        currentSelected = opt.value;
+                        var txt = opt.text;
+                        input.value = '';
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        fetchBloques('');
+                        setTimeout(function() {
+                            for (var i = 0; i < select.options.length; i++) {
+                                if (select.options[i].value === currentSelected) { select.selectedIndex = i; break; }
                             }
-                        }
-                        updateLabel();
-                        
-                        const originalPlaceholder = this.placeholder;
-                        this.placeholder = '✅ ' + selectedText.substring(0, 35);
-                        this.style.background = '#d4edda';
-                        setTimeout(() => {
-                            this.placeholder = originalPlaceholder;
-                            this.style.background = '';
-                        }, 1500);
+                            updateLabel();
+                            select.dispatchEvent(new Event('change'));
+                        }, 400);
+                        input.placeholder = '✅ ' + txt.substring(0, 35);
+                        input.style.background = '#d4edda';
+                        setTimeout(function() { input.placeholder = '🔍 Buscar bloque...'; input.style.background = ''; }, 1500);
                     }
                     return false;
                 }
-                
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (select.selectedIndex < select.options.length - 1) {
-                        select.selectedIndex++;
-                        updateLabel();
-                    }
-                }
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (select.selectedIndex > 0) {
-                        select.selectedIndex--;
-                        updateLabel();
-                    }
-                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
             });
-            
+
             select.addEventListener('change', updateLabel);
             select.addEventListener('click', updateLabel);
+        })();
 
-            // Inicializar label si hay old() seleccionado
+        // ── Búsqueda de Socios (AJAX) ──
+        (function() {
+            var input = document.getElementById('buscarSocio');
+            var select = document.getElementById('selectSocio');
+            var label = document.getElementById('socioSeleccionado');
+            if (!input || !select) return;
+
+            var debounceTimer = null;
+            var currentSelected = select.value;
+
+            function renderSocios(data, keepVal) {
+                select.innerHTML = '<option value="">-- Seleccionar --</option>';
+                data.forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.apellidos + ' ' + s.nombres + ' (' + s.cedula + ')';
+                    if (String(s.id) === String(keepVal)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                updateLabel();
+            }
+
+            function fetchSocios(q) {
+                fetch('/api/socios/search?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderSocios(data, currentSelected);
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        if (q.trim() !== '') {
+                            if (data.length > 0) {
+                                input.classList.add('search-input-found');
+                                if (select.options.length > 1) { select.selectedIndex = 1; updateLabel(); }
+                            } else {
+                                input.classList.add('search-input-empty');
+                            }
+                        }
+                    });
+            }
+
+            function updateLabel() {
+                if (!label) return;
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
+            }
+
+            fetchSocios('');
+
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                var val = input.value;
+                debounceTimer = setTimeout(function() { fetchSocios(val); }, 300);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); e.stopPropagation();
+                    var opt = select.options[select.selectedIndex];
+                    if (opt && opt.value !== '') {
+                        currentSelected = opt.value;
+                        var txt = opt.text;
+                        input.value = '';
+                        input.classList.remove('search-input-found', 'search-input-empty');
+                        fetchSocios('');
+                        setTimeout(function() {
+                            for (var i = 0; i < select.options.length; i++) {
+                                if (select.options[i].value === currentSelected) { select.selectedIndex = i; break; }
+                            }
+                            updateLabel();
+                        }, 400);
+                        input.placeholder = '✅ ' + txt.substring(0, 35);
+                        input.style.background = '#d4edda';
+                        setTimeout(function() { input.placeholder = '🔍 Buscar por nombre o cédula...'; input.style.background = ''; }, 1500);
+                    }
+                    return false;
+                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
+            });
+
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
+        })();
+
+        // ── Búsqueda de GIS (Client-side, se carga por API al seleccionar bloque) ──
+        (function() {
+            var input = document.getElementById('buscarGis');
+            var select = document.getElementById('selectGis');
+            var label = document.getElementById('gisSeleccionado');
+            if (!input || !select) return;
+
+            var allGisOptions = [];
+            function captureGis() {
+                allGisOptions = [];
+                Array.from(select.options).forEach(function(opt) {
+                    allGisOptions.push({ value: opt.value, text: opt.text, disabled: opt.disabled, search: (opt.getAttribute('data-search') || opt.text).toLowerCase() });
+                });
+            }
+            captureGis();
+            var obs = new MutationObserver(captureGis);
+            obs.observe(select, { childList: true });
+
+            function updateLabel() {
+                if (!label) return;
+                var opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') { label.textContent = opt.text; label.className = 'fw-bold text-success'; }
+                else { label.textContent = 'Ninguno'; label.className = 'fw-bold text-primary'; }
+            }
+
+            input.addEventListener('input', function() {
+                var term = this.value.toLowerCase().trim();
+                var isF = true;
+                select.innerHTML = '';
+                var count = 0, first = -1;
+                allGisOptions.forEach(function(o) {
+                    if (term === '' || o.value === '' || o.search.includes(term)) {
+                        var opt = document.createElement('option');
+                        opt.value = o.value; opt.textContent = o.text;
+                        if (o.disabled) opt.disabled = true;
+                        if (term !== '' && o.value !== '' && !o.disabled && o.search.includes(term)) {
+                            count++;
+                            if (first === -1) { first = select.options.length; opt.className = 'search-first-match'; }
+                            else { opt.className = 'search-match'; }
+                        }
+                        select.appendChild(opt);
+                    }
+                });
+                // Recapturar sin que se pierdan por el observer
+                setTimeout(function() { captureGis(); }, 50);
+                input.classList.remove('search-input-found', 'search-input-empty');
+                if (term !== '') {
+                    if (count > 0) { input.classList.add('search-input-found'); if (first !== -1) { select.selectedIndex = first; updateLabel(); } }
+                    else { input.classList.add('search-input-empty'); }
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); updateLabel(); return false; }
+                if (e.key === 'ArrowDown') { e.preventDefault(); if (select.selectedIndex < select.options.length - 1) { select.selectedIndex++; updateLabel(); } }
+                if (e.key === 'ArrowUp') { e.preventDefault(); if (select.selectedIndex > 0) { select.selectedIndex--; updateLabel(); } }
+            });
+
+            select.addEventListener('change', updateLabel);
+            select.addEventListener('click', updateLabel);
             updateLabel();
-        });
+        })();
     })();
 </script>

@@ -125,7 +125,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Socios</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="sociosTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $socios->total() }}
                         </span>
                     </div>
@@ -258,7 +258,10 @@
 
                         {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
                                 id="searchInput" value="{{ request('search') }}">
                         </div>
@@ -306,7 +309,7 @@
                                     <th class="opacity-10" style="width:140px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="sociosTbody">
                                 @forelse ($socios as $s)
                                     <tr>
                                         <td>
@@ -407,7 +410,7 @@
                         </table>
                     </div>
                     
-                    <div class="mt-3 px-3 d-flex justify-content-end">
+                    <div class="mt-3 px-3 d-flex justify-content-end" id="sociosPagination">
                         {{ $socios->appends(request()->query())->links() }}
                     </div>
                 </div>
@@ -548,10 +551,95 @@
                     });
                 }
 
-                if (searchInput) searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); applyFilters(); } });
-                if (comunidadFilter) comunidadFilter.addEventListener('change', applyFilters);
-                document.getElementById('mesFilter')?.addEventListener('change', applyFilters);
-                document.getElementById('anioFilter')?.addEventListener('change', applyFilters);
+                // ── Búsqueda en Tiempo Real (AJAX a toda la BD) ──
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function buildFilterParams() {
+                    const params = new URLSearchParams();
+                    if (searchInput && searchInput.value.trim()) params.set('search', searchInput.value.trim());
+                    if (comunidadFilter && comunidadFilter.value) params.set('comunidad_id', comunidadFilter.value);
+                    const anioEl = document.getElementById('anioFilter');
+                    if (anioEl && anioEl.value) params.set('anio', anioEl.value);
+                    const mesEl = document.getElementById('mesFilter');
+                    if (mesEl && mesEl.value) params.set('mes', mesEl.value);
+                    document.querySelectorAll('.filter-check[data-filter="tipo_beneficio"]:checked').forEach(cb => params.append('tipo_beneficio[]', cb.value));
+                    document.querySelectorAll('.filter-check[data-filter="estatus"]:checked').forEach(cb => params.append('estatus[]', cb.value));
+                    return params;
+                }
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    // Cancelar petición anterior
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const params = buildFilterParams();
+                    const url = "{{ route('socios.index') }}?" + params.toString();
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            // Solo procesar si es la petición más reciente
+                            if (myId !== requestId) return;
+
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('sociosTbody');
+                            var curTbody = document.getElementById('sociosTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('sociosPagination');
+                            var curPag = document.getElementById('sociosPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('sociosTotalBadge');
+                            var curBadge = document.getElementById('sociosTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(function(e) {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
+                function triggerSearch() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(liveSearch, 350);
+                }
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', triggerSearch);
+                    searchInput.addEventListener('keyup', triggerSearch);
+                    searchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+                }
+
+                // Los demás filtros también disparan liveSearch
+                if (comunidadFilter) comunidadFilter.addEventListener('change', liveSearch);
+                document.getElementById('mesFilter')?.addEventListener('change', liveSearch);
+                document.getElementById('anioFilter')?.addEventListener('change', liveSearch);
 
                 // Modal
                 const modalEl = document.getElementById('dynamicModal');
@@ -583,25 +671,25 @@
                     }
                 });
 
-                // SweetAlert Eliminar
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        Swal.fire({
-                            title: '¿Eliminar Socio?',
-                            html: `¿Deseas eliminar al socio <b>"${this.getAttribute('data-item')}"</b>?<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => {
-                            if (r.isConfirmed) {
-                                const f = document.getElementById('deleteForm');
-                                f.action = this.getAttribute('data-url');
-                                f.submit();
-                            }
-                        });
+                // SweetAlert Eliminar (delegación de eventos para que funcione con filas AJAX)
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.js-delete-btn');
+                    if (!btn) return;
+                    Swal.fire({
+                        title: '¿Eliminar Socio?',
+                        html: `¿Deseas eliminar al socio <b>"${btn.getAttribute('data-item')}"</b>?<br><small class="text-muted">Esta acción no se puede deshacer.</small>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => {
+                        if (r.isConfirmed) {
+                            const f = document.getElementById('deleteForm');
+                            f.action = btn.getAttribute('data-url');
+                            f.submit();
+                        }
                     });
                 });
             });

@@ -29,7 +29,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Fallecidos</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="fallecidosTotalBadge" style="font-size: 0.8rem;">
                             Total: {{ $fallecidos->total() }}
                         </span>
                     </div>
@@ -77,7 +77,7 @@
             <form action="{{ route('fallecidos.reports') }}" method="POST" id="reportForm">
                 @csrf
                 
-                {{-- Inputs ocultos para asegurar que si no se selecciona nada, se reporte según el filtro actual --}}
+                {{-- Inputs ocultos para filtros en reporte --}}
                 <input type="hidden" name="current_search" value="{{ request('search') }}">
                 <input type="hidden" name="current_comunidad" value="{{ request('comunidad_id') }}">
                 <input type="hidden" name="current_mes" value="{{ request('mes') }}">
@@ -101,9 +101,7 @@
                         </ul>
                     </div>
 
-                    {{-- Lado Derecho: Filtros (Select + Buscador) --}}
-                    {{-- Nota: Estos inputs NO tienen atributo name para no enviarse en el POST del reporte y ensuciar la request, 
-                         se manejan por JS para la redirección GET, o se usan los inputs ocultos arriba --}}
+                    {{-- Lado Derecho: Filtros --}}
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         {{-- Filtro Año --}}
                         <select id="anioFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;">
@@ -131,9 +129,12 @@
                             @endforeach
                         </select>
 
+                        {{-- Buscador con Spinner --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i
-                                    class="fas fa-search"></i></span>
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
                             <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Buscar..."
                                 id="searchInput" value="{{ request('search') }}">
                         </div>
@@ -159,7 +160,7 @@
                                         <th class="opacity-10" style="width:180px;">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="fallecidosTbody">
                                     @forelse ($fallecidos as $f)
                                         <tr>
                                             <td>
@@ -219,11 +220,11 @@
                         </div>
 
                         {{-- Paginación --}}
-                        @if($fallecidos->hasPages())
-                            <div class="mt-3 px-3 d-flex justify-content-end">
+                        <div class="mt-3 px-3 d-flex justify-content-end" id="fallecidosPagination">
+                            @if($fallecidos->hasPages())
                                 {{ $fallecidos->appends(request()->query())->links() }}
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     </div>
                 </div>
             </form> {{-- FIN DEL FORMULARIO --}}
@@ -247,7 +248,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                // 1. Alertas
+                // 1. Alertas temporales
                 setTimeout(() => {
                     document.querySelectorAll('.alert-temporal').forEach(alert => {
                         alert.style.transition = "opacity 0.5s"; alert.style.opacity = 0;
@@ -255,90 +256,172 @@
                     });
                 }, 3000);
 
-                // 2. Filtros (GET Redirect)
+                // 2. Referencias
                 const searchInput = document.getElementById('searchInput');
                 const comunidadFilter = document.getElementById('comunidadFilter');
                 const mesFilter = document.getElementById('mesFilter');
                 const anioFilter = document.getElementById('anioFilter');
 
-                function applyFilters() {
+                // ── BÚSQUEDA EN TIEMPO REAL (AJAX) ──────────────────────────────
+                let searchTimeout = null;
+                let currentAbort = null;
+                let requestId = 0;
+
+                function buildFilterParams() {
                     const params = new URLSearchParams();
-                    
-                    if(searchInput.value) params.append('search', searchInput.value);
-                    if(comunidadFilter.value) params.append('comunidad_id', comunidadFilter.value);
-                    if(mesFilter.value) params.append('mes', mesFilter.value);
-                    if(anioFilter.value) params.append('anio', anioFilter.value);
-
-                    window.location.href = "{{ route('fallecidos.index') }}?" + params.toString();
+                    if (searchInput && searchInput.value.trim()) params.set('search', searchInput.value.trim());
+                    if (comunidadFilter && comunidadFilter.value) params.set('comunidad_id', comunidadFilter.value);
+                    if (anioFilter && anioFilter.value) params.set('anio', anioFilter.value);
+                    if (mesFilter && mesFilter.value) params.set('mes', mesFilter.value);
+                    return params;
                 }
 
-                if (searchInput) {
-                    searchInput.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault(); 
-                            applyFilters();
-                        }
-                    });
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
                 }
 
-                if (comunidadFilter) comunidadFilter.addEventListener('change', applyFilters);
-                if (mesFilter) mesFilter.addEventListener('change', applyFilters);
-                if (anioFilter) anioFilter.addEventListener('change', applyFilters);
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
 
-                // 3. Modal AJAX
-                const modalEl = document.getElementById('dynamicModal');
-                const modal = new bootstrap.Modal(modalEl);
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault(); // Evita que botones dentro del form envíen el reporte
-                        modalEl.querySelector('.modal-content').innerHTML = `
-                            <div class="p-5 text-center">
-                                <div class="spinner-border text-primary"></div>
-                                <p class="mt-2 text-secondary">Cargando...</p>
-                            </div>`;
-                        modal.show();
-                        fetch(this.getAttribute('data-url'))
-                            .then(r => r.text())
-                            .then(h => { 
-                                modalEl.querySelector('.modal-content').innerHTML = h;
-                                // 🔥 Ejecutar scripts que vienen dentro del HTML cargado
-                                modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
-                                    const newScript = document.createElement('script');
-                                    if (oldScript.src) {
-                                        newScript.src = oldScript.src;
-                                    } else {
-                                        newScript.textContent = oldScript.textContent;
-                                    }
-                                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                                });
-                            });
-                    });
-                });
+                function liveSearch() {
+                    // Cancelar petición anterior
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
 
-                // 4. Delete SweetAlert
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault(); // Evita submit del form principal
-                        Swal.fire({
-                            title: '¿Eliminar Registro?',
-                            html: `¿Deseas eliminar a <b>"${this.getAttribute('data-item')}"</b>?`,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => {
-                            if (r.isConfirmed) {
-                                const f = document.getElementById('deleteForm');
-                                f.action = this.getAttribute('data-url');
-                                f.submit();
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const params = buildFilterParams();
+                    const url = "{{ route('fallecidos.index') }}?" + params.toString();
+                    window.history.replaceState({}, '', url);
+
+                    // Actualizar inputs ocultos del reporte
+                    const hiddenSearch = document.querySelector('input[name="current_search"]');
+                    const hiddenComunidad = document.querySelector('input[name="current_comunidad"]');
+                    const hiddenMes = document.querySelector('input[name="current_mes"]');
+                    const hiddenAnio = document.querySelector('input[name="current_anio"]');
+                    if (hiddenSearch) hiddenSearch.value = searchInput ? searchInput.value.trim() : '';
+                    if (hiddenComunidad) hiddenComunidad.value = comunidadFilter ? comunidadFilter.value : '';
+                    if (hiddenMes) hiddenMes.value = mesFilter ? mesFilter.value : '';
+                    if (hiddenAnio) hiddenAnio.value = anioFilter ? anioFilter.value : '';
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            // Solo procesar si es la petición más reciente
+                            if (myId !== requestId) return;
+
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            // Reemplazar tbody
+                            var newTbody = doc.getElementById('fallecidosTbody');
+                            var curTbody = document.getElementById('fallecidosTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            // Reemplazar paginación
+                            var newPag = doc.getElementById('fallecidosPagination');
+                            var curPag = document.getElementById('fallecidosPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            // Reemplazar total
+                            var newBadge = doc.getElementById('fallecidosTotalBadge');
+                            var curBadge = document.getElementById('fallecidosTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(function(e) {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
                             }
                         });
+                }
+
+                function triggerSearch() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(liveSearch, 350);
+                }
+
+                // Input de búsqueda: tiempo real
+                if (searchInput) {
+                    searchInput.addEventListener('input', triggerSearch);
+                    searchInput.addEventListener('keyup', triggerSearch);
+                    searchInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') e.preventDefault();
+                    });
+                }
+
+                // Los demás filtros también disparan liveSearch
+                if (comunidadFilter) comunidadFilter.addEventListener('change', liveSearch);
+                if (mesFilter) mesFilter.addEventListener('change', liveSearch);
+                if (anioFilter) anioFilter.addEventListener('change', liveSearch);
+
+                // 3. Modal AJAX (Delegación de eventos para funcionar con filas AJAX)
+                const modalEl = document.getElementById('dynamicModal');
+                const modal = new bootstrap.Modal(modalEl);
+                
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.open-modal');
+                    if (!btn) return;
+                    e.preventDefault();
+
+                    modalEl.querySelector('.modal-content').innerHTML = `
+                        <div class="p-5 text-center">
+                            <div class="spinner-border text-primary"></div>
+                            <p class="mt-2 text-secondary">Cargando...</p>
+                        </div>`;
+                    modal.show();
+                    
+                    fetch(btn.getAttribute('data-url'))
+                        .then(r => r.text())
+                        .then(h => { 
+                            modalEl.querySelector('.modal-content').innerHTML = h;
+                            // Ejecutar scripts que vienen dentro del HTML cargado
+                            modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
+                                const newScript = document.createElement('script');
+                                if (oldScript.src) {
+                                    newScript.src = oldScript.src;
+                                } else {
+                                    newScript.textContent = oldScript.textContent;
+                                }
+                                oldScript.parentNode.replaceChild(newScript, oldScript);
+                            });
+                        });
+                });
+
+                // 4. Delete SweetAlert (Delegación de eventos para funcionar con filas AJAX)
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.js-delete-btn');
+                    if (!btn) return;
+                    e.preventDefault();
+                    
+                    Swal.fire({
+                        title: '¿Eliminar Registro?',
+                        html: `¿Deseas eliminar a <b>"${btn.getAttribute('data-item')}"</b>?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => {
+                        if (r.isConfirmed) {
+                            const f = document.getElementById('deleteForm');
+                            f.action = btn.getAttribute('data-url');
+                            f.submit();
+                        }
                     });
                 });
 
-                // 5. Select All (Lógica corregida)
+                // 5. Select All (Delegación de eventos)
                 const selectAll = document.getElementById('selectAll');
                 if(selectAll) {
                     selectAll.addEventListener('change', function() {
@@ -349,13 +432,11 @@
                     });
                 }
 
-                // 🔔 6. VALIDACIÓN POR PESTAÑAS EN MODALES
-                // Usa delegación de eventos para funcionar con contenido cargado por AJAX
+                // 6. VALIDACIÓN POR PESTAÑAS EN MODALES
                 modalEl.addEventListener('submit', function(e) {
                     const form = e.target;
                     if (!form.matches('form')) return;
 
-                    // Buscar campos required vacíos por pestaña
                     const campos = form.querySelectorAll('input[required], select[required]');
                     let vaciosPersonal = [];
                     let vaciosDetalles = [];
@@ -371,16 +452,13 @@
                         }
                     });
 
-                    // Si no hay campos vacíos, dejar enviar
                     if (vaciosPersonal.length === 0 && vaciosDetalles.length === 0) return;
 
                     e.preventDefault();
 
-                    // Quitar alerta anterior
                     const prev = form.querySelector('.alerta-validacion');
                     if (prev) prev.remove();
 
-                    // Detectar pestaña activa
                     const tabPersonalActivo = modalEl.querySelector('#personal.show.active, #edit-personal.show.active');
                     const tabDetallesActivo = modalEl.querySelector('#detalles.show.active, #edit-detalles.show.active');
 
@@ -390,11 +468,9 @@
                     if (vaciosPersonal.length > 0 && vaciosDetalles.length > 0) {
                         msg = '<i class="fas fa-exclamation-triangle me-2"></i> Faltan campos obligatorios en <strong>Personal</strong> y en <strong>Detalles y Notas</strong>. Por favor complételos.';
                     } else if (vaciosDetalles.length > 0 && tabPersonalActivo) {
-                        // Estoy en Personal, faltan datos en Detalles
                         msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Detalles y Notas</strong> y complete los campos obligatorios.';
                         irAPestana = '[data-bs-target="#detalles"], [data-bs-target="#edit-detalles"]';
                     } else if (vaciosPersonal.length > 0 && tabDetallesActivo) {
-                        // Estoy en Detalles, faltan datos en Personal
                         msg = '<i class="fas fa-exclamation-triangle me-2"></i> Vaya al apartado <strong>Personal</strong> y complete los campos obligatorios.';
                         irAPestana = '[data-bs-target="#personal"], [data-bs-target="#edit-personal"]';
                     } else if (vaciosPersonal.length > 0) {
@@ -403,7 +479,6 @@
                         msg = '<i class="fas fa-exclamation-triangle me-2"></i> Complete los campos obligatorios en esta pestaña.';
                     }
 
-                    // Crear alerta warning
                     const alerta = document.createElement('div');
                     alerta.className = 'alert alert-warning py-2 mb-0 mt-2 alerta-validacion d-flex align-items-center';
                     alerta.style.cssText = 'font-size: 0.85rem; border-left: 4px solid #ffc107;';
@@ -412,15 +487,13 @@
                     const body = form.querySelector('.modal-body');
                     if (body) body.appendChild(alerta);
 
-                    // Navegar a la otra pestaña si corresponde
                     if (irAPestana) {
                         setTimeout(function() {
                             const btn = modalEl.querySelector(irAPestana);
                             if (btn) btn.click();
-                        }, 1500); // Espera 1.5s para que lean el mensaje antes de cambiar
+                        }, 1500);
                     }
 
-                    // Auto-ocultar en 5 segundos
                     setTimeout(function() {
                         alerta.style.transition = 'opacity 0.5s ease';
                         alerta.style.opacity = '0';

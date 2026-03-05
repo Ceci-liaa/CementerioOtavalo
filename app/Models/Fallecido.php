@@ -28,7 +28,7 @@ class Fallecido extends Model implements Auditable
             $nuevoId = $ultimoId + 1;
             
             // Genera: FAL0001, FAL0002...
-            $fallecido->codigo = 'FAL' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
+            $fallecido->codigo = 'FA-' . str_pad($nuevoId, 2, '0', STR_PAD_LEFT);
         });
     }
 
@@ -56,10 +56,9 @@ class Fallecido extends Model implements Auditable
     // Relación con Nichos (Usando el modelo Pivot corregido)
     public function nichos()
     {
-        return $this->belongsToMany(Nicho::class, 'fallecido_nicho')
+        return $this->belongsToMany(Nicho::class, 'fallecido_nicho', 'fallecido_id', 'nicho_id')
                     ->using(FallecidoNicho::class)
-                    ->withPivot('socio_id',
-                    'codigo','posicion', 'fecha_inhumacion', 'fecha_exhumacion','observacion')
+                    ->withPivot('socio_id', 'codigo','posicion', 'fecha_inhumacion', 'fecha_exhumacion','observacion')
                     ->withTimestamps();
     }
 }

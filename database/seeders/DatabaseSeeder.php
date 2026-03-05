@@ -48,5 +48,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call(CatalogosSeeder::class);
         $this->call(BeneficioSeeder::class);
+        $this->call(UbicacionesOtavaloSeeder::class);
+        $this->call(SociosSeeder::class);
+        $this->call(FallecidosSeeder::class);
     }
 }

@@ -5,7 +5,7 @@
 
 <form method="POST" action="{{ route('asignaciones.exhumar') }}" id="formExhumar">
     @csrf
-    <input type="hidden" name="nicho_id" value="{{ $nicho->id }}">
+    <input type="hidden" name="nicho_id" value="{{ $nicho->identificacion }}">
 
     <div class="modal-body">
         <div class="alert alert-warning py-2 mb-4 text-xs"><i class="fas fa-exclamation-triangle me-1"></i> <strong>Atención:</strong> Esta acción finalizará la ocupación y liberará el espacio.</div>

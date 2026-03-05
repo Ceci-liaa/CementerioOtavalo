@@ -382,16 +382,16 @@ class FacturaController extends Controller
         $ultimaFactura = Factura::latest('id')->first();
 
         if (!$ultimaFactura) {
-            return 'FAC-00001';
+            return 'FAC-01';
         }
 
-        // Extraer números (FAC-00045 -> 45)
+        // Extraer números (FAC-01 -> 1)
         $numeroUltimo = intval(preg_replace('/[^0-9]/', '', $ultimaFactura->codigo));
         
         // Sumar 1
         $nuevoNumero = $numeroUltimo + 1;
         
-        // Formatear (FAC-00046)
-        return 'FAC-' . str_pad($nuevoNumero, 5, '0', STR_PAD_LEFT);
+        // Formatear (FAC-02)
+        return 'FAC-' . str_pad($nuevoNumero, 2, '0', STR_PAD_LEFT);
     }
 }

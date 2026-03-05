@@ -265,6 +265,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('nichos/{nicho}/qr', [NichoController::class, 'downloadQr'])->name('nichos.qr')->middleware('can:ver qr nicho');
     Route::get('nichos/{nicho}/qr-image', [NichoController::class, 'downloadQrImage'])->name('nichos.qr.image')->middleware('can:ver qr nicho');
 
+    // API: Nichos GIS filtrados por Bloque (AJAX)
+    Route::get('/api/nichos-geom-por-bloque', [NichoController::class, 'getNichosByBloque'])->name('nichos.geomPorBloque');
+    Route::get('/api/bloques/search', [NichoController::class, 'searchBloques'])->name('api.bloques.search');
+    Route::get('/api/socios/search', [NichoController::class, 'searchSocios'])->name('api.socios.search');
+
     // --- BENEFICIOS ---
     Route::resource('beneficios', BeneficioController::class); // Se pueden aplicar permisos en constructor también
     Route::post('beneficios/reports', [BeneficioController::class, 'reports'])->name('beneficios.reports')->middleware('can:reportar beneficio');
@@ -283,6 +288,10 @@ Route::middleware(['auth'])->group(function () {
 // ========================================================================
 
 Route::middleware(['auth'])->group(function () {
+
+    // --- 0. API (Búsquedas AJAX) ---
+    Route::get('/api/asignaciones/nichos-disponibles', [AsignacionController::class, 'searchNichosDisponibles'])->name('api.asignaciones.nichos');
+    Route::get('/api/asignaciones/fallecidos-disponibles', [AsignacionController::class, 'searchFallecidosDisponibles'])->name('api.asignaciones.fallecidos');
 
     // --- 1. REPORTES (Van primero para evitar conflictos con {id}) ---
     Route::get('/asignaciones/reporte-general', [AsignacionController::class, 'pdfReporteGeneral'])
@@ -352,12 +361,15 @@ Route::middleware(['auth'])->group(function () {
 
 
     // --- FACTURAS ---
+    // ⚠️ Rutas estáticas PRIMERO, antes de las rutas con {factura}
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('can:ver factura');
-    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('can:ver factura');
 
     // Crear borrador
     Route::get('/facturas/create', [FacturaController::class, 'create'])->name('facturas.create')->middleware('can:crear factura');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('can:crear factura');
+
+    // Ver detalle (después de /create para no capturar "create" como {factura})
+    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('can:ver factura');
 
     // Editar
     Route::get('/facturas/{factura}/edit', [FacturaController::class, 'edit'])->name('facturas.edit')->middleware('can:editar factura');

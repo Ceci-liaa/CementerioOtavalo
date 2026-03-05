@@ -38,7 +38,7 @@
                 <div class="mb-3 mb-md-0">
                     <div class="d-flex align-items-center gap-3">
                         <h3 class="font-weight-bolder mb-0" style="color: #1c2a48;">Gestión de Asignaciones</h3>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.8rem;">
+                        <span class="badge bg-light text-dark border" id="asignacionesTotalBadge" style="font-size: 0.8rem;">
                             Total Nichos: {{ $nichos->total() }}
                         </span>
                     </div>
@@ -77,10 +77,16 @@
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownGenerate">
                             <li>
-                                <a href="#" onclick="generarReporteConFiltros(event)" class="dropdown-item">
-                                    <i class="fas fa-file-pdf text-danger me-2"></i> Reporte General
+                                <a href="#" onclick="generarReporteConFiltros(event, 'pdf')" class="dropdown-item">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i> Reporte General (PDF)
                                 </a>
                             </li>
+                            <li>
+                                <a href="#" onclick="generarReporteConFiltros(event, 'excel')" class="dropdown-item">
+                                    <i class="fas fa-file-excel text-success me-2"></i> Reporte General (Excel)
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a href="{{ route('asignaciones.pdf.exhumados') }}" target="_blank" class="dropdown-item">
                                     <i class="fas fa-scroll text-dark me-2"></i> Ver Exhumados
@@ -93,7 +99,7 @@
                     <div class="d-flex gap-2 w-100 w-md-auto justify-content-end">
                         
                         {{-- Filtro Año --}}
-                        <select name="anio" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;" onchange="document.getElementById('filterForm').submit()">
+                        <select id="anioFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 100px;">
                             <option value="">Año</option>
                             @for($i = date('Y'); $i >= 1900; $i--)
                                 <option value="{{ $i }}" @selected(request('anio') == $i)>{{ $i }}</option>
@@ -101,7 +107,7 @@
                         </select>
 
                         {{-- Filtro Mes --}}
-                        <select name="mes" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;" onchange="document.getElementById('filterForm').submit()">
+                        <select id="mesFilter" class="form-select form-select-sm compact-filter ps-2" style="max-width: 110px;">
                             <option value="">Mes</option>
                             @foreach(range(1, 12) as $m)
                                 <option value="{{ $m }}" @selected(request('mes') == $m)>
@@ -110,9 +116,14 @@
                             @endforeach
                         </select>
 
+                        {{-- Buscador --}}
                         <div class="input-group input-group-sm bg-white border rounded overflow-hidden compact-filter">
-                            <span class="input-group-text bg-white border-0 pe-1 text-secondary"><i class="fas fa-search"></i></span>
-                            <input type="text" name="search" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Socio..." value="{{ request('search') }}">
+                            <span class="input-group-text bg-white border-0 pe-1 text-secondary" id="searchIconWrapper">
+                                <i class="fas fa-search" id="searchIcon"></i>
+                                <i class="fas fa-spinner fa-spin text-primary" id="searchSpinner" style="display:none;"></i>
+                            </span>
+                            <input type="text" class="form-control border-0 ps-1 shadow-none" placeholder="Código, Socio..."
+                                id="searchInput" value="{{ request('search') }}">
                         </div>
                     </div>
                 </div>
@@ -136,7 +147,7 @@
                                     <th class="opacity-10" style="width:170px;">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="asignacionesTbody">
                                 @forelse ($nichos as $nicho)
                                     @php 
                                         $ocupantes = $nicho->fallecidos->where('pivot.fecha_exhumacion', null);
@@ -223,7 +234,7 @@
                                             <div class="d-flex justify-content-center">
                                                 @can('ver asignacion')
                                                 <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
-                                                        data-url="{{ route('asignaciones.show', $nicho->id) }}" title="Ver Detalles">
+                                                        data-url="{{ route('asignaciones.show', $nicho->identificacion) }}" title="Ver Detalles">
                                                     <i class="fa fa-eye"style="font-size: 0.7rem;"></i>
                                                 </button>
                                                 @endcan
@@ -231,7 +242,7 @@
                                                 @if($ocupantes->count() > 0 || $nicho->socios->count() > 0)
                                                     @can('editar asignacion')
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('asignaciones.edit', $nicho->id) }}" title="Editar/Corregir">
+                                                            data-url="{{ route('asignaciones.edit', $nicho->identificacion) }}" title="Editar/Corregir">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
@@ -240,7 +251,7 @@
                                                 @if($ocupantes->count() > 0)
                                                     @can('exhumar cuerpo')
                                                     <button type="button" class="btn btn-sm btn-dark mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('asignaciones.exhumarForm', $nicho->id) }}" title="Registrar Exhumación">
+                                                            data-url="{{ route('asignaciones.exhumarForm', $nicho->identificacion) }}" title="Registrar Exhumación">
                                                         <i class="fas fa-person-digging"style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
@@ -249,7 +260,7 @@
                                                 @if($nicho->fallecidos->count() > 0)
                                                     @can('eliminar asignacion')
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                            data-url="{{ route('asignacion.destroy', [$nicho->id, $nicho->fallecidos->last()->id]) }}"
+                                                            data-url="{{ route('asignacion.destroy', [$nicho->identificacion, $nicho->fallecidos->last()->id]) }}"
                                                             data-item="Asignación {{ $nicho->codigo }}" title="Eliminar Registro (Error)">
                                                         <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>
@@ -264,7 +275,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-3 px-3 d-flex justify-content-end">{{ $nichos->appends(request()->query())->links() }}</div>
+                    <div class="mt-3 px-3 d-flex justify-content-end" id="asignacionesPagination">{{ $nichos->appends(request()->query())->links() }}</div>
                 </div>
             </div>
 
@@ -300,71 +311,161 @@
                     }); 
                 }, 3000);
 
-                // Modal AJAX - MODIFICADO para inicializar búsqueda después de cargar
+                // Referencias a filtros
+                const searchInput = document.getElementById('searchInput');
+                const anioFilter  = document.getElementById('anioFilter');
+                const mesFilter   = document.getElementById('mesFilter');
+
+                // ── Búsqueda en Tiempo Real (AJAX a toda la BD) ──
+                let searchTimeout = null;
+                let currentAbort  = null;
+                let requestId     = 0;
+
+                function buildFilterParams() {
+                    const params = new URLSearchParams();
+                    if (searchInput && searchInput.value.trim()) params.set('search', searchInput.value.trim());
+                    if (anioFilter && anioFilter.value)          params.set('anio', anioFilter.value);
+                    if (mesFilter && mesFilter.value)             params.set('mes', mesFilter.value);
+                    return params;
+                }
+
+                function showSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'none';
+                    if (sp) sp.style.display = 'inline-block';
+                }
+
+                function hideSpinner() {
+                    const ic = document.getElementById('searchIcon');
+                    const sp = document.getElementById('searchSpinner');
+                    if (ic) ic.style.display = 'inline-block';
+                    if (sp) sp.style.display = 'none';
+                }
+
+                function liveSearch() {
+                    // Cancelar petición anterior
+                    if (currentAbort) currentAbort.abort();
+                    currentAbort = new AbortController();
+
+                    const myId = ++requestId;
+                    showSpinner();
+
+                    const params = buildFilterParams();
+                    const url = "{{ route('asignaciones.index') }}?" + params.toString();
+                    window.history.replaceState({}, '', url);
+
+                    fetch(url, { signal: currentAbort.signal })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            if (myId !== requestId) return;
+
+                            var doc = new DOMParser().parseFromString(html, 'text/html');
+
+                            var newTbody = doc.getElementById('asignacionesTbody');
+                            var curTbody = document.getElementById('asignacionesTbody');
+                            if (newTbody && curTbody) curTbody.innerHTML = newTbody.innerHTML;
+
+                            var newPag = doc.getElementById('asignacionesPagination');
+                            var curPag = document.getElementById('asignacionesPagination');
+                            if (newPag && curPag) curPag.innerHTML = newPag.innerHTML;
+
+                            var newBadge = doc.getElementById('asignacionesTotalBadge');
+                            var curBadge = document.getElementById('asignacionesTotalBadge');
+                            if (newBadge && curBadge) curBadge.textContent = newBadge.textContent;
+
+                            hideSpinner();
+                        })
+                        .catch(function(e) {
+                            if (e.name !== 'AbortError') {
+                                console.error('Error en búsqueda:', e);
+                                hideSpinner();
+                            }
+                        });
+                }
+
+                function triggerSearch() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(liveSearch, 350);
+                }
+
+                // Buscador en tiempo real
+                if (searchInput) {
+                    searchInput.addEventListener('input', triggerSearch);
+                    searchInput.addEventListener('keyup', triggerSearch);
+                    searchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') e.preventDefault(); });
+                }
+
+                // Filtros también disparan búsqueda en tiempo real
+                if (anioFilter) anioFilter.addEventListener('change', liveSearch);
+                if (mesFilter)  mesFilter.addEventListener('change', liveSearch);
+
+                // Modal AJAX (delegación de eventos para filas dinámicas)
                 const modalEl = document.getElementById('dynamicModal');
                 const modal = new bootstrap.Modal(modalEl);
                 
-                document.querySelectorAll('.open-modal').forEach(btn => {
-                    btn.addEventListener('click', function () {
-                        modalEl.querySelector('.modal-content').innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
+                document.body.addEventListener('click', function (e) {
+                    if (e.target.closest('.open-modal')) {
+                        const btn = e.target.closest('.open-modal');
+                        modalEl.querySelector('.modal-content').innerHTML = `
+                            <div class="p-5 text-center">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="mt-2 text-secondary">Cargando...</p>
+                            </div>`;
                         modal.show();
-                        fetch(this.getAttribute('data-url'))
+                        fetch(btn.getAttribute('data-url'))
                             .then(r => r.text())
                             .then(h => { 
                                 modalEl.querySelector('.modal-content').innerHTML = h;
-                                // INICIALIZAR BÚSQUEDA DESPUÉS DE CARGAR EL CONTENIDO
                                 setTimeout(() => initSearchableSelects(), 100);
-                                // Ejecutar scripts cargados dinámicamente
                                 modalEl.querySelectorAll('.modal-content script').forEach(oldScript => {
                                     const newScript = document.createElement('script');
                                     newScript.textContent = oldScript.textContent;
                                     oldScript.parentNode.replaceChild(newScript, oldScript);
                                 });
                             });
-                    });
+                    }
                 });
 
-                // SweetAlert Eliminar
-                document.querySelectorAll('.js-delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        Swal.fire({
-                            title: '¿Eliminar Registro?', 
-                            html: `¿Deseas eliminar el último registro de <b>"${this.getAttribute('data-item')}"</b>?<br><small class="text-danger">Esta acción borrará el historial de asignación.</small>`, 
-                            icon: 'warning', 
-                            showCancelButton: true, 
-                            confirmButtonColor: '#d33', 
-                            cancelButtonColor: '#3085d6', 
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar'
-                        }).then((r) => { 
-                            if (r.isConfirmed) { 
-                                const f = document.getElementById('deleteForm'); 
-                                f.action = this.getAttribute('data-url'); 
-                                f.submit(); 
-                            } 
-                        });
+                // SweetAlert Eliminar (delegación de eventos para filas dinámicas)
+                document.body.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.js-delete-btn');
+                    if (!btn) return;
+                    Swal.fire({
+                        title: '¿Eliminar Registro?', 
+                        html: `¿Deseas eliminar el último registro de <b>"${btn.getAttribute('data-item')}"</b>?<br><small class="text-danger">Esta acción borrará el historial de asignación.</small>`, 
+                        icon: 'warning', 
+                        showCancelButton: true, 
+                        confirmButtonColor: '#d33', 
+                        cancelButtonColor: '#3085d6', 
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((r) => { 
+                        if (r.isConfirmed) { 
+                            const f = document.getElementById('deleteForm'); 
+                            f.action = btn.getAttribute('data-url'); 
+                            f.submit(); 
+                        } 
                     });
                 });
             });
 
             function generarReporteConFiltros(event) {
-                event.preventDefault(); 
-                const inputSearch = document.querySelector('input[name="search"]');
-                const selectEstado = document.querySelector('select[name="estado"]');
-                const selectMes = document.querySelector('select[name="mes"]');
-                const selectAnio = document.querySelector('select[name="anio"]');
+                event.preventDefault();
+                const searchInput = document.getElementById('searchInput');
+                const mesFilter   = document.getElementById('mesFilter');
+                const anioFilter  = document.getElementById('anioFilter');
                 
-                const textoSearch = inputSearch ? inputSearch.value : '';
-                const estadoSelect = selectEstado ? selectEstado.value : '';
-                const mesSelect = selectMes ? selectMes.value : '';
-                const anioSelect = selectAnio ? selectAnio.value : '';
+                const textoSearch = searchInput ? searchInput.value : '';
+                const mesSelect   = mesFilter ? mesFilter.value : '';
+                const anioSelect  = anioFilter ? anioFilter.value : '';
                 
                 let urlBase = "{{ route('asignaciones.pdf.general') }}";
-                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&estado=${encodeURIComponent(estadoSelect)}&mes=${mesSelect}&anio=${anioSelect}`;
+                const urlFinal = `${urlBase}?search=${encodeURIComponent(textoSearch)}&mes=${mesSelect}&anio=${anioSelect}`;
                 window.open(urlFinal, '_blank');
             }
 
-            // ========== FUNCIÓN DE BÚSQUEDA PARA SELECTS ==========
+            // ========== FUNCIÓN DE BÚSQUEDA PARA SELECTS (MODALES) ==========
             function initSearchableSelects() {
                 const configs = [
                     { inputId: 'buscarNicho', selectId: 'selectNicho', labelId: 'nichoSeleccionado' },
@@ -381,7 +482,6 @@
                     if (input.dataset.initialized === 'true') return;
                     input.dataset.initialized = 'true';
                     
-                    // Guardar opciones originales
                     const allOptions = [];
                     Array.from(select.options).forEach(opt => {
                         allOptions.push({
@@ -391,7 +491,6 @@
                         });
                     });
                     
-                    // Función para actualizar opciones
                     function updateOptions(searchTerm) {
                         const term = searchTerm.toLowerCase().trim();
                         select.innerHTML = '';
@@ -421,7 +520,6 @@
                             }
                         });
                         
-                        // Estilos del input
                         input.classList.remove('search-input-found', 'search-input-empty');
                         if (term !== '') {
                             if (matchCount > 0) {
@@ -437,7 +535,6 @@
                         return { matchCount, firstMatchIndex };
                     }
                     
-                    // Función para actualizar etiqueta
                     function updateLabel() {
                         if (!label) return;
                         const selectedOpt = select.options[select.selectedIndex];
@@ -452,12 +549,10 @@
                         }
                     }
                     
-                    // Evento: escribir
                     input.addEventListener('input', function() {
                         updateOptions(this.value);
                     });
                     
-                    // Evento: teclas
                     input.addEventListener('keydown', function(e) {
                         if (e.key === 'Enter') {
                             e.preventDefault();
@@ -472,7 +567,6 @@
                                 this.classList.remove('search-input-found', 'search-input-empty');
                                 updateOptions('');
                                 
-                                // Re-seleccionar
                                 for (let i = 0; i < select.options.length; i++) {
                                     if (select.options[i].value === selectedValue) {
                                         select.selectedIndex = i;
@@ -481,7 +575,6 @@
                                 }
                                 updateLabel();
                                 
-                                // Feedback visual
                                 const originalPlaceholder = this.placeholder;
                                 this.placeholder = '✅ ' + selectedText.substring(0, 35);
                                 this.style.background = '#d4edda';
@@ -509,10 +602,27 @@
                         }
                     });
                     
-                    // Eventos del select
                     select.addEventListener('change', updateLabel);
                     select.addEventListener('click', updateLabel);
                 });
+            }
+            // Función para generar reportes respetando los filtros activos
+            function generarReporteConFiltros(event, reportType) {
+                event.preventDefault();
+                let baseUrl = "{{ route('asignaciones.pdf.general') }}";
+                let params = new URLSearchParams();
+
+                let search = document.getElementById('searchInput')?.value?.trim();
+                let anio = document.getElementById('anioFilter')?.value;
+                let mes = document.getElementById('mesFilter')?.value;
+
+                if (search) params.set('search', search);
+                if (anio) params.set('anio', anio);
+                if (mes) params.set('mes', mes);
+                if (reportType) params.set('report_type', reportType);
+
+                let url = baseUrl + (params.toString() ? '?' + params.toString() : '');
+                window.open(url, '_blank');
             }
         </script>
     </main>

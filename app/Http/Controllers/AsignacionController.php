@@ -8,7 +8,8 @@ use App\Models\Nicho;
 use App\Models\Socio;
 use App\Models\Fallecido;
 use Barryvdh\DomPDF\Facade\Pdf;
-// Asegúrate de importar el PDF
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AsignacionesExport;
 
 class AsignacionController extends Controller
 {
@@ -42,13 +43,12 @@ class AsignacionController extends Controller
         }
         // CASO 2: Si NO filtra por estado, pero tampoco busca nada (VISTA INICIAL)
         else if (!$buscando) {
-            // Regla por defecto: Mostrar (Con Gente) O (En Mantenimiento)
+            // Regla por defecto: Mostrar solo nichos con Socio o con Fallecidos activos
             $query->where(function ($q) {
                 $q->has('socios')
                     ->orWhereHas('fallecidos', function ($qf) {
                         $qf->where('fallecido_nicho.fecha_exhumacion', null);
-                    })
-                    ->orWhereRaw('UPPER(estado) = ?', ['MANTENIMIENTO']);
+                    });
             });
         }
         // CASO 3: Si solo está buscando texto (Search), buscamos en todo lado sin restringir.
@@ -104,8 +104,15 @@ class AsignacionController extends Controller
                 ->withCount(['fallecidos' => function($q) {
                     $q->whereNull('fallecido_nicho.fecha_exhumacion');
                 }])
-                ->whereRaw('disponible = true')
-                ->orderBy('id', 'desc')
+                ->where(function($q) {
+                    // Mostrar nichos donde los ocupantes activos sean menor que la capacidad
+                    $q->whereRaw('(
+                        SELECT COUNT(*) FROM fallecido_nicho 
+                        WHERE fallecido_nicho.nicho_id = nichos.identificacion 
+                        AND fallecido_nicho.fecha_exhumacion IS NULL
+                    ) < nichos.capacidad');
+                })
+                ->orderBy('identificacion', 'desc')
                 ->get();
 
             // 2. SOCIOS
@@ -122,6 +129,64 @@ class AsignacionController extends Controller
             // Si falla, te mostrará el error en pantalla
             dd("ERROR EN CREATE ASIGNACIÓN: " . $e->getMessage());
         }
+    }
+
+    // --- BÚSQUEDA AJAX PARA MODALES ---
+    public function searchNichosDisponibles(Request $request)
+    {
+        $q = trim($request->q);
+        
+        $query = Nicho::with('bloque')
+            ->withCount(['fallecidos' => function($qu) {
+                $qu->whereNull('fallecido_nicho.fecha_exhumacion');
+            }])
+            ->where(function($qu) {
+                $qu->whereRaw('(
+                    SELECT COUNT(*) FROM fallecido_nicho 
+                    WHERE fallecido_nicho.nicho_id = nichos.identificacion 
+                    AND fallecido_nicho.fecha_exhumacion IS NULL
+                ) < nichos.capacidad');
+            });
+
+        if ($q !== '') {
+            $query->where(function($qu) use ($q) {
+                $qu->where('codigo', 'ILIKE', "%{$q}%")
+                   ->orWhereHas('bloque', function($qb) use ($q) {
+                       $qb->where('nombre', 'ILIKE', "%{$q}%");
+                   });
+            });
+        }
+
+        $nichos = $query->orderBy('identificacion', 'desc')->limit(50)->get()->map(function($n) {
+             return [
+                 'id' => $n->identificacion,
+                 'codigo' => $n->codigo,
+                 'bloque_nombre' => $n->bloque->nombre ?? 'N/A',
+                 'ocupados' => $n->fallecidos_count ?? 0,
+                 'capacidad' => $n->capacidad
+             ];
+        });
+
+        return response()->json($nichos);
+    }
+
+    public function searchFallecidosDisponibles(Request $request)
+    {
+        $q = trim($request->q);
+        
+        $query = Fallecido::doesntHave('nichos');
+
+        if ($q !== '') {
+            $query->where(function($qu) use ($q) {
+                $qu->where('apellidos', 'ILIKE', "%{$q}%")
+                   ->orWhere('nombres', 'ILIKE', "%{$q}%")
+                   ->orWhere('cedula', 'ILIKE', "%{$q}%");
+            });
+        }
+
+        $fallecidos = $query->orderBy('id', 'desc')->limit(50)->get(['id', 'apellidos', 'nombres', 'cedula']);
+
+        return response()->json($fallecidos);
     }
 
     // --- 3. SHOW: VER DETALLE ---
@@ -142,7 +207,7 @@ class AsignacionController extends Controller
         // Esto permite cambiar al fallecido en el select si te equivocaste.
         $fallecidos = Fallecido::doesntHave('nichos')
             ->orWhereHas('nichos', function ($q) use ($id) {
-                $q->where('nichos.id', $id);
+                $q->where('nichos.identificacion', $id);
             })
             ->orderBy('apellidos')
             ->get();
@@ -157,7 +222,7 @@ class AsignacionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,id',
+            'nicho_id' => 'required|exists:nichos,identificacion',
             'socio_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'rol' => 'required|string',
@@ -173,8 +238,8 @@ class AsignacionController extends Controller
                     ->wherePivot('fecha_exhumacion', null)
                     ->count();
 
-                if ($ocupantesActivos >= 3) {
-                    throw new \Exception("El nicho ya está al límite (3 fallecidos).");
+                if ($ocupantesActivos >= $nicho->capacidad) {
+                    throw new \Exception("El nicho ya está al límite ({$nicho->capacidad} fallecidos).");
                 }
 
                 // 2. Asignar Socio al Nicho (Relación general del espacio)
@@ -192,7 +257,7 @@ class AsignacionController extends Controller
 
                 // 4. Calcular posición usando MAX para evitar conflictos con exhumados
                 $maxPosicion = DB::table('fallecido_nicho')
-                    ->where('nicho_id', $nicho->id)
+                    ->where('nicho_id', $nicho->identificacion)
                     ->max('posicion') ?? 0;
 
                 // 5. Asignar Fallecido con el SOCIO_ID vinculado al registro
@@ -238,7 +303,7 @@ class AsignacionController extends Controller
     public function exhumar(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,id',
+            'nicho_id' => 'required|exists:nichos,identificacion',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'fecha_exhumacion' => 'required|date', // Validamos que venga fecha
         ]);
@@ -406,7 +471,47 @@ class AsignacionController extends Controller
             'bloque'
         ])->get();
 
-        // 6. Generar el PDF
+        // 6. Verificar tipo de reporte (excel o pdf)
+        $reportType = $request->input('report_type', 'pdf');
+
+        if ($reportType === 'excel') {
+            // EXCEL: Preparar datos planos
+            $headings = ['Nicho', 'Bloque', 'Cód. Acta', 'Fallecido', 'Fecha Inhumación', 'Socio Responsable', 'Estado', 'Ocupación'];
+
+            $data = collect();
+            foreach ($nichos as $nicho) {
+                $ocupantes = $nicho->fallecidos->where('pivot.fecha_exhumacion', null);
+                if ($ocupantes->isEmpty()) {
+                    $data->push([
+                        $nicho->codigo,
+                        $nicho->bloque->descripcion ?? 'N/A',
+                        '-',
+                        '-- Vacío --',
+                        '-',
+                        $nicho->socios->isNotEmpty() ? $nicho->socios->first()->apellidos . ' ' . $nicho->socios->first()->nombres : 'Sin Asignar',
+                        $nicho->estado,
+                        $ocupantes->count() . '/3',
+                    ]);
+                } else {
+                    foreach ($ocupantes as $f) {
+                        $data->push([
+                            $nicho->codigo,
+                            $nicho->bloque->descripcion ?? 'N/A',
+                            $f->pivot->codigo ?? 'S/N',
+                            $f->apellidos . ' ' . $f->nombres,
+                            optional($f->pivot->fecha_inhumacion)->format('d/m/Y') ?? '-',
+                            $nicho->socios->isNotEmpty() ? $nicho->socios->first()->apellidos . ' ' . $nicho->socios->first()->nombres : 'Sin Asignar',
+                            $nicho->estado,
+                            $ocupantes->count() . '/3',
+                        ]);
+                    }
+                }
+            }
+
+            return Excel::download(new AsignacionesExport($data, $headings), 'asignaciones_reporte_' . date('YmdHis') . '.xlsx');
+        }
+
+        // PDF: Generar como siempre
         $infoFiltros = [];
         if ($request->filled('mes')) {
             $nombreMes = ucfirst(\Carbon\Carbon::create(null, $request->mes, 1)->locale('es')->monthName);

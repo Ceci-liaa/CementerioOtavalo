@@ -35,7 +35,7 @@ class User extends Authenticatable implements Auditable
 
         static::creating(function ($user) {
             // Genera el código de usuario basado en el ID, como 'US0001', 'US0002', etc.
-            $user->codigo_usuario = 'US' . str_pad(User::count() + 1, 4, '0', STR_PAD_LEFT);
+            $user->codigo_usuario = 'US-' . str_pad(User::count() + 1, 2, '0', STR_PAD_LEFT);
         });
     }
 }
