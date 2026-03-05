@@ -23,10 +23,21 @@ class User extends Authenticatable implements Auditable
     protected $guarded = [];
 
     protected $casts = [
-        'status' => 'boolean',
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    // Accessor: leer status como boolean PHP
+    public function getStatusAttribute($value)
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    // Mutator: escribir status como string 'true'/'false' para PostgreSQL
+    public function setStatusAttribute($value)
+    {
+        $this->attributes['status'] = filter_var($value, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+    }
 
     // Mutador para generar codigo_usuario
     public static function boot()
