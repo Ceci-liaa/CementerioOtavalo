@@ -91,7 +91,7 @@
                         <select id="bloqueFilter" class="form-select form-select-sm compact-filter ps-2">
                             <option value="">Todos los bloques</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->id }}" @selected(request('bloque_id') == $b->id)>{{ $b->nombre }}</option>
+                                <option value="{{ $b->identificacion }}" @selected(request('bloque_id') == $b->identificacion)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
 

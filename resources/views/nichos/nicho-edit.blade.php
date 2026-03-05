@@ -75,9 +75,9 @@
                         <select name="bloque_id" id="selectBloqueEdit" class="form-select" required size="2" style="height: auto;">
                             <option value="">-- Seleccionar --</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->id }}" 
+                                <option value="{{ $b->identificacion }}" 
                                     data-search="{{ strtolower($b->nombre . ' ' . ($b->codigo ?? '')) }}"
-                                    @selected(old('bloque_id', $nicho->bloque_id) == $b->id)>{{ $b->nombre }}</option>
+                                    @selected(old('bloque_id', $nicho->bloque_id) == $b->identificacion)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
                         <small class="text-muted">Seleccionado: <span id="bloqueSeleccionadoEdit" class="fw-bold text-primary">Ninguno</span></small>

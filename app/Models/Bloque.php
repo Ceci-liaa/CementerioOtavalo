@@ -13,6 +13,7 @@ class Bloque extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
     
     protected $table = 'bloques';
+    protected $primaryKey = 'identificacion';
     protected $guarded = [];
 
     protected $casts = [
@@ -45,7 +46,7 @@ class Bloque extends Model implements Auditable
             // Solo generamos un código automático SI NO VIENE UNO YA DEFINIDO.
             // Si el Controlador ya le asignó "B-20" del GIS, esta parte se salta.
             if (empty($bloque->codigo)) {
-                $ultimoId = Bloque::max('id') ?? 0;
+                $ultimoId = Bloque::max('identificacion') ?? 0;
                 $nuevoId = $ultimoId + 1;
                 
                 // Usamos un prefijo distinto (INT) para diferenciar los
