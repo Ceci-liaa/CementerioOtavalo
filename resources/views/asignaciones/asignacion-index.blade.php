@@ -10,8 +10,11 @@
         .compact-filter { width: auto; min-width: 140px; max-width: 180px; }
         
         /* ESTILOS DE ESTADOS ACTUALIZADOS */
-        .badge-ocupado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; } /* Amarillo */
-        .badge-mantenimiento { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }        
+        .badge-bueno { background-color: #d1e7dd !important; color: #000 !important; border: 1px solid #badbcc !important; } /* Verde */
+        .badge-malo { background-color: #f8d7da !important; color: #000 !important; border: 1px solid #f5c2c7 !important; } /* Rojo */
+        .badge-abandonado { background-color: #fff3cd !important; color: #000 !important; border: 1px solid #ffecb5 !important; } /* Amarillo */
+        .badge-mantenimiento { background-color: #cfe2ff !important; color: #000 !important; border: 1px solid #b6effb !important; } /* Azul claro */
+        .badge-ocupado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; } /* Amarillo (Legacy) */
         .btn-action { margin-right: 4px; }
         
         /* Alineación de filas internas */
@@ -214,8 +217,11 @@
                                         <td>
                                             @php
                                                 $clase = match($nicho->estado) {
-                                                    'OCUPADO' => 'badge-ocupado',
+                                                    'BUENO' => 'badge-bueno',
+                                                    'MALO' => 'badge-malo',
+                                                    'ABANDONADO' => 'badge-abandonado',
                                                     'MANTENIMIENTO' => 'badge-mantenimiento',
+                                                    'OCUPADO' => 'badge-ocupado',
                                                     default => 'bg-secondary text-white'
                                                 };
                                             @endphp
