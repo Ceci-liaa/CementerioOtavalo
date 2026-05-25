@@ -13,7 +13,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
-<form method="POST" action="{{ route('nichos.update', $nicho) }}">
+<form method="POST" action="{{ route('nichos.update', $nicho->identificacion ?? $nicho->id) }}">
     @csrf @method('PUT')
     
     <div class="modal-body">

@@ -21,7 +21,7 @@
 </div>
 
 {{-- FORMULARIO --}}
-<form method="POST" action="{{ route('bloques.update', $bloque) }}">
+<form method="POST" action="{{ route('bloques.update', $bloque->identificacion ?? $bloque->id) }}">
     @csrf @method('PUT')
     
     <div class="modal-body">

@@ -232,7 +232,7 @@
                                                     
                                                     {{-- Botón Eliminar --}}
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                        data-url="{{ route('nichos.destroy', $n) }}"
+                                                        data-url="{{ route('nichos.destroy', $n->identificacion ?? $n->id) }}"
                                                         data-item="{{ $n->codigo }}" title="Eliminar">
                                                         <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>
