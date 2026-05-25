@@ -91,7 +91,7 @@
                         <select id="bloqueFilter" class="form-select form-select-sm compact-filter ps-2">
                             <option value="">Todos los bloques</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->identificacion }}" @selected(request('bloque_id') == $b->identificacion)>{{ $b->nombre }}</option>
+                                <option value="{{ $b->id }}" @selected(request('bloque_id') == $b->id)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
 
@@ -142,7 +142,7 @@
                                     @forelse ($nichos as $n)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" name="ids[]" value="{{ $n->identificacion }}" class="check-item"
+                                                <input type="checkbox" name="ids[]" value="{{ $n->id }}" class="check-item"
                                                     style="cursor: pointer;">
                                             </td>
 
@@ -211,7 +211,7 @@
                                             <td>
                                                 <div class="d-flex justify-content-center align-items-center">
                                                     {{-- Botón QR DIRECTO (Sin dropdown) --}}
-                                                    <a href="{{ route('nichos.qr', ['nicho' => $n->identificacion, 'mode' => 'text']) }}" 
+                                                    <a href="{{ route('nichos.qr', ['nicho' => $n->id, 'mode' => 'text']) }}" 
                                                        target="_blank" 
                                                        class="btn btn-sm btn-dark mb-0 btn-action" 
                                                        title="Ver QR">
@@ -220,19 +220,19 @@
 
                                                     {{-- Botón Ver --}}
                                                     <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal"
-                                                        data-url="{{ route('nichos.show', $n->identificacion) }}" title="Ver">
+                                                        data-url="{{ route('nichos.show', $n->id) }}" title="Ver">
                                                         <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     
                                                     {{-- Botón Editar --}}
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal"
-                                                        data-url="{{ route('nichos.edit', $n->identificacion) }}" title="Editar">
+                                                        data-url="{{ route('nichos.edit', $n->id) }}" title="Editar">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     
                                                     {{-- Botón Eliminar --}}
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                        data-url="{{ route('nichos.destroy', $n->identificacion ?? $n->id) }}"
+                                                        data-url="{{ route('nichos.destroy', $n->id) }}"
                                                         data-item="{{ $n->codigo }}" title="Eliminar">
                                                         <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>

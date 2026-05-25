@@ -108,11 +108,11 @@ class AsignacionController extends Controller
                     // Mostrar nichos donde los ocupantes activos sean menor que la capacidad
                     $q->whereRaw('(
                         SELECT COUNT(*) FROM fallecido_nicho 
-                        WHERE fallecido_nicho.nicho_id = nichos.identificacion 
+                        WHERE fallecido_nicho.nicho_id = nichos.id 
                         AND fallecido_nicho.fecha_exhumacion IS NULL
                     ) < nichos.capacidad');
                 })
-                ->orderBy('identificacion', 'desc')
+                ->orderBy('id', 'desc')
                 ->get();
 
             // 2. SOCIOS
@@ -144,7 +144,7 @@ class AsignacionController extends Controller
             ->where(function($qu) {
                 $qu->whereRaw('(
                     SELECT COUNT(*) FROM fallecido_nicho 
-                    WHERE fallecido_nicho.nicho_id = nichos.identificacion 
+                    WHERE fallecido_nicho.nicho_id = nichos.id 
                     AND fallecido_nicho.fecha_exhumacion IS NULL
                 ) < nichos.capacidad');
             });
@@ -168,9 +168,9 @@ class AsignacionController extends Controller
             });
         }
 
-        $nichos = $query->orderBy('identificacion', 'desc')->limit(50)->get()->map(function($n) {
+        $nichos = $query->orderBy('id', 'desc')->limit(50)->get()->map(function($n) {
              return [
-                 'id' => $n->identificacion,
+                 'id' => $n->id,
                  'codigo' => $n->codigo,
                  'bloque_nombre' => $n->bloque->nombre ?? 'N/A',
                  'ocupados' => $n->fallecidos_count ?? 0,
@@ -228,7 +228,7 @@ class AsignacionController extends Controller
         // Esto permite cambiar al fallecido en el select si te equivocaste.
         $fallecidos = Fallecido::doesntHave('nichos')
             ->orWhereHas('nichos', function ($q) use ($id) {
-                $q->where('nichos.identificacion', $id);
+                $q->where('nichos.id', $id);
             })
             ->orderBy('apellidos')
             ->get();
@@ -243,7 +243,7 @@ class AsignacionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,identificacion',
+            'nicho_id' => 'required|exists:nichos,id',
             'socio_id' => 'required|exists:socios,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'rol' => 'required|string',
@@ -278,7 +278,7 @@ class AsignacionController extends Controller
 
                 // 4. Calcular posición usando MAX para evitar conflictos con exhumados
                 $maxPosicion = DB::table('fallecido_nicho')
-                    ->where('nicho_id', $nicho->identificacion)
+                    ->where('nicho_id', $nicho->id)
                     ->max('posicion') ?? 0;
 
                 // 5. Asignar Fallecido con el SOCIO_ID vinculado al registro
@@ -324,7 +324,7 @@ class AsignacionController extends Controller
     public function exhumar(Request $request)
     {
         $request->validate([
-            'nicho_id' => 'required|exists:nichos,identificacion',
+            'nicho_id' => 'required|exists:nichos,id',
             'fallecido_id' => 'required|exists:fallecidos,id',
             'fecha_exhumacion' => 'required|date', // Validamos que venga fecha
         ]);

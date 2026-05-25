@@ -184,21 +184,21 @@
                                                 <div class="d-flex justify-content-center">
                                                     @can('ver bloque')
                                                     <button type="button" class="btn btn-sm btn-info mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('bloques.show', $b->identificacion ?? $b->id) }}" title="Ver">
+                                                            data-url="{{ route('bloques.show', $b->id) }}" title="Ver">
                                                         <i class="fa-solid fa-eye text-white" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
 
                                                     @can('editar bloque')
                                                     <button type="button" class="btn btn-sm btn-warning mb-0 btn-action open-modal" 
-                                                            data-url="{{ route('bloques.edit', $b->identificacion ?? $b->id) }}" title="Editar">
+                                                            data-url="{{ route('bloques.edit', $b->id) }}" title="Editar">
                                                         <i class="fa-solid fa-pen-to-square" style="font-size: 0.7rem;"></i>
                                                     </button>
                                                     @endcan
 
                                                     @can('eliminar bloque')
                                                     <button type="button" class="btn btn-sm btn-danger mb-0 btn-action js-delete-btn"
-                                                            data-url="{{ route('bloques.destroy', $b->identificacion ?? $b->id) }}"
+                                                            data-url="{{ route('bloques.destroy', $b->id) }}"
                                                             data-item="{{ $b->codigo }} - {{ $b->nombre }}" title="Eliminar">
                                                         <i class="fa-solid fa-trash" style="font-size: 0.7rem;"></i>
                                                     </button>

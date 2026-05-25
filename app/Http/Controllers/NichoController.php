@@ -67,7 +67,7 @@ class NichoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'bloque_id' => 'required|exists:bloques,identificacion',
+            'bloque_id' => 'required|exists:bloques,id',
             'socio_id' => 'required|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
             'clase_nicho' => 'required|in:BOVEDA,TIERRA',
@@ -129,15 +129,15 @@ class NichoController extends Controller
     public function update(Request $request, Nicho $nicho)
     {
         $request->validate([
-            'bloque_id' => 'required|exists:bloques,identificacion',
+            'bloque_id' => 'required|exists:bloques,id',
             'socio_id' => 'required|exists:socios,id',
             'tipo_nicho' => 'required|in:PROPIO,COMPARTIDO',
             'clase_nicho' => 'required|in:BOVEDA,TIERRA',
             'capacidad' => 'required|integer|min:1',
             'estado' => 'required|in:BUENO,MANTENIMIENTO,MALO,ABANDONADO',
             'descripcion' => 'nullable|string|max:1000',
-            'qr_uuid' => ['nullable', 'string', Rule::unique('nichos')->ignore($nicho->identificacion)],
-            'nicho_geom_id' => ['nullable', 'exists:nichos_geom,id', Rule::unique('nichos')->whereNull('deleted_at')->ignore($nicho->identificacion)],
+            'qr_uuid' => ['nullable', 'string', Rule::unique('nichos')->ignore($nicho->id)],
+            'nicho_geom_id' => ['nullable', 'exists:nichos_geom,id', Rule::unique('nichos')->whereNull('deleted_at')->ignore($nicho->id)],
         ]);
 
         try {
@@ -153,7 +153,7 @@ class NichoController extends Controller
             if ($request->filled('nicho_geom_id') && $request->nicho_geom_id != $nicho->nicho_geom_id) {
                 $geom = NichoGeom::find($request->nicho_geom_id);
                 if ($geom && $geom->codigo) {
-                    if (Nicho::where('codigo', $geom->codigo)->where('identificacion', '!=', $nicho->identificacion)->whereNull('deleted_at')->exists()) {
+                    if (Nicho::where('codigo', $geom->codigo)->where('id', '!=', $nicho->id)->whereNull('deleted_at')->exists()) {
                         return back()->withInput()->with('error', "El código '{$geom->codigo}' ya está en uso.");
                     }
                     $data['codigo'] = $geom->codigo;
@@ -187,7 +187,7 @@ class NichoController extends Controller
             return redirect()->back()->with('error', 'Debe seleccionar al menos un registro.');
         }
 
-        $nichos = Nicho::with('bloque')->whereIn('identificacion', $ids)->get()->sortBy('codigo', SORT_NATURAL);
+        $nichos = Nicho::with('bloque')->whereIn('id', $ids)->get()->sortBy('codigo', SORT_NATURAL);
 
         // NUEVOS ENCABEZADOS
         $headings = [
@@ -202,7 +202,7 @@ class NichoController extends Controller
 
         $data = $nichos->map(function ($n) {
             return [
-                'id' => $n->identificacion,
+                'id' => $n->id,
                 'codigo' => $n->codigo,
                 'bloque' => $n->bloque->nombre ?? 'N/A',
                 'clase' => $n->clase_nicho, // NUEVO
@@ -345,7 +345,7 @@ class NichoController extends Controller
 
                 // En modo edición, excluir el nicho actual para que su geom siga visible
                 if ($request->filled('exclude_nicho_id')) {
-                    $q->where('nichos.identificacion', '!=', $request->exclude_nicho_id);
+                    $q->where('nichos.id', '!=', $request->exclude_nicho_id);
                 }
             })
             ->select('id', 'codigo')
@@ -361,7 +361,7 @@ class NichoController extends Controller
     {
         $q = trim($request->get('q', ''));
 
-        $query = Bloque::select('identificacion', 'nombre', 'codigo')
+        $query = Bloque::select('id', 'nombre', 'codigo')
             ->orderBy('nombre');
 
         if ($q !== '') {

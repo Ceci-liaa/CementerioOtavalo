@@ -13,7 +13,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 
-<form method="POST" action="{{ route('nichos.update', $nicho->identificacion ?? $nicho->id) }}">
+<form method="POST" action="{{ route('nichos.update', $nicho->id) }}">
     @csrf @method('PUT')
     
     <div class="modal-body">
@@ -75,9 +75,9 @@
                         <select name="bloque_id" id="selectBloqueEdit" class="form-select" required size="2" style="height: auto;">
                             <option value="">-- Seleccionar --</option>
                             @foreach($bloques as $b)
-                                <option value="{{ $b->identificacion }}" 
+                                <option value="{{ $b->id }}" 
                                     data-search="{{ strtolower($b->nombre . ' ' . ($b->codigo ?? '')) }}"
-                                    @selected(old('bloque_id', $nicho->bloque_id) == $b->identificacion)>{{ $b->nombre }}</option>
+                                    @selected(old('bloque_id', $nicho->bloque_id) == $b->id)>{{ $b->nombre }}</option>
                             @endforeach
                         </select>
                         <small class="text-muted">Seleccionado: <span id="bloqueSeleccionadoEdit" class="fw-bold text-primary">Ninguno</span></small>
@@ -147,7 +147,7 @@
 <script>
     // ========== FILTRO EN CASCADA: Bloque → Nichos GIS (Edit) ==========
     (function() {
-        var currentNichoId = {{ $nicho->identificacion }};
+        var currentNichoId = {{ $nicho->id }};
         var currentGeomId = {{ $nicho->nicho_geom_id ?? 'null' }};
 
         var selectBloque = document.getElementById('selectBloqueEdit');
@@ -247,9 +247,9 @@
                 select.innerHTML = '<option value="">-- Seleccionar --</option>';
                 data.forEach(function(b) {
                     var opt = document.createElement('option');
-                    opt.value = b.identificacion;
+                    opt.value = b.id;
                     opt.textContent = b.nombre;
-                    if (String(b.identificacion) === String(keepVal)) opt.selected = true;
+                    if (String(b.id) === String(keepVal)) opt.selected = true;
                     select.appendChild(opt);
                 });
                 updateLabel();

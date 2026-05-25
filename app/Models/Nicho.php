@@ -14,7 +14,6 @@ class Nicho extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'nichos';
-    protected $primaryKey = 'identificacion';
     protected $guarded = [];
 
     protected $casts = [
@@ -25,7 +24,7 @@ class Nicho extends Model implements Auditable
     /**
      * RELACIONES
      */
-    public function bloque() { return $this->belongsTo(Bloque::class, 'bloque_id', 'identificacion'); }
+    public function bloque() { return $this->belongsTo(Bloque::class, 'bloque_id'); }
     public function creador() { return $this->belongsTo(User::class, 'created_by'); }
     public function socio() { return $this->belongsTo(Socio::class, 'socio_id'); }
     
@@ -59,7 +58,7 @@ class Nicho extends Model implements Auditable
             // Si el controlador NO le pasó un código (porque es un nicho manual),
             // generamos uno secuencial: N0001, N0002...
             if (empty($model->codigo)) {
-                $last = self::withTrashed()->where('codigo', 'LIKE', 'N%')->orderBy('identificacion', 'desc')->first();
+                $last = self::withTrashed()->where('codigo', 'LIKE', 'N%')->orderBy('id', 'desc')->first();
                 
                 // Extraemos el número si existe, sino empezamos en 1
                 $number = 0;
